@@ -1,37 +1,41 @@
-# CarryForward
+# CarryForward — field operations
 
-Independent business-transition product prototype. PRISM remains a separate project. This is an independent repository, separate from Perihelion and PRISM.
+From work order to a clear handoff. A separate product from PRISM and Perihelion Operations.
 
-## Run
+## Run locally
 
-Node 24, no installation required:
+Node 24; no installation required.
 
 ```sh
-cd carryforward
 node server.mjs
 node --test
 ```
 
 Open http://127.0.0.1:4310. The server binds only to loopback.
 
-## Current milestone
+## Workflow
 
-Six fictional records → three deterministic findings → exact source evidence → attributed operator testimony → updated handoff export. Testimony is stored in this browser's localStorage. It remains unverified testimony and never silently resolves evidence gaps. The export preserves all source records and answers. Do not enter real customer records into this demo.
+1. Read a synthetic work-order briefing or import a bounded JSON work order using the downloadable sample format.
+2. Record work performed, observations, observation times, evidence references, new promises and a follow-up owner.
+3. Review missing evidence against each assigned check. Repair, production, monitoring and warranty remain separate obligations.
+4. Confirm the technician's report and download the work order and closeout together as JSON. Confirmation does not close open items or mark Operations acceptance.
 
-This is a fixture-driven prototype, not an AI-powered investigator yet. No provider calls, credentials, production data, PRISM changes or deployment are involved.
+Drafts persist in browser-local storage. Confirmation is kept in memory until export; reload requires re-review and confirmation. Replacing an imported work order resets its draft after a browser confirmation. This demo supports text evidence references, not photo/audio upload or source-content verification. Browser storage failure is shown to the user.
 
-## Next milestone
+## Current boundaries
 
-Add validated JSON import, a provider-neutral analysis contract, and a Meta model adapter after verifying event rules, model access, credits and a bounded spend authorization. Validate citation IDs and quoted spans; retain incomplete runs and actual usage. Evaluate model findings against the fixture answer key without passing expected findings into the prompt.
+Synthetic data only. Deterministic completeness checks, not AI reasoning or technical safety verification. No live Operations reads/writes, provider calls, API keys, paid inference, PRISM changes or deployment. Meta calls remain disabled until hackathon credits are confirmed under the owner's instruction.
 
-## Acceptance checks
+The import/export formats are prototype-owned and are not yet an accepted Perihelion Operations API contract. No production schema changes are required for this milestone.
 
-- Warranty follow-up remains open absent a dated matching delivery receipt.
-- Stale telemetry does not establish failed repair or current zero production.
-- Same-name contacts at different properties stay separate.
-- Corrections retain author/time and do not rewrite original records.
-- Handoff exports include source passages and operator testimony.
+## Next milestones
+
+- Meta-backed, cited comparison of raw work-order scope against technician notes, photos and voice transcripts.
+- Ask focused follow-up questions while the technician is onsite; distinguish field testimony from independently checked evidence.
+- Add evidence uploads with explicit custody and retention rules.
+- Evaluate on withheld synthetic work orders, including partial completion, stale monitoring and unsupported closure.
+- Map an approved Operations export to this contract; add authenticated integration only after reviewing the existing Operations boundary.
 
 ## Hackathon disclosure
 
-Created October 30, 2026. Lessons from Perihelion informed the fictional cases; no Perihelion source code or customer content was copied. Confirm participant rules and submission requirements before release. This milestone is local only.
+Created October 30, 2026. Initial business-transition prototype was pivoted to field operations following owner direction. Fictional cases were informed by operational lessons; no Perihelion customer records or application source were copied. Document actual model use and results before submission. The repository remains private until an authorized public-release review.

@@ -1,9 +1,77 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {demoOrder,validateOrder,reviewReport,confirmReport,exportCloseout} from './public/engine.js';
-const base=()=>({technician:'Demo technician',summary:'Replaced inverter. Monitoring remains offline.',recordedAt:'2026-10-30T14:00:00Z',entries:{repair:{status:'observed',note:'Replaced inverter',reference:'WO-note-1',observedAt:'2026-10-30T13:00:00Z'}},promises:'Send warranty registration',followupOwner:''});
-test('repair does not close production, monitoring or warranty obligations',()=>{const r=reviewReport(demoOrder,base());assert.equal(r.openCount,3);assert.equal(r.findings.find(f=>f.id==='repair').outcome,'documented');assert.ok(r.needsOwner);assert.equal(r.operationsStatus,'Awaiting Operations acceptance');});
-test('observed result without evidence reference or valid time remains open',()=>{for(const change of [{reference:''},{observedAt:'invalid'},{note:''}]){const report=base();Object.assign(report.entries.repair,change);assert.equal(reviewReport(demoOrder,report).openCount,4);}});
-test('confirmation preserves unresolved work and original scope in exported packet',()=>{const r=confirmReport(reviewReport(demoOrder,base()),'Demo technician');const packet=JSON.parse(exportCloseout(demoOrder,r));assert.equal(packet.closeout.openCount,3);assert.equal(packet.closeout.confirmation.name,'Demo technician');assert.deepEqual(packet.workOrder.history,demoOrder.history);assert.equal(packet.closeout.operationsStatus,'Awaiting Operations acceptance');});
-test('import rejects wrong versions, duplicate check IDs and excessive scope',()=>{assert.throws(()=>validateOrder({...demoOrder,version:'unknown'}));assert.throws(()=>validateOrder({...demoOrder,checks:[demoOrder.checks[0],demoOrder.checks[0]]}));assert.throws(()=>validateOrder({...demoOrder,requestedWork:[]}));});
-test('not-applicable explanations are exceptions, never verified work',()=>{const report=base();report.entries.monitoring={status:'not_applicable',note:'Customer has no internet service'};const r=reviewReport(demoOrder,report);assert.equal(r.findings.find(f=>f.id==='monitoring').outcome,'exception');assert.equal(r.openCount,2);assert.throws(()=>reviewReport(demoOrder,{...report,technician:''}));});
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  demoOrder,
+  validateOrder,
+  reviewReport,
+  confirmReport,
+  exportCloseout,
+} from "./public/engine.js";
+const base = () => ({
+  technician: "Demo technician",
+  summary: "Replaced inverter. Monitoring remains offline.",
+  recordedAt: "2026-10-30T14:00:00Z",
+  entries: {
+    repair: {
+      status: "observed",
+      note: "Replaced inverter",
+      reference: "WO-note-1",
+      observedAt: "2026-10-30T13:00:00Z",
+    },
+  },
+  promises: "Send warranty registration",
+  followupOwner: "",
+});
+test("repair does not close production, monitoring or warranty obligations", () => {
+  const r = reviewReport(demoOrder, base());
+  assert.equal(r.openCount, 3);
+  assert.equal(r.findings.find((f) => f.id === "repair").outcome, "documented");
+  assert.ok(r.needsOwner);
+  assert.equal(r.operationsStatus, "Awaiting Operations acceptance");
+});
+test("observed result without evidence reference or valid time remains open", () => {
+  for (const change of [
+    { reference: "" },
+    { observedAt: "invalid" },
+    { note: "" },
+  ]) {
+    const report = base();
+    Object.assign(report.entries.repair, change);
+    assert.equal(reviewReport(demoOrder, report).openCount, 4);
+  }
+});
+test("confirmation preserves unresolved work and original scope in exported packet", () => {
+  const r = confirmReport(reviewReport(demoOrder, base()), "Demo technician");
+  const packet = JSON.parse(exportCloseout(demoOrder, r));
+  assert.equal(packet.closeout.openCount, 3);
+  assert.equal(packet.closeout.confirmation.name, "Demo technician");
+  assert.deepEqual(packet.workOrder.history, demoOrder.history);
+  assert.equal(
+    packet.closeout.operationsStatus,
+    "Awaiting Operations acceptance",
+  );
+});
+test("import rejects wrong versions, duplicate check IDs and excessive scope", () => {
+  assert.throws(() => validateOrder({ ...demoOrder, version: "unknown" }));
+  assert.throws(() =>
+    validateOrder({
+      ...demoOrder,
+      checks: [demoOrder.checks[0], demoOrder.checks[0]],
+    }),
+  );
+  assert.throws(() => validateOrder({ ...demoOrder, requestedWork: [] }));
+});
+test("not-applicable explanations are exceptions, never verified work", () => {
+  const report = base();
+  report.entries.monitoring = {
+    status: "not_applicable",
+    note: "Customer has no internet service",
+  };
+  const r = reviewReport(demoOrder, report);
+  assert.equal(
+    r.findings.find((f) => f.id === "monitoring").outcome,
+    "exception",
+  );
+  assert.equal(r.openCount, 2);
+  assert.throws(() => reviewReport(demoOrder, { ...report, technician: "" }));
+});

@@ -1,41 +1,96 @@
-# CarryForward — field operations
+# CarryForward
 
-From work order to a clear handoff. A separate product from PRISM and Perihelion Operations.
+**Know the job. Bring back the evidence.**
 
-## Run locally
+CarryForward helps field technicians arrive prepared and bring back a useful service report. It starts with the work order, keeps the requested work in view, and checks the closeout for missing observations and unfinished commitments.
 
-Node 24; no installation required.
+## Why I’m building it
 
-```sh
-node server.mjs
-node --test
+I run Perihelion Solar. When a technician finishes a service visit, the office needs more than “it’s fixed.” We need to know what they found, what they did, what they measured, and what we still owe the customer.
+
+Replacing an inverter, confirming production, restoring monitoring, and sending warranty paperwork are separate pieces of work. A good report keeps those distinctions clear. It also gives the technician a chance to fill in missing information while they’re still at the site.
+
+That’s the job I want CarryForward to do.
+
+— Andy Barrett
+
+## The field workflow
+
+1. **Get the briefing.** Review the customer, property, system, reported problem, previous notes, and assigned scope.
+2. **Record the visit.** Capture findings, work performed, dated observations, evidence references, and promises made to the customer.
+3. **Review the closeout.** See which assigned checks have supporting information and which need another answer or follow-up.
+4. **Hand it back.** Confirm the technician’s report and export it for Operations review. Unfinished work stays visible.
+
+```mermaid
+flowchart LR
+    A[Operations work order] --> B[Technician briefing]
+    B --> C[Field report and evidence]
+    C --> D[Closeout review]
+    D -->|Missing information| C
+    D --> E[Technician confirmation]
+    E --> F[Operations acceptance]
 ```
 
-Open http://127.0.0.1:4310. The server binds only to loopback.
+The current prototype uses file import and export. The diagram shows the intended responsibility of each step; it does not imply a live Operations connection.
 
-## Workflow
+## Try it locally
 
-1. Read a synthetic work-order briefing or import a bounded JSON work order using the downloadable sample format.
-2. Record work performed, observations, observation times, evidence references, new promises and a follow-up owner.
-3. Review missing evidence against each assigned check. Repair, production, monitoring and warranty remain separate obligations.
-4. Confirm the technician's report and download the work order and closeout together as JSON. Confirmation does not close open items or mark Operations acceptance.
+You need **Node.js 24**. There are no runtime dependencies to install.
 
-Drafts persist in browser-local storage. Confirmation is kept in memory until export; reload requires re-review and confirmation. Replacing an imported work order resets its draft after a browser confirmation. This demo supports text evidence references, not photo/audio upload or source-content verification. Browser storage failure is shown to the user.
+```sh
+git clone https://github.com/Andy-Barrett/carryforward.git
+cd carryforward
+npm run dev
+```
 
-## Current boundaries
+Open **http://127.0.0.1:4310/**. The server listens only on your computer.
 
-Synthetic data only. Deterministic completeness checks, not AI reasoning or technical safety verification. No live Operations reads/writes, provider calls, API keys, paid inference, PRISM changes or deployment. Meta calls remain disabled until hackathon credits are confirmed under the owner's instruction.
+Start with the included fictional work order. Record a repair, leave production or monitoring unverified, and open the closeout review. Confirming the report keeps those open items in the exported handoff.
 
-The import/export formats are prototype-owned and are not yet an accepted Perihelion Operations API contract. No production schema changes are required for this milestone.
+To use another port:
 
-## Next milestones
+```sh
+PORT=4311 npm run dev
+```
 
-- Meta-backed, cited comparison of raw work-order scope against technician notes, photos and voice transcripts.
-- Ask focused follow-up questions while the technician is onsite; distinguish field testimony from independently checked evidence.
-- Add evidence uploads with explicit custody and retention rules.
-- Evaluate on withheld synthetic work orders, including partial completion, stale monitoring and unsupported closure.
-- Map an approved Operations export to this contract; add authenticated integration only after reviewing the existing Operations boundary.
+Run the checks:
 
-## Hackathon disclosure
+```sh
+npm test
+```
 
-Created October 30, 2026. Initial business-transition prototype was pivoted to field operations following owner direction. Fictional cases were informed by operational lessons; no Perihelion customer records or application source were copied. Document actual model use and results before submission. The repository remains private until an authorized public-release review.
+## What works today
+
+- Work-order briefing with site and system identifiers, assigned scope, and source history.
+- Validated JSON work-order import and a downloadable sample.
+- Field reporting against individual work-order checks.
+- Browser-local draft storage.
+- Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
+- Technician confirmation and JSON closeout export, including unresolved items.
+- Responsive layouts checked at desktop and phone widths.
+
+An evidence reference is a technician’s reference to a record; the app does not yet inspect the referenced file. “Documented” means the required information is present, not that the underlying work has been independently verified.
+
+## What comes next
+
+The next milestone is phone capture: photos, voice notes, and reliable local drafts. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
+
+An installable web app for iPhone and Android is the delivery target. Live inference, media capture, offline attachments, and authenticated Operations integration are not implemented yet.
+
+See the [build plan](docs/BUILD_PLAN.md) and [technical notes](docs/ARCHITECTURE.md).
+
+## Integration direction
+
+CarryForward is a separate product from Perihelion Operations and PRISM. A system that assigns work should be able to supply a work order and receive a structured closeout. The originating system retains responsibility for accepting the report and completing its own work order.
+
+The current JSON format is a prototype contract, not an existing Operations API. You can download its sample from the app. Authenticated endpoints, delivery notifications, and retry handling are planned.
+
+## Development status and data
+
+This is an early prototype built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. It began as a business-transition concept and was narrowed to field operations before model integration. The current review is deterministic; no AI inference runs in this version.
+
+The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
+
+Drafts stay in this browser. Confirmation stays in memory until export, so download the closeout to retain it. Reloading requires another review and confirmation.
+
+For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).

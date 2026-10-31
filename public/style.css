@@ -420,3 +420,136 @@ input[type="file"] {
     letter-spacing: -2px;
   }
 }
+.warn {
+  background: #fcf8ef;
+  border: 1px solid #b58c42;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #6b5320;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.photogrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+.photo-card {
+  background: #fafbf7;
+  border: 1px solid #d7dfd0;
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 0;
+}
+.photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #eef1e8;
+}
+.photo-card.excluded {
+  opacity: 0.85;
+  border-style: dashed;
+}
+.photo-meta {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #617268;
+  line-height: 1.5;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.photo-meta strong {
+  color: #19352f;
+}
+.photo-card button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #b7c5b7;
+  background: transparent;
+  border-radius: 6px;
+  color: inherit;
+}
+.photo-missing {
+  border: 1px dashed #b7c5b7;
+  border-radius: 6px;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #718071;
+}
+.jobs {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.jobs li {
+  background: #fafbf7;
+  border: 1px solid #d7dfd0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.jobs button {
+  min-height: 44px;
+  border: 1px solid #b7c5b7;
+  background: transparent;
+  border-radius: 6px;
+  padding: 10px 16px;
+  color: inherit;
+  margin-top: 8px;
+}
+.linked {
+  font-size: 13px;
+  color: #617268;
+  line-height: 1.7;
+  margin-top: 10px;
+}
+.linked button {
+  border: 1px solid #b7c5b7;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-height: 44px;
+  color: inherit;
+}
+.import {
+  margin-top: 16px;
+}
+@media (max-width: 850px) {
+  .photogrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+@media (max-width: 650px) {
+  .photogrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conversation { padding: 0; list-style: none; max-height: 24rem; overflow: auto; }
+.conversation li { padding: 1rem; margin-bottom: .7rem; border-left: 3px solid var(--accent, #e5ad55); background: #ffffff08; }
+.conversation p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.interview-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.interview textarea, .interview select { width: 100%; }
+.interview details li { padding: .5rem 0; }
+.interview button { min-height: 44px; padding: 10px 14px; border: 1px solid #b7c5b7; border-radius: 7px; background: #f4f6f0; color: #244b3b; }
+.interview button.primary { background: #244b3b; color: white; }
+.interview button:disabled { opacity: .55; cursor: default; }
+.interview small { overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .steps button { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .interview-actions button { flex: 1 1 130px; }
+}
+.operations { margin-top: 2rem; }
+.operations button { min-height:44px; padding:10px 14px; border:1px solid #b7c5b7; border-radius:7px; background:#f4f6f0; color:#244b3b; }
+.operations article { overflow-wrap:anywhere; }

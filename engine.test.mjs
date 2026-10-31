@@ -75,3 +75,14 @@ test("not-applicable explanations are exceptions, never verified work", () => {
   assert.equal(r.openCount, 2);
   assert.throws(() => reviewReport(demoOrder, { ...report, technician: "" }));
 });
+
+test('interview-supported claims appear as reported while deferred and pending obligations remain open', () => {
+  const report={technician:'Synthetic tech',summary:'Replaced inverter.',recordedAt:'2026-10-30T10:00:00-05:00',entries:{},followupOwner:'Operations'};
+  const interview={jobId:demoOrder.id,branches:[{id:'repair',state:'supported',sourceIds:['t1'],reason:'Technician reports inverter replacement.'},{id:'production',state:'deferred',sourceIds:['t1'],reason:'Measurement deferred to Operations.',owner:'Operations'},{id:'monitoring',state:'supported',sourceIds:['t1'],reason:'Technician reports monitoring connected at 10:20.'},{id:'warranty',state:'needs_verification',sourceIds:['t1'],reason:'Registration is unfinished.',owner:'Operations'}]};
+  const result=reviewReport(demoOrder,report,interview);
+  assert.equal(result.reportedCount,2);assert.equal(result.openCount,2);
+  assert.equal(result.findings.find(f=>f.id==='repair').outcome,'reported');
+  assert.deepEqual(result.findings.find(f=>f.id==='repair').sourceIds,['t1']);
+  assert.equal(result.findings.find(f=>f.id==='warranty').followupOwner,'Operations');
+  assert.throws(()=>reviewReport(demoOrder,report,{...interview,jobId:'other'}),/another job/);
+});

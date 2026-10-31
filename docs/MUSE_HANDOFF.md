@@ -4,7 +4,7 @@
 
 Read AGENTS.md, README.md, docs/CONTEST_SCOPE.md, docs/ARCHITECTURE.md, and docs/BUILD_PLAN.md. Run `npm test` and inspect `git status --short`. Preserve unrelated edits. The existing form is a prototype; the agreed target is a natural interview and branching evidence-review loop.
 
-This handoff does not itself authorize inference, paid usage, provider access, a push, or deployment. The owner must confirm credits and a bounded coding run before starting Muse. Use a non-contributor model route. Keep default sandbox/approval protections enabled.
+October 30 owner session approval permits up to $10 aggregate inference across coding and product testing. Meta billing shows $150 free credits; the owner approved the associated product-improvement notice for CarryForward code and synthetic examples only. Use the supplied guarded API route; do not call a provider directly, read credentials, reset the budget, buy subscriptions, push, or deploy. Use the standard non-contributor model ID, while recognizing free-credit terms may still permit product improvement. Keep default sandbox/approval protections enabled.
 
 ## First task: a durable job session with photos
 

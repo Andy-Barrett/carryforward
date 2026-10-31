@@ -31,7 +31,7 @@ flowchart LR
     E --> F[Operations acceptance]
 ```
 
-The current prototype uses file import and export. The diagram shows the intended responsibility of each step; it does not imply a live Operations connection.
+The prototype supports file import/export and a local Operations simulator with HTTP assignment, evidence, handoff, receipt and acceptance endpoints. It has no live Perihelion connection.
 
 ## Try it locally
 
@@ -64,9 +64,10 @@ npm test
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
-- Browser-local draft storage.
+- Browser-local draft storage and saved text interviews with correction history and explicit deferrals.
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
+- Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
 - Responsive layouts checked at desktop and phone widths.
 
 An evidence reference is a technician’s reference to a record; the app does not yet inspect the referenced file. “Documented” means the required information is present, not that the underlying work has been independently verified.
@@ -75,12 +76,14 @@ An evidence reference is a technician’s reference to a record; the app does no
 
 The target is a short conversation, not a longer form. A technician should be able to describe the visit naturally, refer to a job photo, correct a detail, and get one useful follow-up. Each new answer or image updates the investigation. Unresolved work stays visible without asking the same question over and over.
 
-Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. That behavior is planned; the current interface is the working form-based foundation.
+Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. Adaptive style and AI interpretation are planned. The text interview now preserves answers, corrections and deferrals, with explicitly labeled work-order questions and a form for final review.
 
 
-The next milestone is phone capture: photos, voice notes, and reliable local drafts. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
+Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice capture and the adaptive interview are next. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
 
-An installable web app for iPhone and Android is the delivery target. Live inference, media capture, offline attachments, and authenticated Operations integration are not implemented yet.
+An installable web app for iPhone and Android is the delivery target. Audio capture, offline startup, and production Operations integration are not implemented yet. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; this is not a completed conversational voice experience.
+
+See [guarded Meta development](docs/META_DEVELOPMENT.md) for the local inference boundary.
 
 See the [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md), and [technical notes](docs/ARCHITECTURE.md). Developers should start with [AGENTS.md](AGENTS.md) and the [Muse Code handoff](docs/MUSE_HANDOFF.md).
 
@@ -88,14 +91,14 @@ See the [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md)
 
 CarryForward is a separate product from Perihelion Operations and PRISM. A system that assigns work should be able to supply a work order and receive a structured closeout. The originating system retains responsibility for accepting the report and completing its own work order.
 
-The current JSON format is a prototype contract, not an existing Operations API. You can download its sample from the app. Authenticated endpoints, delivery notifications, and retry handling are planned.
+The JSON format is a prototype contract, not an adopted Perihelion API. The local simulator now accepts assignments and evidence, exposes an Operations inbox, and records receipt and acceptance separately. Retries are idempotent for identical assignments and queued report revisions; changed scope or stale revisions are rejected. See [local Operations API](docs/OPERATIONS_API.md).
 
 ## Development status and data
 
-This is an early prototype built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. It began as a business-transition concept and was narrowed to field operations before model integration. The current review is deterministic; no AI inference runs in this version.
+This is an early prototype built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. It began as a business-transition concept and was narrowed to field operations before model integration. The base completeness review is deterministic. Optional server-side Meta review now interprets saved synthetic testimony and selected job images through the approved aggregate spending guard; it remains disabled unless explicitly configured.
 
 The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
 
-Drafts stay in this browser. Confirmation stays in memory until export, so download the closeout to retain it. Reloading requires another review and confirmation.
+Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. This is a prototype: storage conflicts, quota recovery and physical phone behavior still need validation.
 
 For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).

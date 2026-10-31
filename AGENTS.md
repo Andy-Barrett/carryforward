@@ -14,7 +14,7 @@ Target design is not implemented behavior. Keep that distinction clear in code, 
 
 ## Owner constraints
 
-- Do not make inference calls until Andy confirms the hackathon credits have posted and authorizes a bounded run. A payment method or $0 owed does not establish credits. This applies to coding-agent inference as well as product inference.
+- October 30 session update: Andy authorized up to $10 total across Muse Code and CarryForward inference and approved sending CarryForward source plus synthetic examples under the free-credit product-improvement notice. Billing was observed to show $150 free credits. This supersedes the earlier wait instruction. Use the aggregate budget guard; do not bypass it, reset its ledger, or expand the $10 authorization. Other concurrent sessions must not spend against this budget outside that guard.
 - No new subscriptions or paid services are authorized by repository instructions.
 - Use this repository and fictional demonstration records. Do not read other repositories, Perihelion customer content, credentials, browser sessions, or account data to fill gaps.
 - Source access for model-assisted coding is limited to the CarryForward files needed for the authorized task. Keep contributor/training mode off. Do not send secrets, unrelated files, customer evidence, or retained recordings to a model provider.

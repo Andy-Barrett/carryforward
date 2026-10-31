@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-CarryForward is a small browser application served by Node’s built-in HTTP server. It has no framework, build step, database, or runtime package dependencies.
+CarryForward is a small browser application served by Node’s built-in HTTP server. It has no framework, build step or runtime package dependencies. The local Operations simulator uses Node 24 built-in SQLite under ignored `.local/`; browser drafts and attachments remain in IndexedDB.
 
 | File               | Responsibility                                                                        |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -23,7 +23,8 @@ The validator requires nonempty bounded text, limits the number of work items an
 Each check records a status, observation or explanation, evidence reference, and observation time.
 
 - **Documented:** an observed result includes a note, reference, and parseable observation time. This is a completeness check, not independent verification of the source.
-- **Open:** the check is pending or unverified, or required supporting information is missing.
+- **Reported:** a source-linked interview branch supports a narrow technician claim. It is not independently verified or silently upgraded to a measured observation.
+- **Open:** the check is pending, deferred, contradicted or unverified, or required supporting information is missing.
 - **Exception:** the technician supplies a not-applicable explanation. Operations still needs to review it.
 
 The engine reviews each check independently. A documented repair cannot resolve production, monitoring, or warranty checks by implication. New customer commitments and open work require a follow-up owner; an absent owner is flagged.
@@ -32,13 +33,13 @@ Technician confirmation records a name and timestamp. It is an attestation withi
 
 ## Persistence and export
 
-The work order and field draft use the browser’s `localStorage` under `carryforward.field.v1`. They are local to this browser and origin. Confirmation is memory-only until downloaded. Importing another work order asks before replacing the current draft.
+The work order and field draft use the browser’s `localStorage` under `carryforward.field.v1`. They are local to this browser and origin. IndexedDB holds job sessions, ordered events, photo blobs and revision-bound confirmations. Importing another work order preserves saved jobs. Active text drafts also use localStorage; multi-tab conflict resolution remains unimplemented.
 
 The JSON download contains the validated work order and `carryforward.closeout.v1` report together. It preserves original history, individual findings, open items, new commitments, and confirmation when present. No report is sent to a provider or Operations.
 
 ## Limits to address before operational use
 
-There is no user authentication, multi-user access control, attachment storage, durable server persistence, live inference, or delivery queue. Browser storage is not a backup. Observation times entered through the form use the device’s local time without an explicit timezone in the current export; cross-system use needs an offset-aware timestamp contract.
+There is no production user authentication or multi-user access control. The loopback simulator persists admitted records and evidence bytes, and guarded Meta review is opt-in. Source receipt and acceptance are local simulation, not a live Perihelion connection. Browser storage is not a backup. Observation times entered through the form use the device’s local time without an explicit timezone in the current export; cross-system use needs an offset-aware timestamp contract.
 
 Phone-width layout checks have been performed. Physical-device camera, microphone, installability, and offline behavior still need implementation and testing.
 
@@ -144,3 +145,7 @@ A photo or recording moves through `saving_local`, `saved_local`, `pending_uploa
 Network loss does not prevent local capture of an already opened job. AI review requires admitted evidence and connectivity. A service worker can cache the app shell later; do not claim fresh offline startup before it is tested. Browser eviction, permission refusal, storage exhaustion, recorder interruption, and unsupported image formats need visible recovery paths.
 
 Photo inspection and final confirmation are parked activities. No continuous driving interview, background camera collection, full-library access, or glasses dependency.
+
+## Investigation implementation checkpoint
+
+`public/investigation.js` and `investigation.test.mjs` implement the pure job projection and interpretation validator described above. Source admission, correction history, excluded support, explicit human deferral/reopening, bounded follow-ups and branch/evidence-based question suppression are implemented in the module. The UI still uses the original completeness engine; no live provider or interview integration is claimed. Test model names explicitly identify synthetic fixtures.

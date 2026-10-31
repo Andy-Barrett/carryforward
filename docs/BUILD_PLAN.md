@@ -20,11 +20,15 @@ Done means two photos survive reload and job switching; actual bytes/hashes surv
 
 ## Slice 2 — investigation state and contracts
 
+Implementation checkpoint: `public/investigation.js` now provides a pure event reducer and bounded model-output validator, with synthetic unit cases covering correction history, stale output, excluded/cross-job sources, human deferral, duplicate events and equivalent-question suppression. It is not yet connected to the interview or a live model.
+
 Implement a pure reducer over ordered job events, with branch states and evidence ownership checks. Add a schema validator for proposed model observations, branch changes, and one next question. Use explicitly labeled fixtures, not live calls.
 
 Done means a new photo can open one branch while another stays resolved; a correction supersedes the relevant claim without erasing its source; stale interpretation results cannot overwrite newer turns; equivalent questions are suppressed; unknown/deferred outcomes remain visible. Add malformed-output and duplicate-event cases.
 
 ## Slice 3 — simple interview capture
+
+Partial implementation: a job-local text interview is connected to the event reducer. Answers, explicit corrections, already-answered responses and owner-assigned deferrals persist through reload. Question selection is deterministic and labeled; voice capture, interruption recovery and live interpretation remain unimplemented.
 
 Add voice recording, explicit capture state, playback, interruption recovery, and a text fallback. The UI offers one question at a time plus already answered, can't verify, and follow up later. Use explicit direct/conversational style settings; keep requirements identical. No inferred personality profile or cross-job memory.
 
@@ -32,11 +36,15 @@ Done means a technician can narrate, add a photo mid-session, correct a statemen
 
 ## Slice 4 — Meta-backed review
 
+Partial implementation: guarded `muse-spark-1.3` review of saved testimony and selected job images is connected to the interview. Model proposals and references are validated; actual usage/latency is retained in the event projection. Four live development calls exercised incomplete testimony, prompt refinement, an unreadable image and a more complete narrative. This is not a held-out evaluation or a finished voice path.
+
 Only after credits, billing route, data handling and a numeric coding/product budget are confirmed. Verify actual model capabilities and implement bounded transcription/image/text adapters. Capture model IDs, usage, latency, validation failures, and conservative cost reservations. Do not assume a paid coding subscription is covered by API promotional credits.
 
 Done means complete, incomplete and contradictory evidence produce different actual model findings/questions; sources remain inspectable; an ambiguous photo candidate requires confirmation; a provider error leaves a recoverable draft; a budget failure prevents a call. Resolve spoken-output support early; retain readable text if speech synthesis is unavailable.
 
 ## Slice 5 — API loop and Operations simulator
+
+Implementation checkpoint: persistent SQLite simulator, canonical job IDs, evidence-byte admission, append-only interview admission, server-derived handoff packets and SHA-256 revisions, separate confirmation, queue, source receipt and acceptance endpoints, and browser source-inbox controls. Unit tests cover restart persistence and stale/cross-job rejection; a real HTTP test covers assignment through receipt and revision-specific acceptance. Live Perihelion integration remains excluded.
 
 Implement the bounded versioned interface in the architecture notes. Use a clearly labeled local source-system simulator. Preserve source IDs, reject cross-job access, deduplicate admission/delivery, and separate delivery receipt, technician confirmation, and source-system acceptance.
 

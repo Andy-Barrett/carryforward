@@ -98,14 +98,14 @@ export function validateOrder(input) {
     throw new Error("Check IDs and history IDs must be unique.");
   return order;
 }
-export function reviewReport(order, report) {
+export function reviewReport(order, report, interview = null) {
   const checked = validateOrder(order);
   const technician = clean(report.technician, "Technician", 200);
   const summary = clean(report.summary, "Visit summary");
   const recordedAt = clean(report.recordedAt, "Recorded time", 100);
   if (!Number.isFinite(Date.parse(recordedAt)))
     throw new Error("Recorded time must be a valid timestamp.");
-  const findings = checked.checks.map((check) => {
+  let findings = checked.checks.map((check) => {
     const entry = report.entries?.[check.id] || {};
     const status = statuses.includes(entry.status)
       ? entry.status
@@ -151,6 +151,30 @@ export function reviewReport(order, report) {
                 : "",
     };
   });
+  if (interview) {
+    if (interview.jobId !== checked.id || !Array.isArray(interview.branches)) throw new Error("Interview belongs to another job or is malformed.");
+    findings = findings.map(finding => {
+      const branch = interview.branches.find(b => b.id === finding.id);
+      if (!branch || (!branch.sourceIds?.length && branch.state === "open")) return finding;
+      const sources = Array.isArray(branch.sourceIds) ? [...branch.sourceIds] : [];
+      if (branch.state === "supported" && sources.length) {
+        return { ...finding,
+          outcome: finding.outcome === "documented" ? "documented" : "reported",
+          note: finding.note || branch.reason,
+          reference: finding.reference || sources.join(", "),
+          sourceIds: sources,
+          reason: "Source-linked technician claim recorded through the interview; not independent verification.",
+          question: "Technician reviews this reported claim in the final handoff.",
+        };
+      }
+      if (["needs_verification", "contradicted", "deferred"].includes(branch.state)) {
+        return { ...finding, outcome: "open", note: finding.note || branch.reason,
+          sourceIds: sources, followupOwner: branch.owner || null,
+          reason: branch.reason, question: finding.question };
+      }
+      return finding;
+    });
+  }
   const promises =
     typeof report.promises === "string"
       ? report.promises.trim().slice(0, 4000)
@@ -169,11 +193,15 @@ export function reviewReport(order, report) {
     promises,
     followupOwner,
     findings,
+    ...(interview ? {interview} : {}),
+    reportedCount: findings.filter(f => f.outcome === "reported").length,
     openCount: findings.filter((f) => f.outcome === "open").length,
     needsOwner:
       (findings.some((f) => f.outcome === "open") || !!promises) &&
       !followupOwner,
-    reviewMode: "Deterministic evidence-completeness review; no AI inference",
+    reviewMode: interview?.interpretations?.length
+      ? "Deterministic completeness review with source-linked Meta interpretations attached; technician review required"
+      : "Deterministic evidence-completeness review; no AI inference",
     operationsStatus: "Awaiting Operations acceptance",
   };
 }

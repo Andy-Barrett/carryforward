@@ -20,3 +20,7 @@ Record the device, OS, browser version, origin, source commit, exact actions, ob
 | Connectivity loss | With an already opened job, lose connectivity, capture locally, reload only if supported, reconnect and inspect actual saved state. After an initial successful app-shell installation, test a fresh offline reopening as well. Desktop server-stopped reopening is verified; phone behavior is not. |
 
 The interruption handlers request stop on hidden-page, pagehide and track-ended events. The normal recorder stop handler attempts to save the original. An OS killing or suspending the page can prevent asynchronous storage from completing; this is not a guaranteed background-save mechanism. Do not claim it is until the actual device evidence supports that claim.
+
+## Private Wi-Fi access prepared October 31
+
+See [private phone HTTPS](PRIVATE_PHONE_HTTPS.md) for the owner-authorized paired local-network trial. Its encrypted access checks and 83 passing local tests do not complete any physical-device row above. Capture-only mode keeps inference disabled and uses a separate simulator database. Certificate installation/trust and actual iPhone actions remain owner steps until observed.

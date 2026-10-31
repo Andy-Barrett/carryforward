@@ -1,15 +1,20 @@
 import http from "node:http";
+import https from "node:https";
+import {phoneConfig, phoneGate} from "./lib/private-phone.mjs";
 import { readFile, mkdir, chmod } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { transcribeWithMeta } from "./lib/meta-transcribe.mjs";
 import { reviewWithMeta } from "./lib/meta-review.mjs";
 import { OperationsStore } from "./lib/operations.mjs";
 import { handleOperations } from "./lib/operations-api.mjs";
+const phone = await phoneConfig();
 await mkdir(new URL(".local/", import.meta.url), {recursive:true, mode:0o700});
 const operationsPath = process.env.CARRYFORWARD_OPERATIONS_DB || new URL(".local/operations.sqlite",import.meta.url).pathname;
 const operations = new OperationsStore(operationsPath);
 await chmod(operationsPath,0o600);
 const localSession = randomBytes(32).toString("hex");
+const gate = phone ? phoneGate({code:phone.pairingCode,session:localSession}) : null;
+const sessionCookie = `carryforward_session=${localSession}; HttpOnly; SameSite=Strict; Path=/${phone ? "; Secure" : ""}`;
 const enabled = process.env.CARRYFORWARD_META_ENABLED === "1";
 const guardToken = enabled ? (await readFile(process.env.CARRYFORWARD_GUARD_TOKEN_FILE, "utf8")).trim() : null;
 let reviewBusy = false;
@@ -44,16 +49,18 @@ const files = {
   "/jobstore.js": ["jobstore.js", "text/javascript"],
   "/style.css": ["style.css", "text/css"],
 };
-const server = http.createServer(async (req, res) => {
+const handler = async (req, res) => {
   const host = req.headers.host || "";
-  if (!/^127\.0\.0\.1:\d+$/.test(host)) { res.writeHead(421); res.end("Use loopback address"); return; }
+  if (!(phone ? host === `${phone.host}:${server.address().port}` : /^127\.0\.0\.1:\d+$/.test(host))) { res.writeHead(421); res.end("Use the configured application address"); return; }
   const path = new URL(req.url, "http://localhost").pathname;
+  const origin = `${phone ? "https" : "http"}://${host}`;
+  if (gate && await gate(req,res,path,origin)) return;
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
-  if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===`http://${host}`) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
-  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", `carryforward_session=${localSession}; HttpOnly; SameSite=Strict; Path=/`); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled}); }
+  if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===origin) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
+  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled}); }
   if (["/api/review", "/api/transcribe"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
-    if (req.headers.origin !== `http://${host}` || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});
+    if (req.headers.origin !== origin || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});
     if (req.headers["content-type"] !== "application/json") return json(415,{error:"Expected application/json"});
     if (reviewBusy) return json(429,{error:"Another review is running. Saved work is unchanged."});
     reviewBusy = true;
@@ -84,7 +91,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       "Content-Type": file[1],
       "Cache-Control": "no-store",
-      ...(path === "/" ? {"Set-Cookie": `carryforward_session=${localSession}; HttpOnly; SameSite=Strict; Path=/`} : {}),
+      ...(path === "/" ? {"Set-Cookie": sessionCookie} : {}),
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy":
         "default-src 'self'; img-src 'self' blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
@@ -94,7 +101,8 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(500);
     res.end("Unable to load application");
   }
-});
-server.listen(Number(process.env.PORT || 4310), "127.0.0.1", () =>
-  console.log(`CarryForward: http://127.0.0.1:${server.address().port}`),
+};
+const server = phone ? https.createServer({key:phone.key,cert:phone.cert,minVersion:"TLSv1.2"},handler) : http.createServer(handler);
+server.listen(Number(process.env.PORT || 4310), phone?.host || "127.0.0.1", () =>
+  console.log(`CarryForward: ${phone ? "https" : "http"}://${phone?.host || "127.0.0.1"}:${server.address().port}`),
 );

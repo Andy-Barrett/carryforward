@@ -268,6 +268,7 @@ export function buildMediaBundle({ order, review, photos, audio = [], exportedAt
       mime: p.mime,
       bytes: p.size,
       sha256: p.sha256,
+      ...(p.derivedFrom ? {derivedFrom:p.derivedFrom,sourceSha256:p.sourceSha256,derivation:p.derivation} : {}),
       captureTime: p.captureTime,
       fileModifiedTime: p.fileModifiedTime || "unknown",
       addedAt: p.addedAt,
@@ -345,7 +346,7 @@ export function selectReviewPhotos(photos,selectedIds,jobId){
  const ids=[...selectedIds];
  if(ids.length>PHOTO_REVIEW_LIMITS.maxPhotos||new Set(ids).size!==ids.length)throw Error('Select at most three different job photos.');
  const selected=ids.map(id=>{const photo=photos.find(p=>p.id===id);
-  if(!photo||photo.jobId!==jobId||photo.status==='excluded'||!photo.blob)throw Error('Selected photo is unavailable, excluded or belongs to another job.');
+  if(!photo||photo.jobId!==jobId||photo.status==='excluded'||!photo.blob||(photo.derivedFrom&&!photos.some(p=>p.id===photo.derivedFrom&&p.jobId===jobId&&p.status!=='excluded'&&p.sha256===photo.sourceSha256)))throw Error('Selected photo is unavailable, excluded or belongs to another job.');
   return photo;});
  if(selected.reduce((n,p)=>n+p.blob.size,0)>PHOTO_REVIEW_LIMITS.maxBytes)throw Error('Selected originals exceed the 1 MB AI review limit. Choose fewer or smaller photos; originals remain saved.');
  return selected;

@@ -19,10 +19,10 @@ export function createInvestigation(order) {
     observations: [], branches, questions: [], activeQuestion: null, followups: 0, interpretations: [], communicationStyle: 'direct', reviewRequired: false };
 }
 
-function requireSources(state, ids) {
+function requireSources(state, ids, {forExclusion=false}={}) {
   if (!Array.isArray(ids) || !ids.length || ids.length > 20 || new Set(ids).size !== ids.length) fail('Expected bounded source references');
   for (const id of ids) {
-    if (!Object.hasOwn(state.sources, id) || state.sources[id].excluded || state.sources[id].supersededBy) fail('Unknown, excluded or wrong-job source');
+    if (!Object.hasOwn(state.sources, id) || state.sources[id].excluded || state.sources[id].supersededBy || (!forExclusion && state.sources[id].derivedFrom && state.sources[state.sources[id].derivedFrom]?.excluded)) fail('Unknown, excluded or wrong-job source');
   }
 }
 
@@ -82,6 +82,10 @@ export function reduceInvestigation(previous, event) {
     if (!text(p.id, 200) || Object.hasOwn(state.sources, p.id) || !['photo', 'audio', 'testimony', 'measurement'].includes(p.kind)) fail('Invalid source');
     if (['photo','audio'].includes(p.kind) && !/^[a-f0-9]{64}$/.test(p.sha256 || '')) fail('Photo hash required');
     if (!['photo','audio'].includes(p.kind) && !text(p.text)) fail('Source text required');
+    if(p.derivedFrom){
+      const parent=state.sources[p.derivedFrom];
+      if(p.kind!=='photo'||!parent||parent.kind!=='photo'||parent.excluded||parent.derivedFrom||p.sourceSha256!==parent.sha256||p.derivation?.method!=='browser-review-copy.v1'||![p.derivation.width,p.derivation.height].every(n=>Number.isInteger(n)&&n>0&&n<=1600)||![0.85,0.7,0.55].includes(p.derivation.quality))fail('Invalid review-copy origin');
+    }
     Object.defineProperty(state.sources, p.id, { enumerable: true, writable: true, configurable: true, value: { ...clone(p), jobId: state.jobId, excluded: false } });
     state.inputRevision++;
     state.reviewRequired = true;
@@ -125,10 +129,10 @@ export function reduceInvestigation(previous, event) {
     state.inputRevision++;
     state.reviewRequired = true;
   } else if (event.type === 'source.excluded') {
-    requireSources(state, [p.id]);
+    requireSources(state, [p.id], {forExclusion:true});
     state.sources[p.id].excluded = true;
     for (const b of Object.values(state.branches)) {
-      if (b.sourceIds.includes(p.id)) {
+      if (b.sourceIds.some(id=>id===p.id||state.sources[id]?.derivedFrom===p.id)) {
         b.state = b.state === 'deferred' ? 'deferred' : 'needs_verification';
         b.reason = 'Supporting source excluded by technician.';
         b.epoch++;
@@ -214,6 +218,7 @@ export function interviewHandoff(state) {
       ? 'Technician testimony with source-linked model interpretations; not independent verification'
       : 'Technician testimony with deterministic question selection; no model interpretation',
     turns: Object.values(state.sources).filter(s => s.kind === 'testimony'),
+    photoSources: Object.values(state.sources).filter(s => s.kind === 'photo'),
     audioSources: Object.values(state.sources).filter(s => s.kind === 'audio'),
     branches: Object.values(state.branches),
     observations: state.observations,

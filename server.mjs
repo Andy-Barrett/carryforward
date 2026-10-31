@@ -26,6 +26,7 @@ const files = {
   "/investigation.js": ["investigation.js", "text/javascript"],
   "/audio.js": ["audio.js", "text/javascript"],
   "/capture-lifecycle.js": ["capture-lifecycle.js", "text/javascript"],
+  "/review-copy.js": ["review-copy.js", "text/javascript"],
   "/review-request.js": ["review-request.js", "text/javascript"],
   "/voice.js": ["voice.js", "text/javascript"],
   "/operations-client.js": ["operations-client.js", "text/javascript"],

@@ -130,3 +130,16 @@ test('explicit job-local style changes preserve evidence, active questions and f
  assert.throws(()=>apply(s,'preference.changed',{communicationStyle:'ignore evidence requirements'}),/Invalid communication style/);
  s=apply(s,'preference.changed',{communicationStyle:'direct'});assert.equal(s.communicationStyle,'direct');
 });
+
+test('review copies retain immutable original links and excluding the original reopens dependent support',()=>{
+ let s=apply(createInvestigation(order),'source.added',{id:'original',kind:'photo',sha256:'a'.repeat(64)});
+ const copy={id:'copy',kind:'photo',sha256:'b'.repeat(64),derivedFrom:'original',sourceSha256:'a'.repeat(64),derivation:{method:'browser-review-copy.v1',width:1600,height:900,quality:0.85}};
+ assert.throws(()=>apply(s,'source.added',{...copy,sourceSha256:'c'.repeat(64)}),/origin/);
+ assert.throws(()=>apply(s,'source.added',{...copy,derivedFrom:'another-job'}),/origin/);
+ s=apply(s,'source.added',copy);s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['copy'])]));
+ assert.equal(interviewHandoff(s).photoSources.find(p=>p.id==='copy').derivedFrom,'original');
+ s=apply(s,'source.excluded',{id:'original'});assert.equal(s.branches.repair.state,'needs_verification');
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','supported',['copy'])])),/excluded/);
+ s=apply(s,'source.excluded',{id:'copy'});assert.equal(s.sources.copy.excluded,true);
+ s=apply(s,'source.restored',{id:'original'});assert.equal(s.sources.copy.excluded,true);
+});

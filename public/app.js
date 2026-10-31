@@ -565,7 +565,7 @@ function render() {
         if (order.id !== jobId) return;
         await refreshJobData();
         review=null;save();await persistSession();
-        notify("Original audio saved. Review and confirm the current evidence before handoff.");
+        notify("Evidence saved. Review and confirm the current evidence before handoff.");
       },
       onSaved: packet => {
         if (order.id !== jobId) return;

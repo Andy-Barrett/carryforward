@@ -66,3 +66,15 @@ test('voice originals, normalized WAV and reviewed words survive the API handoff
  const other=s.assign({...demoOrder,id:'OTHER-VOICE-JOB'});assert.throws(()=>s.audio(other.jobId,'voice1'),/not available/);
  }finally{s.close();}
 });
+
+test('original and reduced review bytes and their source relation survive the Operations handoff',()=>{
+ const s=new OperationsStore();try{
+ const {jobId}=s.assign(demoOrder);const bytes=[Buffer.from('fictional original'),Buffer.from('fictional reduced pixels')];
+ const photos=bytes.map((b,i)=>({id:i?'copy':'original',jobId:demoOrder.id,name:i?'Review copy':'Original',mime:'image/png',sha256:createHash('sha256').update(b).digest('hex'),dataBase64:b.toString('base64')}));
+ s.admitEvidence(jobId,photos);
+ const events=photos.map((p,i)=>({id:'source-'+i,jobId:demoOrder.id,seq:i+1,type:'source.added',payload:{id:p.id,kind:'photo',sha256:p.sha256,...(i?{derivedFrom:'original',sourceSha256:photos[0].sha256,derivation:{method:'browser-review-copy.v1',width:800,height:400,quality:0.85}}:{})}}));
+ s.syncEvents(jobId,events);const report={...baseReport,interviewRevision:2,evidenceRevision:evidenceRevision(photos)};const packet=s.candidate(jobId,report,2);
+ assert.equal(packet.closeout.interview.photoSources.find(p=>p.id==='copy').sourceSha256,photos[0].sha256);
+ assert.deepEqual(Buffer.from(s.evidence(jobId,'original').bytes),bytes[0]);assert.deepEqual(Buffer.from(s.evidence(jobId,'copy').bytes),bytes[1]);
+ }finally{s.close();}
+});

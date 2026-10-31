@@ -39,5 +39,5 @@ test('real HTTP assignment, confirmed delivery, source receipt and acceptance re
   const changed=await call(path+'/closeout',{report:{...report,summary:'Correction: site visit postponed.'},eventRevision:0});assert.notEqual(changed.data.revision,packet.revision);
   assert.equal((await call(path+'/acceptances',{revision:packet.revision})).status,400);
   assert.equal((await call(path)).data.accepted,false);
- }finally{child.kill('SIGTERM');await once(child,'exit');await rm(dir,{recursive:true,force:true});}
+ }finally{if(child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}await rm(dir,{recursive:true,force:true});}
 });

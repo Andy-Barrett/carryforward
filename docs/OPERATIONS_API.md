@@ -12,6 +12,8 @@ Routes:
 | GET | `/api/v1/jobs/:id` | Current assignment, event and closeout revisions and separate confirmation/queue/receipt/acceptance states |
 | POST | `/api/v1/jobs/:id/evidence` | Admit `{photos}` with exact original base64 bytes, MIME, ID, job association and SHA-256 |
 | GET | `/api/v1/jobs/:id/evidence/:evidenceId` | Retrieve included bytes for the correct job |
+| POST | `/api/v1/jobs/:id/audio` | Admit bounded original voice clips and optional normalized WAV derivatives with independent hashes |
+| GET | `/api/v1/jobs/:id/audio/:audioId` | Retrieve a job-owned original voice clip |
 | POST | `/api/v1/jobs/:id/turns` | Admit `{events}` as an append-only extension of the saved investigation history |
 | POST | `/api/v1/jobs/:id/closeout` | Recompute deterministic findings and attach the replayed interview, corrections, model provenance, unresolved branches and evidence manifest from `{report,eventRevision}` |
 | GET | `/api/v1/jobs/:id/closeout` | Retrieve the current immutable packet revision and technician confirmation |
@@ -25,6 +27,6 @@ Browser controls below the field workflow exercise these endpoints. “Receive c
 
 A server revision is SHA-256 over the complete packet: canonical job/assignment identity, report, event revision, replayed interview and evidence manifest. Changed report/event/evidence content clears prior confirmation, delivery and acceptance. Old acceptance requests are rejected. Accepted-with-follow-ups is an acceptance of a handoff, never a claim that all assigned physical work is complete. Technician names remain attestations, not authenticated identity/electronic signatures.
 
-Limits: 10 original JPEG/PNG/WebP files per job, 5 MB each, 25 MB combined; HTTP JSON cap 35 MB; 500 investigation events; 100 assignments. Evidence IDs cannot be reused across jobs or with different bytes. Hash and MIME/size validation is not malware scanning or proof of what an image depicts. The app's image picker also checks browser decodability. Database persistence and browser-local capture are distinct states.
+Limits: 10 original JPEG/PNG/WebP files per job, 5 MB each, 25 MB combined; HTTP JSON cap 35 MB; 500 investigation events; 100 assignments. Evidence IDs cannot be reused across jobs or with different bytes. Hash and MIME/size validation is not malware scanning or proof of what an image depicts. The app's image picker also checks browser decodability. Five original voice clips (5 MB each) plus bounded normalized transcription WAV derivatives may also be admitted; each clip is uploaded separately. Reviewed voice turns preserve raw transcription and model provenance in the ordered history. Database persistence and browser-local capture are distinct states.
 
 `CARRYFORWARD_OPERATIONS_DB` can point tests at an isolated temporary database. Tests create and remove only their own temporary fixtures. Production source revision updates, broader integrations, access control, durable retry queues and deployed hosting remain unimplemented.

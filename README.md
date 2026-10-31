@@ -64,7 +64,8 @@ npm test
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
-- Browser-local draft storage and saved text interviews with correction history and explicit deferrals.
+- Browser-local drafts, saved interviews, correction history and explicit deferrals.
+- Local voice clips and playback, optional guarded Meta transcription of synthetic clips, and reviewed transcript-to-answer links.
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
@@ -81,7 +82,7 @@ Communication style can be direct or conversational, with room for a little humo
 
 Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice capture and the adaptive interview are next. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
 
-An installable web app for iPhone and Android is the delivery target. Audio capture, offline startup, and production Operations integration are not implemented yet. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; this is not a completed conversational voice experience.
+An installable web app for iPhone and Android is the delivery target. Voice capture controls and uploaded-audio transcription are implemented; microphone capture/interruption on physical iPhone and Android devices is not verified. Offline startup and production Operations integration remain unimplemented. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; this is not a completed conversational voice experience.
 
 See [guarded Meta development](docs/META_DEVELOPMENT.md) for the local inference boundary.
 

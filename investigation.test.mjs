@@ -101,3 +101,9 @@ test('correction to another answer does not dismiss an unrelated active question
  s=apply(s,'turn.recorded',{id:'correction',text:'Replaced inverter.',branchId:'repair',supersedes:'initial'});
  assert.equal(s.activeQuestion.branchId,'monitoring');
 });
+test('new testimony requires reconciliation; deferral alone does not make a completed review stale',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));assert.equal(s.reviewRequired,false);
+ s=apply(s,'branch.response',{branchId:'monitoring',action:'later',reason:'Office follow-up'});assert.equal(s.reviewRequired,false);
+ s=apply(s,'turn.recorded',{id:'new-answer',text:'New observation changes the situation.'});assert.equal(s.reviewRequired,true);
+});

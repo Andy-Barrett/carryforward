@@ -169,7 +169,8 @@ function canonicalMaterial(report) {
   const entries = report.entries || {};
   const keys = Object.keys(entries).sort();
   return JSON.stringify({
-    reviewContract: "carryforward.review.v2",
+    reviewContract: "carryforward.review.v3",
+    evidenceRevision: report.evidenceRevision ?? null,
     interviewRevision: report.interviewRevision ?? null,
     technician: report.technician || "",
     summary: report.summary || "",
@@ -247,7 +248,7 @@ export async function hashBytes(u8) {
 // bytesIncluded:false and a reason. Anything else -- a missing blob for
 // an admitted photo, a cross-job photo, an over-limit bundle -- throws
 // instead of silently dropping data.
-export function buildMediaBundle({ order, review, photos, exportedAt }) {
+export function buildMediaBundle({ order, review, photos, audio = [], exportedAt }) {
   if (!order || !order.id) throw new Error("A work order is required to export.");
   const list = Array.isArray(photos) ? photos : [];
   for (const p of list) {
@@ -287,6 +288,17 @@ export function buildMediaBundle({ order, review, photos, exportedAt }) {
     totalBytes += p.size || 0;
     return entry;
   });
+  if (!Array.isArray(audio) || audio.length > 5) throw new Error("At most five voice clips per bundle.");
+  const audioData = {};
+  const audioManifest = audio.map(clip => {
+    if (clip.jobId !== order.id) throw new Error("Voice clip belongs to another job.");
+    if (typeof clip.dataBase64 !== "string" || !clip.dataBase64 || !Number.isFinite(clip.size) || clip.size <= 0 || clip.size > 5000000) throw new Error("Voice bytes are missing or exceed the clip limit; nothing exported.");
+    if (clip.wavSize && !clip.wavBase64) throw new Error("Transcription WAV bytes are missing; nothing exported.");
+    totalBytes += clip.size + (clip.wavSize || 0);
+    audioData[clip.id] = {original:clip.dataBase64,transcriptionWav:clip.wavBase64 || null};
+    const {dataBase64,wavBase64,...metadata}=clip;
+    return {...metadata,bytesIncluded:true};
+  });
   if (totalBytes > EVIDENCE_LIMITS.MAX_BUNDLE_BYTES) {
     throw new Error(
       `Photos total ${formatBytes(totalBytes)}; the bundle limit is ` +
@@ -307,6 +319,8 @@ export function buildMediaBundle({ order, review, photos, exportedAt }) {
       workOrder: order,
       closeout: review || null,
       manifest,
+      audioManifest,
+      audioData,
       photoCount: manifest.length,
       totalBytes,
       warnOverBytes: EVIDENCE_LIMITS.BUNDLE_WARN_BYTES,
@@ -315,4 +329,13 @@ export function buildMediaBundle({ order, review, photos, exportedAt }) {
     null,
     2,
   );
+}
+
+// All included/excluded originals belong to the handoff being confirmed.
+export function evidenceRevision(photos = [], audio = []) {
+  const records = [
+    ...photos.map(p => ["photo",p.id,p.sha256,p.status === "excluded" ? "excluded" : "included"]),
+    ...audio.map(c => ["audio",c.id,c.originalSha256 || c.sha256,c.wavSha256 || c.wav_sha256 || null]),
+  ].sort((a,b) => `${a[0]}:${a[1]}`.localeCompare(`${b[0]}:${b[1]}`));
+  return `media-${cyrb53(JSON.stringify(records))}`;
 }

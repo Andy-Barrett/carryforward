@@ -19,7 +19,7 @@
 // so the failure UI can be exercised without real quota pressure.
 
 export const DB_NAME = "carryforward.jobs.v1";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export const __faults = { nextWriteFails: false };
 
@@ -69,12 +69,19 @@ export function openDb() {
         const store = db.createObjectStore("events", { keyPath: "id" });
         store.createIndex("by-job", "jobId", { unique: false });
       }
+      if (!db.objectStoreNames.contains("audio")) {
+        const store = db.createObjectStore("audio", { keyPath: "id" });
+        store.createIndex("by-job", "jobId", {unique:false});
+      }
       if (!db.objectStoreNames.contains("photos")) {
         const store = db.createObjectStore("photos", { keyPath: "id" });
         store.createIndex("by-job", "jobId", { unique: false });
       }
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      req.result.onversionchange = () => req.result.close();
+      resolve(req.result);
+    };
     req.onerror = () =>
       reject(unavailable(req.error?.message || "open failed"));
     req.onblocked = () =>
@@ -132,6 +139,8 @@ export async function appendEvent(db, { id, jobId, type, at, payload }) {
   const tx = db.transaction("events", "readwrite");
   const store = tx.objectStore("events");
   const existing = await requestTo(store.index("by-job").getAll(jobId));
+  try { validateEventAppend(existing || [], {jobId,type,payload}); }
+  catch(error) { tx.abort(); throw error; }
   const seq = (existing || []).reduce((m, e) => Math.max(m, e.seq || 0), 0) + 1;
   store.add({
     id,
@@ -207,4 +216,34 @@ export async function setPhotoStatus(db, id, status) {
   if (!current) throw new Error(`Photo ${id} is not saved on this device.`);
   store.put({ ...current, status });
   await txDone(tx);
+}
+
+export async function listAudioByJob(db,jobId){
+  return requestTo(db.transaction("audio","readonly").objectStore("audio").index("by-job").getAll(jobId));
+}
+export async function saveAudio(db,record){
+  maybeFault("audio save");
+  const tx=db.transaction("audio","readwrite"),store=tx.objectStore("audio");
+  const existing=await requestTo(store.index("by-job").getAll(record.jobId));
+  if(existing.length>=5){tx.abort();throw new Error("This job already has five voice clips. Export them before recording another.");}
+  store.add(record);
+  await txDone(tx);
+}
+
+export async function updateAudioTranscription(db,id,jobId,transcription){
+  maybeFault("transcription save");
+  const tx=db.transaction("audio","readwrite"),store=tx.objectStore("audio");
+  const record=await requestTo(store.get(id));
+  if(!record||record.jobId!==jobId){tx.abort();throw new Error("Voice clip belongs to another job.");}
+  store.put({...record,transcription});await txDone(tx);
+}
+
+export function validateEventAppend(existing,{jobId,type,payload}) {
+  if (!type.startsWith("interview.")) return;
+  const logical=payload?.investigationEvent;
+  const history=existing.filter(e=>e.type.startsWith("interview."));
+  const prior=history.reduce((max,e)=>Math.max(max,e.payload?.investigationEvent?.seq || 0),0);
+  if (!logical || logical.jobId!==jobId || logical.type!==type.slice(10) || logical.seq!==prior+1) {
+    throw new Error("This job changed in another view. Reopen it before saving; your unsent answer is retained.");
+  }
 }

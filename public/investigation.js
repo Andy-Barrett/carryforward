@@ -16,7 +16,7 @@ export function createInvestigation(order) {
     }});
   }
   return { jobId: order.id, seq: 0, inputRevision: 0, events: [], sources: {},
-    observations: [], branches, questions: [], activeQuestion: null, followups: 0, interpretations: [] };
+    observations: [], branches, questions: [], activeQuestion: null, followups: 0, interpretations: [], reviewRequired: false };
 }
 
 function requireSources(state, ids) {
@@ -78,11 +78,12 @@ export function reduceInvestigation(previous, event) {
   const p = event.payload;
   if (!p || typeof p !== 'object' || Array.isArray(p)) fail('Invalid event payload');
   if (event.type === 'source.added') {
-    if (!text(p.id, 200) || Object.hasOwn(state.sources, p.id) || !['photo', 'testimony', 'measurement'].includes(p.kind)) fail('Invalid source');
-    if (p.kind === 'photo' && !/^[a-f0-9]{64}$/.test(p.sha256 || '')) fail('Photo hash required');
-    if (p.kind !== 'photo' && !text(p.text)) fail('Source text required');
+    if (!text(p.id, 200) || Object.hasOwn(state.sources, p.id) || !['photo', 'audio', 'testimony', 'measurement'].includes(p.kind)) fail('Invalid source');
+    if (['photo','audio'].includes(p.kind) && !/^[a-f0-9]{64}$/.test(p.sha256 || '')) fail('Photo hash required');
+    if (!['photo','audio'].includes(p.kind) && !text(p.text)) fail('Source text required');
     Object.defineProperty(state.sources, p.id, { enumerable: true, writable: true, configurable: true, value: { ...clone(p), jobId: state.jobId, excluded: false } });
     state.inputRevision++;
+    state.reviewRequired = true;
   } else if (event.type === 'question.offered') {
     if (!Object.hasOwn(state.branches, p.branchId) || !text(p.text, 500)) fail('Invalid interview question');
     const branch = state.branches[p.branchId];
@@ -94,6 +95,8 @@ export function reduceInvestigation(previous, event) {
   } else if (event.type === 'turn.recorded') {
     if (!text(p.id, 200) || Object.hasOwn(state.sources, p.id) || !text(p.text)) fail('Invalid interview answer');
     if (p.branchId && !Object.hasOwn(state.branches, p.branchId)) fail('Answer belongs to unknown branch');
+    if (p.audioId && (!Object.hasOwn(state.sources,p.audioId) || state.sources[p.audioId].kind !== 'audio' || state.sources[p.audioId].excluded)) fail('Unknown or wrong-job voice source');
+    if (p.transcription && (!p.audioId || typeof p.transcription.rawText !== 'string' || p.transcription.rawText.length > 4000 || p.transcription.reviewed !== true)) fail('Transcript must be reviewed before use');
     if (p.supersedes && (!Object.hasOwn(state.sources, p.supersedes) || state.sources[p.supersedes].kind !== 'testimony' || state.sources[p.supersedes].supersededBy)) fail('Invalid corrected answer');
     if (p.supersedes) {
       state.sources[p.supersedes].supersededBy = p.id;
@@ -108,6 +111,7 @@ export function reduceInvestigation(previous, event) {
     Object.defineProperty(state.sources, p.id, { enumerable: true, writable: true, configurable: true, value: {
       id: p.id, jobId: state.jobId, kind: 'testimony', text: p.text, at: event.at || null,
       branchId: p.branchId || null, supersedes: p.supersedes || null, excluded: false,
+      ...(p.audioId ? {audioId:p.audioId,transcription:clone(p.transcription || null)} : {}),
     }});
     if (p.branchId) {
       const branch = state.branches[p.branchId];
@@ -118,6 +122,7 @@ export function reduceInvestigation(previous, event) {
     }
     if (!p.supersedes || state.activeQuestion?.branchId === p.branchId) state.activeQuestion = null;
     state.inputRevision++;
+    state.reviewRequired = true;
   } else if (event.type === 'source.excluded') {
     requireSources(state, [p.id]);
     state.sources[p.id].excluded = true;
@@ -130,10 +135,12 @@ export function reduceInvestigation(previous, event) {
     }
     state.activeQuestion = null;
     state.inputRevision++;
+    state.reviewRequired = true;
   } else if (event.type === 'source.restored') {
     if (!Object.hasOwn(state.sources, p.id) || !state.sources[p.id].excluded) fail('Source is not excluded');
     state.sources[p.id].excluded = false;
     state.inputRevision++;
+    state.reviewRequired = true;
   } else if (event.type === 'branch.response') {
     const b = state.branches[p.branchId];
     if (!Object.hasOwn(state.branches, p.branchId) || !['cannot_verify', 'later', 'already_answered', 'reopen'].includes(p.action)) fail('Invalid branch response');
@@ -177,6 +184,7 @@ export function reduceInvestigation(previous, event) {
         state.followups++;
       }
     }
+    state.reviewRequired = false;
     state.interpretations.push({ model: proposal.model, inputRevision: proposal.baseRevision, eventId: event.id, provenance: proposal.provenance || null });
   } else fail('Unknown investigation event');
   state.seq = event.seq;
@@ -197,8 +205,10 @@ export function interviewHandoff(state) {
     version: 'carryforward.interview.v1', jobId: state.jobId, revision: state.seq, inputRevision: state.inputRevision,
     mode: 'Technician testimony with deterministic question selection; no model interpretation',
     turns: Object.values(state.sources).filter(s => s.kind === 'testimony'),
+    audioSources: Object.values(state.sources).filter(s => s.kind === 'audio'),
     branches: Object.values(state.branches),
     observations: state.observations,
+    reviewRequired: !!state.reviewRequired,
     interpretations: state.interpretations,
   };
 }

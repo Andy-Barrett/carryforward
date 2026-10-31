@@ -14,6 +14,7 @@ import {
   excludePhotoFromReport,
   confirmationToPersist,
   reportRevision,
+  evidenceRevision,
   buildMediaBundle,
   formatBytes,
   hashBytes,
@@ -127,6 +128,7 @@ async function refreshJobData() {
   sessionConfirmation = sess?.confirmation || null;
   interviewPacket = interviewHandoff(await loadInterview(db, order));
   report.interviewRevision = interviewPacket.revision;
+  report.evidenceRevision = evidenceRevision(photos, await jobStore.listAudioByJob(db,order.id));
   const alive = new Set(photos.map((p) => p.id));
   for (const [id, url] of thumbUrls) {
     if (!alive.has(id)) {
@@ -338,7 +340,15 @@ async function exportBundle() {
       const { blob, ...meta } = p;
       packed.push({ ...meta, dataBase64: base64Encode(buf) });
     }
-    const text = buildMediaBundle({ order, review, photos: packed });
+    const audio = [];
+    for (const clip of await jobStore.listAudioByJob(db,order.id)) {
+      const bytes = new Uint8Array(await clip.blob.arrayBuffer());
+      if (await hashBytes(bytes) !== clip.originalSha256) throw new Error(`Voice clip ${clip.id} failed its saved hash check.`);
+      const wav = clip.wavBlob ? new Uint8Array(await clip.wavBlob.arrayBuffer()) : null;
+      if (wav && await hashBytes(wav) !== clip.wavSha256) throw new Error(`Voice clip ${clip.id} transcription WAV failed its hash check.`);
+      audio.push({id:clip.id,jobId:clip.jobId,name:clip.name,mime:clip.mime,sha256:clip.originalSha256,size:bytes.length,dataBase64:base64Encode(bytes),wavSha256:clip.wavSha256,wavSize:wav?.length||0,wavBase64:wav?base64Encode(wav):null,transcription:clip.transcription,interrupted:clip.interrupted});
+    }
+    const text = buildMediaBundle({ order, review, photos: packed, audio });
     if (
       text.length > EVIDENCE_LIMITS.BUNDLE_WARN_BYTES &&
       !window.confirm(
@@ -351,7 +361,7 @@ async function exportBundle() {
     }
     download(`${order.id}-media-bundle.json`, text);
     notify(
-      `Media bundle exported: ${packed.length} photo(s), ` +
+      `Media bundle exported: ${packed.length} photo(s), ${audio.length} voice clip(s), ` +
         `${formatBytes(text.length)}. Excluded photos are listed without bytes.`,
     );
   } catch (err) {
@@ -396,6 +406,7 @@ function collect() {
     promises: d.get("promises"),
     recordedAt: new Date().toISOString(),
     interviewRevision: report.interviewRevision ?? null,
+    evidenceRevision: report.evidenceRevision ?? null,
     entries: Object.fromEntries(
       order.checks.map((c, i) => [
         c.id,
@@ -473,7 +484,7 @@ function render() {
     b.classList.toggle("active", b.dataset.step === step);
     b.setAttribute("aria-current", b.dataset.step === step ? "step" : "false");
   });
-  const heading = `<div class="sectionhead"><div><p class="eyebrow">${esc(order.id)} / ${esc(order.systemId)}</p><h2>${esc(order.customer)}</h2><p>${esc(order.property)}</p></div><span class="pill">${review?.confirmation ? "Technician confirmed" : "Awaiting Operations acceptance"}</span></div>`;
+  const heading = `<div class="sectionhead"><div><p class="eyebrow">${esc(order.id)} / ${esc(order.systemId)}</p><h2>${esc(order.customer)}</h2><p>${esc(order.property)}</p></div><span class="pill">${confirmationToPersist(review?.confirmation || sessionConfirmation,report) ? "Technician confirmed" : "Local draft"}</span></div>`;
   if (step === "briefing") {
     $("#view").innerHTML =
       `${heading}<div class="workspace"><section class="panel"><h2>The reported problem</h2><p>${esc(order.reportedIssue)}</p><h4>Assigned scope</h4><ul>${order.requestedWork.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><h4>Source history</h4>${order.history.map((h) => `<article class="source"><div>${esc(h.id)} / ${esc(h.date)}</div><blockquote>${esc(h.text)}</blockquote></article>`).join("")}<button id="begin" class="primary">Start visit interview →</button></section><aside><p class="eyebrow">COLLECT BEFORE YOU LEAVE</p><h2>Make the next step clear.</h2>${order.checks.map((c) => `<article class="source"><h4>${esc(c.label)}</h4><p>${esc(c.question)}</p></article>`).join("")}<h4>Jobs on this device</h4>${jobListHtml()}<label class="import">Import an exported work order (JSON)<input id="import" type="file" accept="application/json,.json"></label><p>Use the sample format. No live Operations access. Use synthetic records in this prototype. Importing keeps your other saved jobs.</p></aside></div>`;
@@ -550,6 +561,12 @@ function render() {
     const jobId = order.id;
     mountInterview(root, {
       db, order: structuredClone(order),
+      onEvidenceSaved: async () => {
+        if (order.id !== jobId) return;
+        await refreshJobData();
+        review=null;save();await persistSession();
+        notify("Original audio saved. Review and confirm the current evidence before handoff.");
+      },
       onSaved: packet => {
         if (order.id !== jobId) return;
         interviewPacket = packet;
@@ -686,7 +703,7 @@ function render() {
         const branch = interviewPacket?.jobId === order.id ? interviewPacket.branches.find(b => b.id === f.id) : null;
         const interviewContext = branch ? `<p>Interview: ${esc(branch.state)}${branch.owner ? ` · Owner: ${esc(branch.owner)}` : ""}. ${esc(branch.reason)}</p>` : "";
         return `<article class="source ${f.outcome === "open" ? "gap" : ""}"><div>${esc(f.outcome.toUpperCase())} / ${esc(f.id)}</div><h3>${esc(f.label)}</h3><p>${esc(f.note || "No observation supplied.")}</p>${f.reference ? `<p>Reference: ${esc(f.reference)}<br>Observed: ${esc(f.observedAt || "Not supplied")}</p>` : ""}${ids.length ? `<p>Local photos: ${ids.map((id) => esc(id)).join(", ")}</p>` : ""}<p>${esc(f.reason || f.question)}</p>${interviewContext}</article>`;
-      }).join("")}<button id="edit">Return to field report</button></section><aside><p class="eyebrow">HANDOFF TO OPERATIONS</p><h2>${review.openCount ? "Keep the gaps visible." : "Ready for human review."}</h2><p><strong>Technician:</strong> ${esc(review.technician)}</p><p>${esc(review.summary)}</p><h4>Customer commitments</h4><p>${esc(review.promises || "No new promises recorded; confirm this with the technician.")}</p><h4>Follow-up owner</h4><p>${esc(review.followupOwner || "Not assigned")}${review.needsOwner ? " — assign an owner for open work or commitments." : ""}</p><p>Technician confirmation preserves open items. It does not mark the Operations work order complete.${conf ? ` Confirmed revision ${esc(conf.reportRevision)}.` : ""}</p><button id="confirm" class="primary" ${conf ? "disabled" : ""}>${conf ? "Technician confirmed" : "Confirm as " + esc(review.technician)}</button><button id="export">Download closeout JSON ↓</button><button id="bundle">Download media bundle ↓</button><p>These downloads send nothing to Operations. Use the local simulator below for API delivery. The media bundle embeds this job's saved photos with a manifest and hashes.</p></aside></div>`;
+      }).join("")}<button id="edit">Return to field report</button></section><aside><p class="eyebrow">HANDOFF TO OPERATIONS</p><h2>${review.openCount ? "Keep the gaps visible." : "Ready for human review."}</h2><p><strong>Technician:</strong> ${esc(review.technician)}</p><p>${esc(review.summary)}</p><h4>Customer commitments</h4><p>${esc(review.promises || "No new promises recorded; confirm this with the technician.")}</p><h4>Follow-up owner</h4><p>${esc(review.followupOwner || "Not assigned")}${review.needsOwner ? " — assign an owner for open work or commitments." : ""}</p><p>Technician confirmation preserves open items. It does not mark the Operations work order complete.${conf ? ` Confirmed revision ${esc(conf.reportRevision)}.` : ""}</p><button id="confirm" class="primary" ${conf ? "disabled" : ""}>${conf ? "Technician confirmed" : "Confirm as " + esc(review.technician)}</button><button id="export">Download closeout JSON ↓</button><button id="bundle">Download media bundle ↓</button><p>These downloads send nothing to Operations. Use the local simulator below for API delivery. The media bundle embeds this job's saved photos and voice originals with a manifest and hashes.</p></aside></div>`;
     $("#edit").onclick = () => {
       step = "capture";
       render();
@@ -765,7 +782,7 @@ mountOperations($("#operations-root"), {
     snapshot.report.interviewRevision = state.seq;
     const confirmation = confirmationToPersist(review?.confirmation || sessionConfirmation, snapshot.report);
     if (!confirmation) throw new Error("The current report has not been confirmed, or changed after confirmation.");
-    return {...snapshot,confirmation,events:state.events,photos:await jobStore.listPhotosByJob(db,snapshot.order.id)};
+    return {...snapshot,confirmation,events:state.events,photos:await jobStore.listPhotosByJob(db,snapshot.order.id),audio:await jobStore.listAudioByJob(db,snapshot.order.id)};
   },
   onDecision: message => notify(message),
   onAssignment: async (assigned) => {

@@ -157,6 +157,9 @@ export function reviewReport(order, report, interview = null) {
       const branch = interview.branches.find(b => b.id === finding.id);
       if (!branch || (!branch.sourceIds?.length && branch.state === "open")) return finding;
       const sources = Array.isArray(branch.sourceIds) ? [...branch.sourceIds] : [];
+      if (branch.state === "supported" && interview.reviewRequired) {
+        return {...finding,outcome:"open",note:finding.note || branch.reason,sourceIds:sources,reason:"New material evidence has not been reconciled with earlier model findings."};
+      }
       if (branch.state === "supported" && sources.length) {
         return { ...finding,
           outcome: finding.outcome === "documented" ? "documented" : "reported",

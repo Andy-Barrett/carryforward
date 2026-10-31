@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { OperationsStore } from './lib/operations.mjs';
 import { demoOrder } from './public/engine.js';
-import { reportRevision } from './public/evidence.js';
+import { reportRevision, evidenceRevision } from './public/evidence.js';
 const baseReport={technician:'Synthetic technician',summary:'Replaced inverter; registration remains with Operations.',recordedAt:'2026-10-30T15:20:00-05:00',followupOwner:'Operations',promises:'Office will send registration.',interviewRevision:0,entries:{repair:{status:'observed',note:'Replaced inverter',reference:'field-note-1',observedAt:'2026-10-30T15:00:00-05:00'},warranty:{status:'pending',note:'Operations owns registration'}}};
 const confirm=(store,id,packet,report=baseReport)=>store.confirm(id,{revision:packet.revision,reportRevision:reportRevision(report),name:report.technician,confirmedAt:'2026-10-30T16:00:00-05:00'});
 
@@ -36,7 +36,7 @@ test('evidence bytes, correction history, confirmation and acceptance survive re
  const {jobId}=s.assign(demoOrder);const bytes=Buffer.from('synthetic encoded-photo fixture'),sha256=createHash('sha256').update(bytes).digest('hex');
  const photo={id:'p1',jobId:demoOrder.id,mime:'image/png',sha256,dataBase64:bytes.toString('base64')};s.admitEvidence(jobId,[photo]);
  const events=[{id:'e1',jobId:demoOrder.id,seq:1,type:'turn.recorded',payload:{id:'t1',text:'Output 4.2 kW'}},{id:'e2',jobId:demoOrder.id,seq:2,type:'turn.recorded',payload:{id:'t2',text:'Correction: 2.4 kW',supersedes:'t1'}},{id:'e3',jobId:demoOrder.id,seq:3,type:'source.added',payload:{id:'p1',kind:'photo',sha256}}];
- s.syncEvents(jobId,events);const report={...baseReport,interviewRevision:3};const packet=s.candidate(jobId,report,3);confirm(s,jobId,packet,report);s.queue(jobId,packet.revision);s.receipt(jobId,packet.revision);s.accept(jobId,packet.revision);
+ s.syncEvents(jobId,events);const report={...baseReport,interviewRevision:3,evidenceRevision:evidenceRevision([photo])};const packet=s.candidate(jobId,report,3);confirm(s,jobId,packet,report);s.queue(jobId,packet.revision);s.receipt(jobId,packet.revision);s.accept(jobId,packet.revision);
  s.close();s=new OperationsStore(path);
  assert.equal(s.status(jobId).accepted,true);assert.deepEqual(Buffer.from(s.evidence(jobId,'p1').bytes),bytes);
  const read=s.closeout(jobId);assert.equal(read.closeout.interview.turns[0].supersededBy,'t2');assert.equal(read.confirmation.revision,packet.revision);assert.equal(read.evidence[0].sha256,sha256);
@@ -53,5 +53,16 @@ test('cross-job evidence and rewriting saved event history are refused',()=>{
  const event={id:'e1',jobId:demoOrder.id,seq:1,type:'turn.recorded',payload:{id:'t1',text:'Original claim'}};s.syncEvents(a.jobId,[event]);
  assert.throws(()=>s.syncEvents(a.jobId,[{...event,payload:{...event.payload,text:'Rewrite'}}]),/prefix/);
  assert.throws(()=>s.candidate(a.jobId,{...baseReport,interviewRevision:0},0),/Stale/);
+ }finally{s.close();}
+});
+
+test('voice originals, normalized WAV and reviewed words survive the API handoff',async()=>{
+ const {encodeMonoWav}=await import('./public/audio.js');const s=new OperationsStore();try{
+ const {jobId}=s.assign(demoOrder),bytes=Buffer.from(encodeMonoWav([new Float32Array(16000)],16000)),sha256=createHash('sha256').update(bytes).digest('hex');
+ const clip={id:'voice1',jobId:demoOrder.id,mime:'audio/wav',sha256,wavSha256:sha256,dataBase64:bytes.toString('base64'),wavBase64:bytes.toString('base64')};s.admitAudio(jobId,[clip]);
+ const events=[{id:'a1',jobId:demoOrder.id,seq:1,type:'source.added',payload:{id:'voice1',kind:'audio',sha256,wavSha256:sha256}},{id:'a2',jobId:demoOrder.id,seq:2,type:'turn.recorded',payload:{id:'answer1',text:'Corrected transcript',audioId:'voice1',transcription:{rawText:'Raw transcript',reviewed:true}}}];s.syncEvents(jobId,events);
+ const packet=s.candidate(jobId,{...baseReport,interviewRevision:2,evidenceRevision:evidenceRevision([],[clip])},2);
+ assert.equal(packet.audio[0].sha256,sha256);assert.equal(packet.closeout.interview.turns[0].transcription.rawText,'Raw transcript');assert.deepEqual(Buffer.from(s.audio(jobId,'voice1').bytes),bytes);
+ const other=s.assign({...demoOrder,id:'OTHER-VOICE-JOB'});assert.throws(()=>s.audio(other.jobId,'voice1'),/not available/);
  }finally{s.close();}
 });

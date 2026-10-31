@@ -553,3 +553,6 @@ input[type="file"] {
 .operations { margin-top: 2rem; }
 .operations button { min-height:44px; padding:10px 14px; border:1px solid #b7c5b7; border-radius:7px; background:#f4f6f0; color:#244b3b; }
 .operations article { overflow-wrap:anywhere; }
+.interview audio { display:block; width:100%; max-width:100%; margin: .75rem 0; }
+.interview .checkline { display:flex; align-items:flex-start; gap:.6rem; min-height:44px; }
+.interview .checkline input[type="checkbox"] { display:inline-block; flex:0 0 18px; width:18px; height:18px; padding:0; margin:0; }

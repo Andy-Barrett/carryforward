@@ -20,7 +20,7 @@ Done means two photos survive reload and job switching; actual bytes/hashes surv
 
 ## Slice 2 — investigation state and contracts
 
-Implementation checkpoint: `public/investigation.js` now provides a pure event reducer and bounded model-output validator, with synthetic unit cases covering correction history, stale output, excluded/cross-job sources, human deferral, duplicate events and equivalent-question suppression. It is not yet connected to the interview or a live model.
+Implementation checkpoint: `public/investigation.js` now provides a pure event reducer and bounded model-output validator, with synthetic unit cases covering correction history, stale output, excluded/cross-job sources, human deferral, duplicate events and equivalent-question suppression. It is connected to the saved interview and guarded Meta review; broader evaluation remains pending.
 
 Implement a pure reducer over ordered job events, with branch states and evidence ownership checks. Add a schema validator for proposed model observations, branch changes, and one next question. Use explicitly labeled fixtures, not live calls.
 
@@ -28,7 +28,7 @@ Done means a new photo can open one branch while another stays resolved; a corre
 
 ## Slice 3 — simple interview capture
 
-Partial implementation: a job-local text interview is connected to the event reducer. Answers, explicit corrections, already-answered responses and owner-assigned deferrals persist through reload. Question selection is deterministic and labeled; voice capture, interruption recovery and live interpretation remain unimplemented.
+Partial implementation: a job-local text interview is connected to the event reducer. Answers, explicit corrections, already-answered responses and owner-assigned deferrals persist through reload. Question selection has a labeled deterministic fallback plus guarded live Meta interpretation. Local recording controls, playback, synthetic audio transcription and reviewed transcript-to-answer links now exist. Uploaded WAV persistence and delivery were verified; microphone/interruption on physical devices remains unverified.
 
 Add voice recording, explicit capture state, playback, interruption recovery, and a text fallback. The UI offers one question at a time plus already answered, can't verify, and follow up later. Use explicit direct/conversational style settings; keep requirements identical. No inferred personality profile or cross-job memory.
 

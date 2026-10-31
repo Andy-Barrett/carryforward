@@ -189,3 +189,19 @@ test('new interview evidence invalidates a prior report confirmation', () => {
   const confirmation = { name: 'Synthetic tech', reportRevision: reportRevision(report) };
   assert.equal(confirmationToPersist(confirmation, {...report, interviewRevision: 2}), null);
 });
+
+test('media export includes original voice and transcription WAV; missing/cross-job clips fail',()=>{
+ const order={id:'job-1',systemId:'system1'},clip={id:'clip1',jobId:'job-1',mime:'audio/wav',sha256:'a'.repeat(64),size:3,dataBase64:'YWJj',wavSize:3,wavBase64:'YWJj'};
+ const bundle=JSON.parse(buildMediaBundle({order,review:null,photos:[],audio:[clip]}));
+ assert.equal(bundle.audioData.clip1.original,'YWJj');assert.equal(bundle.audioManifest[0].sha256,clip.sha256);assert.equal(bundle.totalBytes,6);
+ assert.throws(()=>buildMediaBundle({order,photos:[],audio:[{...clip,jobId:'other'}]}),/another job/);
+ assert.throws(()=>buildMediaBundle({order,photos:[],audio:[{...clip,wavBase64:null}]}),/WAV bytes/);
+});
+
+test('adding an unlinked voice/photo original invalidates confirmation of the evidence packet',async()=>{
+  const {evidenceRevision}=await import('./public/evidence.js');
+  const report={technician:'Synthetic tech',summary:'Field visit',entries:{},evidenceRevision:evidenceRevision()};
+  const confirmation={name:'Synthetic tech',reportRevision:reportRevision(report)};
+  const changed={...report,evidenceRevision:evidenceRevision([],[{id:'voice1',sha256:'a'.repeat(64)}])};
+  assert.equal(confirmationToPersist(confirmation,changed),null);
+});

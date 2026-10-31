@@ -1,6 +1,6 @@
 // App shell only. Never cache API responses, evidence or arbitrary requests.
-const CACHE='carryforward-shell-19caedf18284af7e';
-const SHELL=["/visit-brief.js", "/cloud-view.js", "/cloud-session.js", "/cloud-resources.js", "/job-context.js", "/cloud.css", "/", "/app-icon.svg", "/app.js", "/audio.js", "/capture-lifecycle.js", "/engine.js", "/evidence.js", "/interview.js", "/investigation.js", "/jobstore.js", "/manifest.webmanifest", "/observation-time.js", "/offline.js", "/operations-client.js", "/review-copy.js", "/review-request.js", "/style.css", "/voice.js"];
+const CACHE='carryforward-shell-d014f2eebe6343ae';
+const SHELL=["/cloud-dialogs.js", "/evidence-review.js", "/visit-brief.js", "/cloud-view.js", "/cloud-session.js", "/cloud-resources.js", "/job-context.js", "/cloud.css", "/", "/app-icon.svg", "/app.js", "/audio.js", "/capture-lifecycle.js", "/engine.js", "/evidence.js", "/interview.js", "/investigation.js", "/jobstore.js", "/manifest.webmanifest", "/observation-time.js", "/offline.js", "/operations-client.js", "/review-copy.js", "/review-request.js", "/style.css", "/voice.js"];
 const allowed=new Set(SHELL);
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);

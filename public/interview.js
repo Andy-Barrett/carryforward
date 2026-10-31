@@ -1,9 +1,9 @@
 import {makeReviewCopy} from './review-copy.js';
-import {requestReview} from './review-request.js';
+import {reviewEvidence} from './evidence-review.js';
 import { createInvestigation, reduceInvestigation, nextInterviewQuestion, interviewHandoff } from './investigation.js';
 import { listEvents, appendEvent, listPhotosByJob, getInterviewDraft, saveInterviewDraft, savePhotoWithEvent } from './jobstore.js';
 import { mountVoice } from './voice.js';
-import { newEventId, hashBytes, selectReviewPhotos } from './evidence.js';
+import { newEventId, selectReviewPhotos } from './evidence.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export async function loadInterview(db, order) {
@@ -76,29 +76,11 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
     if (q) await dispatch('question.offered', q);
   }
   async function metaReview() {
-    const stored = await listPhotosByJob(db, order.id);
-    const reviewPhotos=selectReviewPhotos(stored,selected,order.id);
-    for (const photo of stored) {
-      if (!Object.hasOwn(state.sources, photo.id) && photo.status !== 'excluded') {
-        await dispatch('source.added', {id:photo.id,kind:'photo',sha256:photo.sha256,name:photo.name,...(photo.derivedFrom?{derivedFrom:photo.derivedFrom,sourceSha256:photo.sourceSha256,derivation:photo.derivation}:{})});
-      } else if (state.sources[photo.id]) {
-        if (photo.status === 'excluded' && !state.sources[photo.id].excluded) await dispatch('source.excluded',{id:photo.id});
-        if (photo.status !== 'excluded' && state.sources[photo.id].excluded) await dispatch('source.restored',{id:photo.id});
-      }
-    }
-    const packed = [];
-    for (const photo of reviewPhotos) {
-      const bytes = new Uint8Array(await photo.blob.arrayBuffer());
-      if (await hashBytes(bytes) !== photo.sha256) throw new Error('Saved photo failed its hash check.');
-      let binary=''; for (let i=0;i<bytes.length;i+=8192) binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
-      packed.push({id:photo.id,jobId:order.id,mime:photo.mime,dataBase64:btoa(binary)});
-    }
-    const revision = state.seq;
-    const data = await requestReview('/api/review', {order,events:state.events,photos:packed});
-    const latest = await loadInterview(db, order);
-    if (latest.seq !== revision) throw new Error('The job changed during review. Stale result was not applied.');
-    await dispatch('interpretation.received',data.proposal);
+    await reviewEvidence({order,selected,readPhotos:()=>listPhotosByJob(db,order.id),
+      readState:async()=>state=await loadInterview(db,order),dispatch,
+      ensureCurrent:()=>{if(!root.isConnected)throw Error('This job view has closed.');}});
   }
+
   function draw() {
     releasePreviews();
     if(!root.isConnected)return;

@@ -1,9 +1,12 @@
 import { mountCloud } from './cloud-view.js';
+import {chooseCloudReview,prepareCloudHandoff} from './cloud-dialogs.js';
+import {reviewEvidence} from './evidence-review.js';
+import {makeReviewCopy} from './review-copy.js';
 import { createJobContext, routeJobCommand } from './job-context.js';
 import { resourcesForJob } from './cloud-resources.js';
 import { loadInterview } from './interview.js';
 import { reduceInvestigation, interviewHandoff } from './investigation.js';
-import { appendEvent, listPhotosByJob, listAudioByJob } from './jobstore.js';
+import { appendEvent, listPhotosByJob, listAudioByJob, savePhotoWithEvent } from './jobstore.js';
 import { newEventId, hashBytes } from './evidence.js';
 import { mountVoice } from './voice.js';
 
@@ -11,7 +14,7 @@ import { mountVoice } from './voice.js';
 // Source lookup is deterministic; it is never represented as model reasoning.
 export async function mountCloudSession(root, {
   db, order: suppliedOrder, onNavigate, onSaved, onEvidenceSaved,
-  onPhotoFiles, onReview, onGetPhotos,
+  onPhotoFiles, onPrepareHandoff, onGetReport, onGetPhotos,
 }) {
   if (!db || !root || !suppliedOrder?.id) throw new Error('A saved job is required before opening its conversation.');
   const order = structuredClone(suppliedOrder), jobId = order.id;
@@ -25,6 +28,7 @@ export async function mountCloudSession(root, {
   let state = await loadInterview(db, order), context = createJobContext(order);
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
   let callbackError = '';
+  let config = {metaEnabled:false,transcriptionEnabled:false};
   const photoUrls = new Map();
   const valid = () => alive && root.isConnected;
   const requireCurrent = () => { if (!valid()) throw new Error('This job view has closed. Reopen the job before continuing.'); };
@@ -125,6 +129,15 @@ export async function mountCloudSession(root, {
     requireIdle();
     stopSpeaking();
     if (step === 'sources') { await showSources(); return; }
+    if (step === 'review' && onPrepareHandoff) {
+      state=await loadInterview(db,order);requireCurrent();
+      const packet=interviewHandoff(state),revision=state.seq;
+      const prepared=await prepareCloudHandoff(root,{report:await onGetReport?.()||{},packet,unsent:!!draft.trim()});
+      requireIdle();if(!prepared)return;
+      const latest=await loadInterview(db,order);requireCurrent();
+      if(latest.seq!==revision)throw Error('The conversation changed. Reopen the handoff to review the latest answers.');
+      await onPrepareHandoff(prepared,{jobId});
+    }
     const executed = {id:draftId,text:draft};
     await onNavigate?.(step, { jobId });
     // A command may unmount this view before submit returns. Button navigation
@@ -224,9 +237,8 @@ export async function mountCloudSession(root, {
       return { handled: true };
     }
     if (/^(?:review|check) (?:the |latest )?(?:job )?evidence(?: with meta)?$/.test(normalized)) {
-      if (!onReview) throw new Error('Open the interview to review selected synthetic evidence with Meta.');
-      await navigate('interview', {executedCommand:true});
-      return { handled: true, response: 'Choose the synthetic evidence in the review controls, then request Meta review.', origin: 'Interface navigation' };
+      const result=await reviewLatest();
+      return {handled:true,...(result||{})};
     }
     // The assignment brief is available without loading any saved media.
     if (routeJobCommand(text,context).kind === 'briefing') { view.openBrief(); return {handled:true}; }
@@ -246,6 +258,42 @@ export async function mountCloudSession(root, {
       ...(result.kind === 'present' ? { evidence: evidence(result.resource) } : {}),
       ...(result.kind === 'unavailable' ? { evidence: null } : {}),
     };
+  }
+  async function reviewLatest() {
+    requireIdle();stopSpeaking();
+    const selection=await chooseCloudReview(root,{photos:await getPhotos(),enabled:config.metaEnabled===true,unsent:!!draft.trim(),prepareCopy:async id=>{
+      requireIdle();const stored=await getPhotos();
+      if(stored.length>=10)throw Error('This job has ten photos. Copies count toward the limit.');
+      const original=stored.find(photo=>photo.id===id);
+      if(!original)throw Error('Original photo is unavailable.');
+      if(stored.some(photo=>photo.derivedFrom===id&&photo.status!=='excluded'))throw Error('A review copy already exists. Select it in the review list.');
+      const copy=await makeReviewCopy(original);requireCurrent();
+      await savePhotoWithEvent(db,copy,{id:newEventId(),type:'evidence.added',payload:{photoId:copy.id,derivedFrom:copy.derivedFrom}});
+      await onEvidenceSaved?.({jobId});requireCurrent();return copy;
+    }});
+    requireIdle();if(!selection)return null;
+    saving=true;view.setActivity('reviewing');
+    try {
+      await reviewEvidence({order,selected:selection,readPhotos:getPhotos,
+        readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:requireCurrent});
+      await refreshContext();
+      const last=state.interpretations.at(-1),open=Object.values(state.branches).filter(b=>b.state!=='supported').length;
+      return {response:state.activeQuestion?.text||`Review saved. ${open} unresolved ${open===1?'item remains':'items remain'} for the handoff.`,
+        origin:`Model interpretation · ${last.model}`,
+        detail:`${last.provenance?.latencyMs||'?'} ms · ${last.provenance?.usage?.total_tokens||'?'} tokens. Reported claims remain distinct from verified observations.`};
+    } finally {saving=false;if(valid())view.setActivity('ready');}
+  }
+  async function respondQuestion(action,owner,expected) {
+    requireIdle();state=await loadInterview(db,order);requireCurrent();
+    if(!state.activeQuestion||state.activeQuestion.branchId!==expected?.branchId||state.inputRevision!==expected.inputRevision)throw Error('This question has changed. Refresh the conversation.');
+    const sources=Object.values(state.sources).filter(s=>s.kind==='testimony'&&!s.supersededBy).map(s=>s.id);
+    if(action!=='already_answered'&&!owner?.trim())throw Error('Name the person or team who will follow up.');
+    saving=true;
+    try {await dispatch('branch.response',{branchId:state.activeQuestion.branchId,action,owner:owner?.trim()||null,
+      reason:action==='already_answered'?'Technician points to saved answers; interpretation remains pending.':action==='later'?'Technician requested follow-up.':'Technician cannot verify this during the visit.',
+      ...(action==='already_answered'?{sourceIds:sources.slice(-20)}:{})});
+      return {response:action==='already_answered'?'Saved your reference to the earlier answers. This remains unverified until review.':`Kept open for ${owner.trim()}.`,origin:'Technician decision · saved locally'};
+    }finally{saving=false;}
   }
   function stopSpeaking() {
     if (speech) { speech.onend = null; speech.onerror = null; speech = null; }
@@ -271,7 +319,7 @@ export async function mountCloudSession(root, {
     order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief,
     onBriefViewed: () => { try { localStorage.setItem(briefKey,briefRevision); } catch { /* Viewing is not confirmation or work authorization. */ } },
     onGetState: async () => { const next = await loadInterview(db, order); requireCurrent(); state = next; return next; },
-    onDraftChange: saveDraft,
+    onDraftChange: saveDraft, onQuestionResponse:respondQuestion,
     onPhotoFiles: async files => {
       requireIdle();
       if (!onPhotoFiles) throw new Error('Open the field report to attach photos.');
@@ -281,10 +329,7 @@ export async function mountCloudSession(root, {
       return result;
     },
     onRefresh: async () => {
-      requireIdle();
-      if (!onReview) throw new Error('Open the interview to review selected synthetic evidence.');
-      await onReview({ jobId });
-      return { response: 'Use the explicit evidence selection and synthetic-data review controls.', origin: 'Interface navigation' };
+      return reviewLatest();
     },
     onTalk: async () => {
       requireIdle(); stopSpeaking(); voicePanel.open = true;
@@ -300,7 +345,7 @@ export async function mountCloudSession(root, {
   const voiceRoot = document.createElement('div');
   voicePanel.append(summary, voiceRoot); root.append(voicePanel);
   if (restored) view.setDraft?.(draft, { audio: draftAudio, focus: false });
-  let config = { transcriptionEnabled: false };
+
   try { config = await fetch('/api/config', { signal: AbortSignal.timeout(5000) }).then(response => response.json()); } catch { /* Capture stays local when offline. */ }
   if (valid()) {
     try {

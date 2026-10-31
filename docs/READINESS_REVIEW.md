@@ -26,3 +26,5 @@ CarryForward's local evidence-to-handoff loop is implemented. The full field-pro
 | Contest publication and demonstration | Tracked-source candidate independently extracted/tested; see `RELEASE_CANDIDATE.md`. No public release, hosted deployment or submission performed | Owner release decision pending |
 
 The immediate next acceptance work is a physical-device access path and the checks in `PHONE_VALIDATION.md`, followed by a short technician usability run using `evaluation/usability/README.md`. The prepared kit remains explicitly unrun; it is not participant evidence. Keep the natural interview/evidence loop as the product; additional framework work does not replace those checks. Do not claim completion or production readiness from this local review.
+
+The cloud loop now has an actual synthetic model-to-simulator acceptance exercise; see [October 31 receipt and limits](CLOUD_VISIT_LOOP.md). This does not replace the pending physical-phone and human usability rows.

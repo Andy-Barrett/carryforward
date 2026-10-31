@@ -509,7 +509,12 @@ function render() {
       db, order: structuredClone(order), onNavigate: target => { if(current()) navigateStep(target === "sources" ? "capture" : target); },
       onGetPhotos: async () => current() ? await jobStore.listPhotosByJob(db, jobId) : [],
       onPhotoFiles: async files => { if(current()) return await admitFiles(files); throw Error("This job view changed; no upload was started."); },
-      onReview: () => { if(current()) navigateStep("interview"); },
+      onGetReport: () => structuredClone(report),
+      onPrepareHandoff: async prepared => {
+        if(!current())throw Error("This job view has changed.");
+        Object.assign(report,prepared);review=null;
+        if(!save()||!await persistSession())throw Error("Handoff draft could not be safely saved. Keep this view open and retry.");
+      },
       onSaved: async packet => {
         if(!current()) return;
         interviewPacket = packet; report.interviewRevision = packet.revision; review = null;

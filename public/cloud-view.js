@@ -68,7 +68,7 @@ function originForQuestion(state) {
 export function mountCloud(root, {
   order, db, onNavigate, onSaveAnswer, onPhotoFiles, onRefresh, onGetState, onCommand,
   onTalk, onStopTalk, onStopSpeaking, onSpeak, onUpload, onDraftChange,
-  startWithBrief = true, onBriefViewed,
+  startWithBrief = true, onBriefViewed, onQuestionResponse,
 } = {}) {
   if (!root || !order?.id) throw new Error('A job and a mount point are required.');
   void db; // Persistence remains in the integration adapter.
@@ -114,7 +114,8 @@ export function mountCloud(root, {
   const hearButton = button('Read aloud', 'cf-text-action', 'volume');
   hearButton.hidden = typeof onSpeak !== 'function';
   responseActions.append(reviewButton, hearButton);
-  focus.append(eyebrow, responseText, context, provenance, briefPane, focalEvidence, responseActions);
+  const questionActions=el('div','cf-question-actions');
+  focus.append(eyebrow, responseText, context, provenance, briefPane, focalEvidence, questionActions, responseActions);
   main.append(presence, focus);
   const lower = el('div', 'cf-lower');
   const history = el('details', 'cf-history');
@@ -191,6 +192,7 @@ export function mountCloud(root, {
       else { control.setAttribute('aria-disabled', String(locked || activity === 'listening')); control.tabIndex = locked || activity === 'listening' ? -1 : 0; }
     }
     handoffButton.disabled = !onNavigate || locked || activity === 'listening';
+    for(const control of questionActions.querySelectorAll('button,input'))control.disabled=locked||activity==='listening'||(control.textContent==='Already answered'&&!Object.values(state?.sources||{}).some(s=>s.kind==='testimony'&&!s.supersededBy));
     input.readOnly = locked || activity === 'listening';
   }
   function openComposer({focusInput = true} = {}) {
@@ -265,6 +267,19 @@ export function mountCloud(root, {
     hearButton.replaceChildren(icon('volume'),el('span','',briefOpen?'Read the brief aloud':'Read aloud'));
     renderBrief();
     renderEvidence();
+    renderQuestionActions();
+  }
+  function renderQuestionActions() {
+    questionActions.replaceChildren();
+    if(briefOpen||evidence||!state?.activeQuestion||!onQuestionResponse)return;
+    if(response?.text&&response.text!==state.activeQuestion.text)questionActions.append(el('p','cf-pending-question',state.activeQuestion.text));
+    const label=el('label','','Follow-up owner'),owner=el('input');owner.maxLength=200;owner.placeholder='For example, Operations';label.append(owner);questionActions.append(label);
+    for(const [action,text] of [['cannot_verify',"Can't verify"],['later','Follow up later'],['already_answered','Already answered']]){
+      const control=button(text,'cf-text-action');control.disabled=busy||activity==='listening'||activity==='reviewing';
+      if(action==='already_answered'&&!Object.values(state.sources||{}).some(s=>s.kind==='testimony'&&!s.supersededBy))control.disabled=true;
+      control.onclick=()=>run(async()=>{const result=await onQuestionResponse(action,owner.value,{branchId:state.activeQuestion.branchId,inputRevision:state.inputRevision});if(!valid())return;setResponse(result.response,{origin:result.origin});await refresh();});
+      questionActions.append(control);
+    }
   }
   function setResponse(text, metadata = {}) {
     if (!valid()) return;
@@ -518,7 +533,7 @@ export function mountCloud(root, {
   reviewButton.onclick = () => run(async () => {
     const result = await onRefresh?.();
     if (!valid()) return;
-    if (result?.response) setResponse(result.response, {origin: result.origin, sourceIds: result.sourceIds});
+    if (result?.response) setResponse(result.response, {origin: result.origin, sourceIds: result.sourceIds,detail:result.detail});
     else clearResponse();
     await refresh();
   }, {review: true});

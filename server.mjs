@@ -26,6 +26,8 @@ const files = {
   "/manifest.webmanifest": ["manifest.webmanifest", "application/manifest+json"],
   "/app-icon.svg": ["app-icon.svg", "image/svg+xml"],
   "/app.js": ["app.js", "text/javascript"],
+  "/cloud-dialogs.js": ["cloud-dialogs.js", "text/javascript"],
+  "/evidence-review.js": ["evidence-review.js", "text/javascript"],
   "/cloud-view.js": ["cloud-view.js", "text/javascript"],
   "/cloud-session.js": ["cloud-session.js", "text/javascript"],
   "/cloud-resources.js": ["cloud-resources.js", "text/javascript"],

@@ -176,12 +176,36 @@
 .cf-job-history { padding: 17px 0; border-bottom: 1px solid #dce6d8; }
 .cf-cloud .cf-history-date { color: #7b8d79; font-size: 11px; margin: 4px 0 9px; }
 .cf-cloud .cf-dialog-note { font-size: 11px; line-height: 1.7; color: #758972; padding-top: 22px; }
+.cf-cloud.cf-has-brief .cf-stage { justify-content: flex-start; padding-top: 0; }
+.cf-has-brief .cf-presence { margin-bottom: 4px; transform: scale(.72); height: 118px; }
+.cf-cloud.cf-has-brief .cf-response { font-size: clamp(32px,4vw,49px); }
+.cf-cloud.cf-has-brief .cf-context { margin-top: 14px; max-width: 620px; font-size: 13px; }
+.cf-visit-brief { margin-top: 28px; text-align: left; }
+.cf-brief-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 34px; }
+.cf-brief-section { border-top: 1px solid #d6e2d8; padding-top: 14px; }
+.cf-cloud .cf-brief-section h2 { font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 9px; color: #4f7866; }
+.cf-cloud .cf-brief-section p { font-size: 13px; line-height: 1.65; }
+.cf-cloud .cf-brief-section .cf-brief-source { margin-top: 7px; font-size: 9px; line-height: 1.6; color: #738778; overflow-wrap: anywhere; }
+.cf-brief-note:not(:first-of-type) { margin-top: 14px !important; }
+.cf-brief-gap { border-top-color: #d6cfb3; }
+.cf-cloud .cf-brief-gap h2 { color: #856a3c; }
+.cf-brief-references { font-size: 11px; margin-top: 11px; color: #6b796a; }
+.cf-brief-references summary,.cf-brief-scope summary { cursor: pointer; min-height: 38px; display: list-item; padding: 8px 0; }
+.cf-cloud .cf-brief-references blockquote { border-left: 2px solid #d1c8ac; padding: 8px 12px; font-size: 12px; }
+.cf-brief-scope { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d6e2d8; font-size: 12px; }
+.cf-brief-scope ul { padding-left: 19px; line-height: 1.7; }
+.cf-cloud .cf-brief-history { font-size: 12px; line-height: 1.7; margin-top: 14px; }
+.cf-brief-scope .cf-brief-source { font-size: 9px; color: #738778; }
+.cf-brief-controls { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding: 22px 0 8px; }
 @media (min-width: 1400px) {
   .cf-stage { padding-top: 35px; padding-bottom: 45px; }
   .cf-presence { margin-bottom: 42px; }
   .cf-lower { padding-bottom: 27px; }
 }
 @media (max-width: 760px) {
+  .cf-brief-grid { grid-template-columns: 1fr; gap: 20px; }
+  .cf-cloud.cf-has-brief .cf-presence { height: 103px; margin-bottom: 0; }
+  .cf-cloud.cf-has-brief .cf-stage { padding-top: 0; }
   .cf-rail { min-height: 112px; padding: 18px 22px 12px; column-gap: 15px; row-gap: 12px; flex-wrap: wrap; }
   .cf-brand { font-size: 17px; }
   .cf-job-identity { margin-left: auto; padding-left: 0; border: 0; font-size: 11px; max-width: 48%; }

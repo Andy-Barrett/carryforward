@@ -62,6 +62,7 @@ npm test
 ## What works today
 
 - A cloud conversation as the main workspace, with on-demand job sources, PDF-page inspection and a hidden type fallback. See the [cloud interface](docs/CLOUD_INTERFACE.md) for command examples and current document/voice limits.
+- A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.

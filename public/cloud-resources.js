@@ -6,7 +6,7 @@ export function resourcesForJob(order, photos = []) {
     kind: 'document', title: `Work-order history ${item.id}`,
     revision: item.date, text: item.text,
   }));
-  if (order.id === 'DEMO-WO-1042' && order.systemId === 'DEMO-SYS-017') {
+  if (['DEMO-WO-1042','DEMO-WO-1043'].includes(order.id) && order.systemId === 'DEMO-SYS-017') {
     resources.push({id:'demo-visit-reference',jobId:order.id,systemId:order.systemId,kind:'document',
       title:'Fictional visit reference.pdf',revision:'DEMO-1',page:2,
       url:'/job-assets/visit-reference.pdf',imageUrl:'/job-assets/visit-reference-page-2.png',posterUrl:'/job-assets/visit-reference-page-2.png',
@@ -18,6 +18,11 @@ export function resourcesForJob(order, photos = []) {
       title:'Fictional handoff illustration',revision:'DEMO-1',url:'/job-assets/visit-demo.webm',
       text:'Three-second generated interface illustration. It contains no field footage or equipment procedure.'});
   }
+  if (order.id === 'DEMO-WO-1043' && order.systemId === 'DEMO-SYS-017') resources.push({
+    id:'DEMO-BRIEF-1043',jobId:order.id,systemId:order.systemId,kind:'document',
+    title:'Fictional pre-visit briefing packet.pdf',revision:'DEMO-1',page:1,
+    url:'/job-assets/pre-visit-brief-1043.pdf',posterUrl:'/job-assets/pre-visit-brief-1043-page-1.png',
+    text:'Fictional dispatch context for this visit. Includes system, issue, planning ideas, customer preferences, reported gate and missing approved safety/ladder references. Source context does not establish current field conditions or authorize work.'});
   for (const photo of photos.filter(p=>p.jobId===order.id&&p.status!=='excluded'&&p.blob)) {
     resources.push({id:photo.id,jobId:order.id,systemId:order.systemId,kind:'image',
       title:photo.name||photo.id,url:photo.previewUrl,

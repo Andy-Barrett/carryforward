@@ -1,4 +1,5 @@
 /* A conversation surface over the existing job record. No provider or storage writes live here. */
+import {buildVisitBrief,BRIEF_KIND_LABELS} from './visit-brief.js';
 const ACTIVITY = new Set(['ready', 'listening', 'reviewing', 'speaking']);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -67,12 +68,15 @@ function originForQuestion(state) {
 export function mountCloud(root, {
   order, db, onNavigate, onSaveAnswer, onPhotoFiles, onRefresh, onGetState, onCommand,
   onTalk, onStopTalk, onStopSpeaking, onSpeak, onUpload, onDraftChange,
+  startWithBrief = true, onBriefViewed,
 } = {}) {
   if (!root || !order?.id) throw new Error('A job and a mount point are required.');
   void db; // Persistence remains in the integration adapter.
   let alive = true, state = null, activity = 'ready', busy = false, refreshId = 0;
   let evidence = null, response = null, draft = '', pendingAudio = null, talkCleanup = null;
   let currentAction = 0, draftSave = Promise.resolve(), activeEvidenceDialog = null;
+  const visitBrief = buildVisitBrief(order);
+  let briefOpen = startWithBrief;
   const shell = el('section', 'cf-cloud');
   shell.dataset.activity = 'ready';
   shell.setAttribute('aria-label', 'CarryForward field conversation');
@@ -85,7 +89,7 @@ export function mountCloud(root, {
   jobIdentity.append(jobName);
   const actions = el('nav', 'cf-rail-actions');
   actions.setAttribute('aria-label', 'Current job');
-  const jobButton = button('The job', 'cf-small-action');
+  const jobButton = button('The brief', 'cf-small-action');
   const sourcesButton = button('Sources', 'cf-small-action', 'source');
   const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow');
   actions.append(jobButton, sourcesButton, handoffButton);
@@ -103,12 +107,14 @@ export function mountCloud(root, {
   const context = el('p', 'cf-context', 'Tell me what you found, what you did, and what still needs a hand.');
   const provenance = el('p', 'cf-provenance');
   const focalEvidence = el('div', 'cf-focal-evidence');
+  const briefPane = el('section','cf-visit-brief');
+  briefPane.setAttribute('aria-label','Pre-visit briefing');
   const responseActions = el('div', 'cf-response-actions');
   const reviewButton = button('Review latest evidence', 'cf-text-action', 'refresh');
   const hearButton = button('Read aloud', 'cf-text-action', 'volume');
   hearButton.hidden = typeof onSpeak !== 'function';
   responseActions.append(reviewButton, hearButton);
-  focus.append(eyebrow, responseText, context, provenance, focalEvidence, responseActions);
+  focus.append(eyebrow, responseText, context, provenance, briefPane, focalEvidence, responseActions);
   main.append(presence, focus);
   const lower = el('div', 'cf-lower');
   const history = el('details', 'cf-history');
@@ -196,23 +202,73 @@ export function mountCloud(root, {
     if (focusInput) input.focus();
   }
   function clearResponse() { response = null; }
+  function sourceCaption(note) {
+    const source = note.source;
+    return `${BRIEF_KIND_LABELS[note.kind]} · ${source.title} · ${source.id} · ${source.revision}${source.page ? ` · p. ${source.page}` : ''}`;
+  }
+  function renderBrief() {
+    briefPane.hidden = !briefOpen;
+    if (!briefOpen || briefPane.childElementCount) return;
+    const grid = el('div','cf-brief-grid');
+    for (const section of visitBrief.sections) {
+      const row = el('section',`cf-brief-section${section.needsContext?' cf-brief-gap':''}`);
+      row.append(el('h2','',section.title));
+      if (section.procedure) {
+        row.append(el('p','',section.missing));
+        if (section.notes.length) {
+          const refs = el('details','cf-brief-references');
+          refs.append(el('summary','','Supplied reference notes · not approved instructions'));
+          for (const note of section.notes) refs.append(el('blockquote','',note.text),el('p','cf-brief-source',sourceCaption(note)));
+          row.append(refs);
+        }
+      } else if (!section.notes.length) row.append(el('p','',section.missing));
+      else for (const note of section.notes) row.append(el('p','cf-brief-note',note.text),el('p','cf-brief-source',sourceCaption(note)));
+      grid.append(row);
+    }
+    const scope = el('details','cf-brief-scope');
+    scope.append(el('summary','','The assignment and what came before'));
+    const list = el('ul');
+    for (const item of visitBrief.scope) list.append(el('li','',item));
+    scope.append(list);
+    for (const record of visitBrief.history) scope.append(el('p','cf-brief-history',`${record.date} · ${record.text}`),el('p','cf-brief-source',`Original work-order history · ${record.id}`));
+    const controls = el('div','cf-brief-controls');
+    const begin = button('Continue to the visit','cf-send','arrow');
+    begin.onclick = () => {
+      if (busy || activity === 'listening' || activity === 'reviewing') return;
+      onStopSpeaking?.(); briefOpen = false; onBriefViewed?.(); clearResponse(); renderResponse();
+    };
+    const tools = button('Work order and job selection','cf-text-action','source');
+    tools.onclick = () => navigate('briefing');
+    controls.append(begin,tools);
+    briefPane.append(grid,scope,controls);
+  }
+  function openBrief() {
+    if (!valid()) return;
+    onStopSpeaking?.(); clearResponse(); evidence = null; briefOpen = true; renderResponse(); syncControls();
+    main.scrollIntoView({block:'start'});
+  }
   function renderResponse() {
     if (!valid()) return;
     const question = state?.activeQuestion;
-    eyebrow.textContent = evidence ? 'IN VIEW' : question ? 'ONE USEFUL NEXT STEP' : 'HERE WITH THE JOB';
-    responseText.textContent = response?.text || question?.text || 'Let’s bring this visit forward.';
+    shell.classList.toggle('cf-has-brief',briefOpen);
+    eyebrow.textContent = briefOpen ? 'BEFORE THE VISIT' : evidence ? 'IN VIEW' : question ? 'ONE USEFUL NEXT STEP' : 'HERE WITH THE JOB';
+    responseText.textContent = briefOpen ? 'Let’s arrive prepared.' : response?.text || question?.text || 'Let’s bring this visit forward.';
     responseText.classList.toggle('cf-response-short', !!evidence);
-    context.textContent = response ? (response.detail || '') : (question ? 'Answer in your own words. If you can’t verify it here, keep it open for the handoff.' : `You’re with ${order.customer || 'this job'}. Tell me what you found, what you did, and what still needs a hand.`);
+    context.textContent = briefOpen ? `${order.customer || 'This visit'} · ${order.property || order.id}. Here’s the context supplied for ${order.systemId}.` : response ? (response.detail || '') : (question ? 'Answer in your own words. If you can’t verify it here, keep it open for the handoff.' : `You’re with ${order.customer || 'this job'}. Tell me what you found, what you did, and what still needs a hand.`);
     context.hidden = !context.textContent;
     provenance.replaceChildren();
-    if (response?.origin) provenance.append(el('span', 'cf-origin-badge', response.origin));
+    if (briefOpen) provenance.append(el('span','cf-origin-badge',`Work-order briefing · ${order.id}`));
+    else if (response?.origin) provenance.append(el('span', 'cf-origin-badge', response.origin));
     else if (question) provenance.append(el('span', 'cf-origin-badge', originForQuestion(state)));
     else provenance.append(el('span', 'cf-origin-badge', `Work order · ${order.id}`));
-    if (response?.sourceIds?.length) provenance.append(el('span', 'cf-source-ids', response.sourceIds.join(' · ')));
+    if (!briefOpen && response?.sourceIds?.length) provenance.append(el('span', 'cf-source-ids', response.sourceIds.join(' · ')));
+    hearButton.replaceChildren(icon('volume'),el('span','',briefOpen?'Read the brief aloud':'Read aloud'));
+    renderBrief();
     renderEvidence();
   }
   function setResponse(text, metadata = {}) {
     if (!valid()) return;
+    briefOpen = false;
     response = {text: String(text || ''), origin: metadata.origin || 'Interface message', sourceIds: metadata.sourceIds || [], detail: metadata.detail};
     renderResponse();
   }
@@ -297,6 +353,7 @@ export function mountCloud(root, {
     return run(async () => {
       await draftSave;
       if (!valid()) return;
+      briefOpen = false;
       const result = await onCommand?.(message, {order, state, ...metadata});
       if (!valid()) return;
       if (result?.handled === true) {
@@ -396,6 +453,7 @@ export function mountCloud(root, {
   function showEvidence(item) {
     if (!valid()) return;
     if (item?.jobId && item.jobId !== order.id) { say('That source belongs to another job and cannot be shown here.', true); return; }
+    if (item) briefOpen = false;
     evidence = item ? {...item, excerpt: item.excerpt || item.text || '', sourceUrl: item.sourceUrl || item.sourceURL || ''} : null;
     renderResponse();
     syncControls();
@@ -444,28 +502,7 @@ export function mountCloud(root, {
     if (control) { control.setAttribute('aria-pressed', String(expanded)); control.replaceChildren(icon('expand'), el('span', '', expanded ? 'Fit to view' : 'Zoom in')); }
     return true;
   }
-  function openJob() {
-    if (!valid() || busy || activity === 'listening' || activity === 'reviewing') return;
-    const dialog = makeDialog('The job, in view.');
-    dialog.classList.add('cf-job-dialog');
-    dialog.append(el('p', 'cf-eyebrow', `${order.id} · ${order.systemId || 'System not supplied'}`), el('h3', 'cf-job-customer', order.customer), el('p', 'cf-job-property', order.property), el('h4', '', 'The reported problem'), el('p', '', order.reportedIssue));
-    const scope = el('ul', 'cf-job-scope');
-    for (const text of order.requestedWork || []) scope.append(el('li', '', text));
-    dialog.append(el('h4', '', 'What we came to do'), scope);
-    if (order.history?.length) {
-      dialog.append(el('h4', '', 'What came before'));
-      for (const record of order.history) {
-        const entry = el('article', 'cf-job-history');
-        entry.append(el('span', 'cf-origin-badge', `Work-order history · ${record.id}`), el('p', 'cf-history-date', record.date), el('p', '', record.text));
-        dialog.append(entry);
-      }
-    }
-    const workspace = button('Work order and job selection', 'cf-text-action', 'arrow');
-    workspace.onclick = () => { dialog.close(); navigate('briefing'); }; dialog.append(workspace);
-    dialog.append(el('p', 'cf-dialog-note', 'Source history and technician testimony remain separate. A reported repair does not establish production, monitoring, or completion of paperwork.'));
-    dialog.showModal();
-  }
-  jobButton.onclick = openJob;
+  jobButton.onclick = () => { if (!busy && activity !== 'listening' && activity !== 'reviewing') openBrief(); };
   function navigate(destination) {
     if (!valid() || busy || activity === 'listening' || activity === 'reviewing') return;
     try { Promise.resolve(onNavigate?.(destination)).catch(error => say(error.message || 'That view could not be opened.', true)); }
@@ -510,7 +547,7 @@ export function mountCloud(root, {
   };
   hearButton.onclick = async () => {
     if (activity === 'speaking') { await onStopSpeaking?.(); if (valid()) setActivity('ready'); return; }
-    try { await onSpeak?.(responseText.textContent, {onState: next => { if (valid()) setActivity(next); }, onError: error => { if (valid()) { setActivity('ready'); say(error?.message || String(error), true); } }}); }
+    try { await onSpeak?.(briefOpen ? visitBrief.spoken : responseText.textContent, {onState: next => { if (valid()) setActivity(next); }, onError: error => { if (valid()) { setActivity('ready'); say(error?.message || String(error), true); } }}); }
     catch (error) { if (valid()) { setActivity('ready'); say(error.message || 'Spoken output unavailable.', true); } }
   };
   syncControls();
@@ -524,6 +561,6 @@ export function mountCloud(root, {
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {refresh, submit, setActivity, setResponse, showEvidence, setDraft, zoomEvidence});
+  Object.assign(cleanup, {refresh, submit, setActivity, setResponse, showEvidence, setDraft, zoomEvidence, openBrief});
   return cleanup;
 }

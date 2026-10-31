@@ -1,7 +1,17 @@
 import {isOffsetObservationTime} from './observation-time.js';
+export const BRIEFING_SECTIONS = Object.freeze([
+  'system', 'problem', 'troubleshooting', 'customer', 'access', 'safety', 'ladder',
+]);
+export const BRIEFING_LIMITS = Object.freeze({
+  notesPerSection: 4, notesTotal: 20, noteId: 100, noteText: 1500,
+  sourceId: 100, sourceTitle: 200, sourceRevision: 100, sourcePage: 100000,
+});
+const demoBriefingSource = (page) => ({
+  id: 'DEMO-BRIEF-1043', title: 'Fictional pre-visit briefing packet', revision: 'DEMO-1', page,
+});
 export const demoOrder = {
   version: "carryforward.work-order.v1",
-  id: "DEMO-WO-1042",
+  id: "DEMO-WO-1043",
   customer: "Elena Brooks",
   property: "7 Meadow Court · fictional site",
   systemId: "DEMO-SYS-017",
@@ -25,6 +35,43 @@ export const demoOrder = {
       text: "Office promised a warranty registration update after the visit.",
     },
   ],
+  briefing: {
+    system: [{
+      id: 'demo-system', kind: 'context',
+      text: 'String-inverter solar system. Make, model and capacity are not supplied. Battery presence is unconfirmed.',
+      source: demoBriefingSource(1),
+    }],
+    problem: [{
+      id: 'demo-problem', kind: 'reported',
+      text: 'Intermittent production after an inverter fault; current cause and equipment status are unconfirmed.',
+      source: demoBriefingSource(1),
+    }],
+    troubleshooting: [{
+      id: 'demo-planning', kind: 'hypothesis',
+      text: 'Determine whether the reported concern is production, monitoring communication, or both. A cause is not established.',
+      source: demoBriefingSource(1),
+    }],
+    customer: [{
+      id: 'demo-contact-preference', kind: 'reported',
+      text: 'Customer requested a text before the visit and a call on arrival.',
+      source: demoBriefingSource(2),
+    }],
+    access: [{
+      id: 'demo-gate', kind: 'reported',
+      text: 'Closed driveway gate reported. Entry arrangements and permission are unconfirmed; confirm them with the office.',
+      source: demoBriefingSource(2),
+    }],
+    safety: [{
+      id: 'demo-safety-source-needed', kind: 'reference',
+      text: 'No applicable approved equipment or site-safety procedure is attached.',
+      source: demoBriefingSource(3),
+    }],
+    ladder: [{
+      id: 'demo-ladder-source-needed', kind: 'reference',
+      text: 'Ladder need, site conditions and an applicable approved ladder policy are not established.',
+      source: demoBriefingSource(3),
+    }],
+  },
   checks: [
     {
       id: "repair",
@@ -59,6 +106,50 @@ const clean = (v, label, max = 4000) => {
     );
   return v.trim();
 };
+function briefingObject(value, label, allowed) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object.`);
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) throw new Error(`${label} contains unsupported field ${key}; imported briefing notes cannot supply approval flags.`);
+  }
+}
+export function validateBriefing(input) {
+  briefingObject(input, 'Briefing', BRIEFING_SECTIONS);
+  const result = {}, ids = new Set();
+  let total = 0;
+  for (const section of BRIEFING_SECTIONS) {
+    if (!Object.hasOwn(input, section)) continue;
+    const notes = input[section];
+    if (!Array.isArray(notes) || notes.length > BRIEFING_LIMITS.notesPerSection) {
+      throw new Error(`Briefing ${section} must contain at most ${BRIEFING_LIMITS.notesPerSection} notes.`);
+    }
+    total += notes.length;
+    if (total > BRIEFING_LIMITS.notesTotal) throw new Error(`Briefing must contain at most ${BRIEFING_LIMITS.notesTotal} notes in total.`);
+    result[section] = notes.map(note => {
+      briefingObject(note, `Briefing ${section} note`, ['id', 'text', 'kind', 'source']);
+      const id = clean(note.id, 'Briefing note ID', BRIEFING_LIMITS.noteId);
+      if (ids.has(id)) throw new Error('Briefing note IDs must be unique across sections.');
+      ids.add(id);
+      if (!['reported', 'context', 'hypothesis', 'reference'].includes(note.kind)) throw new Error('Unsupported briefing note kind.');
+      if (['safety', 'ladder'].includes(section) && note.kind !== 'reference') {
+        throw new Error(`Briefing ${section} notes must remain unapproved references.`);
+      }
+      briefingObject(note.source, 'Briefing note source', ['id', 'title', 'revision', 'page']);
+      const source = {
+        id: clean(note.source.id, 'Briefing source ID', BRIEFING_LIMITS.sourceId),
+        title: clean(note.source.title, 'Briefing source title', BRIEFING_LIMITS.sourceTitle),
+        revision: clean(note.source.revision, 'Briefing source revision', BRIEFING_LIMITS.sourceRevision),
+      };
+      if (note.source.page !== undefined) {
+        if (!Number.isSafeInteger(note.source.page) || note.source.page < 1 || note.source.page > BRIEFING_LIMITS.sourcePage) {
+          throw new Error('Briefing source page must be a bounded positive integer.');
+        }
+        source.page = note.source.page;
+      }
+      return { id, text: clean(note.text, 'Briefing note text', BRIEFING_LIMITS.noteText), kind: note.kind, source };
+    });
+  }
+  return result;
+}
 export function validateOrder(input) {
   if (!input || input.version !== "carryforward.work-order.v1")
     throw new Error("Expected carryforward.work-order.v1 JSON.");
@@ -97,6 +188,7 @@ export function validateOrder(input) {
     new Set(order.history.map((h) => h.id)).size !== order.history.length
   )
     throw new Error("Check IDs and history IDs must be unique.");
+  if (Object.hasOwn(input, 'briefing')) order.briefing = validateBriefing(input.briefing);
   return order;
 }
 export function reviewReport(order, report, interview = null) {

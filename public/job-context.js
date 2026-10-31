@@ -1,6 +1,8 @@
 // Pure, job-local navigation over sources explicitly admitted by the caller.
 // Resource text is untrusted display data. This module never fetches a URL,
 // treats source text as a command, or infers an equipment procedure.
+import {validateBriefing} from './engine.js';
+import {buildVisitBrief} from './visit-brief.js';
 const LIMITS = { resources: 64, text: 12000, warning: 4000, command: 1000 };
 const KINDS = new Set(['document', 'image', 'video']);
 const owns = (object, key) => Object.hasOwn(object, key);
@@ -81,6 +83,11 @@ function orderSummary(order) {
     if (!Array.isArray(order.requestedWork) || order.requestedWork.length > 20) throw new Error('Briefing supports at most 20 work items.');
     details.requestedWork = order.requestedWork.map(item => text(item, 'Requested work', 4000));
   }
+  if (Object.hasOwn(order, 'briefing')) details.briefing = validateBriefing(order.briefing);
+  if (order.history !== undefined) {
+    if (!Array.isArray(order.history) || order.history.length > 30) throw new Error('Briefing supports at most 30 history records.');
+    details.history = order.history.map(item => ({id:text(item.id,'History ID',100),date:text(item.date,'History date',100),text:text(item.text,'History text',4000)}));
+  }
   return details;
 }
 
@@ -130,10 +137,8 @@ function present(resource, context, message = `Showing ${resource.title}.`) {
 function briefing(context) {
   const details = context.briefing;
   const lines = [`Job ${context.jobId}; system ${context.systemId}.`];
-  if (details.customer) lines.push(`Customer: ${details.customer}.`);
   if (details.property) lines.push(`Site: ${details.property}.`);
-  if (details.reportedIssue) lines.push(`Reported issue: ${details.reportedIssue}`);
-  if (details.requestedWork?.length) lines.push(`Assigned work: ${details.requestedWork.join(' ')}`);
+  lines.push(buildVisitBrief({...details,id:context.jobId,systemId:context.systemId}).spoken);
   lines.push(context.resources.length ? `${context.resources.length} attached job source(s) available.` : 'No attached job sources are available.');
   return result('briefing', lines.join('\n'), context);
 }
@@ -164,7 +169,7 @@ export function routeJobCommand(input, currentContext) {
   if (typeof input !== 'string' || input.length > LIMITS.command) return result('not_command', '', context);
   const command = normalize(input).replace(/^(?:wait|hold on) /u, '')
     .replace(/^(?:please )?(?:(?:can|could|would) you )?(?:please )?/u, '').replace(/ please$/u, '');
-  if (/^(?:(?:show|give|read) (?:me )?(?:the |my |this jobs? )?)?(?:job )?briefing$/u.test(command) || command === 'brief me') return briefing(context);
+  if (/^(?:(?:show|give|read|repeat) (?:me )?(?:the |my |this jobs? )?)?(?:(?:job|pre-visit|arrival) )?brief(?:ing)?$/u.test(command) || command === 'brief me') return briefing(context);
 
   const warningRequest = command.match(/^(?:what (?:was|is) |repeat |show (?:me )?)(?:that |the )?(?:last )?warning(?: before (.+))?$/u);
   if (warningRequest) {

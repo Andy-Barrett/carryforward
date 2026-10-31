@@ -4,7 +4,7 @@ import { resourcesForJob } from './cloud-resources.js';
 import { loadInterview } from './interview.js';
 import { reduceInvestigation, interviewHandoff } from './investigation.js';
 import { appendEvent, listPhotosByJob, listAudioByJob } from './jobstore.js';
-import { newEventId } from './evidence.js';
+import { newEventId, hashBytes } from './evidence.js';
 import { mountVoice } from './voice.js';
 
 // This surface navigates admitted sources and saves ordinary interview events.
@@ -17,6 +17,10 @@ export async function mountCloudSession(root, {
   const order = structuredClone(suppliedOrder), jobId = order.id;
   const draftKey = `carryforward.cloud-draft.v1:${jobId}`;
   const focusKey = `carryforward.cloud-focus.v1:${jobId}:${order.systemId}`;
+  const briefKey = `carryforward.brief-viewed.v1:${jobId}`;
+  const briefRevision = await hashBytes(new TextEncoder().encode(JSON.stringify(order)));
+  let startWithBrief = true;
+  try { startWithBrief = localStorage.getItem(briefKey) !== briefRevision; } catch { /* Show the brief if view-state storage is unavailable. */ }
   let alive = true, saving = false, capture = false, voice = null, view = null;
   let state = await loadInterview(db, order), context = createJobContext(order);
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
@@ -224,6 +228,8 @@ export async function mountCloudSession(root, {
       await navigate('interview', {executedCommand:true});
       return { handled: true, response: 'Choose the synthetic evidence in the review controls, then request Meta review.', origin: 'Interface navigation' };
     }
+    // The assignment brief is available without loading any saved media.
+    if (routeJobCommand(text,context).kind === 'briefing') { view.openBrief(); return {handled:true}; }
     const result = routeJobCommand(text, await refreshContext());
     requireCurrent();
     context = result.context;
@@ -262,7 +268,8 @@ export async function mountCloudSession(root, {
 
   requireCurrent();
   view = mountCloud(root, {
-    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command,
+    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief,
+    onBriefViewed: () => { try { localStorage.setItem(briefKey,briefRevision); } catch { /* Viewing is not confirmation or work authorization. */ } },
     onGetState: async () => { const next = await loadInterview(db, order); requireCurrent(); state = next; return next; },
     onDraftChange: saveDraft,
     onPhotoFiles: async files => {
@@ -340,9 +347,5 @@ export async function mountCloudSession(root, {
   cleanup.canNavigate = () => !capture && !saving;
   cleanup.refresh = () => view.refresh();
   cleanup.setResponse = (...args) => view.setResponse(...args);
-  if (!state.events.length) view.setResponse('The job is in view. Let’s make the next step clear.', {
-    origin:'Original work order · supplied references',
-    detail:order.reportedIssue,
-  });
   return cleanup;
 }

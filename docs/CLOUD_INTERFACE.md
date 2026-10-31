@@ -4,7 +4,7 @@ Andrew requested a modern field companion that feels like talking to a cloud, br
 
 ## What works in this increment
 
-- The work order supplies the opening context; the job dialog retains identity, scope and dated history.
+- A new assignment opens with a pre-visit brief: system, problem, troubleshooting context, customer preferences, gate/access, safety and ladder source gaps. Continue moves into capture; The brief and “repeat the brief” recall it. See [briefing contract](PRE_VISIT_BRIEF.md).
 - A quiet cloud presence shows actual ready/recording/reviewing/speaking state, rather than pretending a microphone or model is active.
 - Typed commands and reviewed voice drafts share the same command router. Navigation commands do not become technician testimony. Ordinary narration is saved through the existing ordered investigation events.
 - Source recall and focus are job-scoped. “Show the PDF,” “show me that last PDF,” “zoom in on this,” and “show the clip” operate on supplied sources. A missing or ambiguous source stays explicit.
@@ -30,6 +30,6 @@ The default surface has a voice action and an optional type composer. Sources an
 
 ## Verification and limits
 
-The candidate passes 80 Node 24 tests, including thirteen job-context tests for source recall, cross-job isolation, ambiguous matches, zoom, unsafe URLs and unsupported warnings. Existing HTTP/guard tests use isolated stores and mocks; no real model calls were made for this increment. Browser verification and final integration receipts are recorded in the development log.
+The current build passes 95 Node 24 tests, including thirteen job-context tests and briefing contract/presentation/model-boundary cases for source recall, cross-job isolation, ambiguous matches, zoom, unsafe URLs and unsupported warnings. Existing HTTP/guard tests use isolated stores and mocks; no real model calls were made for this increment. Browser verification and final integration receipts are recorded in the development log.
 
 Real microphone permissions and voice capture on iPhone/Android, naturalness and field usability still require the prepared device/pilot checks. General job-document ingestion, video indexing and an actual retrieval pipeline remain separate work. Do not describe the supplied fictional packet as complete RAG coverage.

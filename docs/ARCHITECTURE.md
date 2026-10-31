@@ -22,7 +22,7 @@ CarryForward is a small browser application served by Node’s built-in HTTP ser
 
 ## Work-order input
 
-`carryforward.work-order.v1` includes the source work-order ID, customer and property labels, system ID, reported issue, requested work, dated history, and individual closeout checks. Download the sample from the app to inspect the full format.
+`carryforward.work-order.v1` includes the source work-order ID, customer and property labels, system ID, reported issue, requested work, dated history, and individual closeout checks. An optional `briefing` carries bounded source-tagged system/problem/planning/customer/access/safety/ladder notes. These remain assignment context rather than field evidence or procedure approval; see [pre-visit brief](PRE_VISIT_BRIEF.md). Download the sample from the app to inspect the full format.
 
 The validator requires nonempty bounded text, limits the number of work items and checks, and rejects duplicate check and history IDs. Browser import limits the file to 100 KB. This is a local prototype format; it has not been adopted as a Perihelion Operations contract.
 

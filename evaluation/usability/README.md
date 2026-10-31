@@ -29,3 +29,9 @@ The observer may inspect the final source-linked handoff and retained conversati
 Report individual trial results before aggregates, sample size, missing values, assistance and practice order. Supported outcomes per active human minute is exploratory and must be accompanied by the quality failures. Do not average an abandoned trial into a successful score.
 
 The existing same-model summary comparison measures output quality on fixed supplied inputs. It does not provide a comparable user interface or capture workflow, so this pilot must not claim a time advantage over that summary baseline. A single pilot can identify friction; it cannot prove that style increases accuracy or that technicians generally enjoy the app.
+
+## Reverse trial: the human plays CarryForward
+
+Andy also requested role reversal. Fresh kits now include a separate `reverse/` case: human-interviewer instructions, an AI-technician role card, an observer key, an empty turn log and blank annotation templates. Keep the AI and observer cards hidden from the human interviewer during the exercise. Run it after the normal trial; do not combine its effort scores with ordinary technician use.
+
+See `docs/TRAINING_MODE.md` for the optional Teach CarryForward concept and capture requirements. This is a prepared trial protocol; no in-app training mode, runtime capture or automatic model learning is claimed.

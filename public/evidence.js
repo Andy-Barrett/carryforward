@@ -339,3 +339,14 @@ export function evidenceRevision(photos = [], audio = []) {
   ].sort((a,b) => `${a[0]}:${a[1]}`.localeCompare(`${b[0]}:${b[1]}`));
   return `media-${cyrb53(JSON.stringify(records))}`;
 }
+
+export const PHOTO_REVIEW_LIMITS={maxPhotos:3,maxBytes:1000000};
+export function selectReviewPhotos(photos,selectedIds,jobId){
+ const ids=[...selectedIds];
+ if(ids.length>PHOTO_REVIEW_LIMITS.maxPhotos||new Set(ids).size!==ids.length)throw Error('Select at most three different job photos.');
+ const selected=ids.map(id=>{const photo=photos.find(p=>p.id===id);
+  if(!photo||photo.jobId!==jobId||photo.status==='excluded'||!photo.blob)throw Error('Selected photo is unavailable, excluded or belongs to another job.');
+  return photo;});
+ if(selected.reduce((n,p)=>n+p.blob.size,0)>PHOTO_REVIEW_LIMITS.maxBytes)throw Error('Selected originals exceed the 1 MB AI review limit. Choose fewer or smaller photos; originals remain saved.');
+ return selected;
+}

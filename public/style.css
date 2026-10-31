@@ -556,3 +556,6 @@ input[type="file"] {
 .interview audio { display:block; width:100%; max-width:100%; margin: .75rem 0; }
 .interview .checkline { display:flex; align-items:flex-start; gap:.6rem; min-height:44px; }
 .interview .checkline input[type="checkbox"] { display:inline-block; flex:0 0 18px; width:18px; height:18px; padding:0; margin:0; }
+
+.photo-card img.review-image { object-fit: contain; aspect-ratio: auto; max-height: 360px; height: auto; }
+.photo-card strong, .photo-card p { overflow-wrap: anywhere; }

@@ -2,7 +2,7 @@ import {requestReview} from './review-request.js';
 import { createInvestigation, reduceInvestigation, nextInterviewQuestion, interviewHandoff } from './investigation.js';
 import { listEvents, appendEvent, listPhotosByJob, getInterviewDraft, saveInterviewDraft } from './jobstore.js';
 import { mountVoice } from './voice.js';
-import { newEventId, hashBytes } from './evidence.js';
+import { newEventId, hashBytes, selectReviewPhotos } from './evidence.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export async function loadInterview(db, order) {
@@ -19,6 +19,10 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
   const config = await fetch('/api/config').then(r => r.json()).catch(() => ({metaEnabled:false}));
   let photos = await listPhotosByJob(db, order.id);
   const selected = new Set();
+  const previewUrls=[];
+  const releasePreviews=()=>{for(const url of previewUrls)URL.revokeObjectURL(url);previewUrls.length=0;};
+  const previewObserver=new MutationObserver(()=>{if(!root.isConnected){releasePreviews();previewObserver.disconnect();}});
+  previewObserver.observe(document.body,{childList:true,subtree:true});
   let busy = false;
   let message = '';
   let draft = '';
@@ -72,6 +76,7 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
   }
   async function metaReview() {
     const stored = await listPhotosByJob(db, order.id);
+    const reviewPhotos=selectReviewPhotos(stored,selected,order.id);
     for (const photo of stored) {
       if (!Object.hasOwn(state.sources, photo.id) && photo.status !== 'excluded') {
         await dispatch('source.added', {id:photo.id,kind:'photo',sha256:photo.sha256,name:photo.name});
@@ -81,7 +86,7 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       }
     }
     const packed = [];
-    for (const photo of stored.filter(p => selected.has(p.id) && p.status !== 'excluded')) {
+    for (const photo of reviewPhotos) {
       const bytes = new Uint8Array(await photo.blob.arrayBuffer());
       if (await hashBytes(bytes) !== photo.sha256) throw new Error('Saved photo failed its hash check.');
       let binary=''; for (let i=0;i<bytes.length;i+=8192) binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
@@ -94,6 +99,10 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
     await dispatch('interpretation.received',data.proposal);
   }
   function draw() {
+    releasePreviews();
+    if(!root.isConnected)return;
+    const photoCards=photos.map(p=>{const url=URL.createObjectURL(p.blob);previewUrls.push(url);
+      return `<article class="photo-card ${p.status==='excluded'?'excluded':''}"><img class="review-image" src="${url}" alt="Job photo: ${esc(p.name)}"><strong>${esc(p.name)}</strong><p>${esc(p.id)} · ${Math.ceil(p.blob.size/1000)} KB · original saved locally</p>${p.status==='excluded'?'<p>Excluded from AI review</p>':config.metaEnabled?`<label class="checkline"><input type="checkbox" data-review-photo="${esc(p.id)}" ${selected.has(p.id)?'checked':''}>Include ${esc(p.name)} in this review</label>`:''}</article>`;}).join('');
     const turns = Object.values(state.sources).filter(s => s.kind === 'testimony');
     root.innerHTML = `<section class="panel interview"><p class="eyebrow">TALK THROUGH THE VISIT</p>
       <h2>Tell me what happened.</h2><p>Park before reviewing photos or confirming a handoff. This text interview saves your words; ${config.metaEnabled ? 'Meta review and reviewed voice transcripts are available for synthetic job evidence.' : 'Voice clips save locally. AI transcription and review are disabled.'}</p>
@@ -107,7 +116,8 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       <button class="primary" ${busy ? 'disabled' : ''}>Save answer</button></form>
       ${state.activeQuestion ? `<label>Follow-up owner<input id="interview-owner" maxlength="200" placeholder="For example, Operations"></label><div class="interview-actions"><button type="button" data-response="cannot_verify">Can't verify</button><button type="button" data-response="later">Follow up later</button><button type="button" data-response="already_answered" ${turns.length ? '' : 'disabled'}>Already answered</button></div>` : ''}
       <div class="interview-actions"><button id="ask-next" type="button" ${state.activeQuestion ? 'disabled' : ''}>${state.followups >= 3 ? 'Continue with more questions' : 'Next work-order question (fallback)'}</button><button id="use-interview" type="button" ${turns.length ? '' : 'disabled'}>Use these notes in field report</button></div>
-      ${config.metaEnabled ? `<fieldset><legend>Meta evidence review</legend><p>Only fictional demonstration content is authorized. Select up to three job photos (1 MB total) to send with the saved conversation. Originals stay on this device.</p>${photos.filter(p=>p.status!=='excluded').map(p=>`<label class="checkline"><input type="checkbox" data-review-photo="${esc(p.id)}" ${selected.has(p.id)?'checked':''}>${esc(p.name)} · ${esc(p.id)}</label>`).join('')}<label class="checkline"><input id="synthetic-review" type="checkbox">This job and its selected photos are synthetic demonstration data.</label><button id="meta-review" type="button" ${busy?'disabled':''}>Review evidence with Meta</button><p>${state.interpretations.length ? `Last review: ${esc(state.interpretations.at(-1).model)} · ${esc(state.interpretations.at(-1).provenance?.latencyMs || '?')} ms · ${esc(state.interpretations.at(-1).provenance?.usage?.total_tokens || '?')} tokens` : 'No Meta interpretation recorded for this job.'}</p></fieldset>` : ''}
+      <details><summary>Review this job's photos (${photos.length})</summary><p>Inspect the originals before choosing evidence. Selection does not verify the reading, timing or equipment.</p><div class="photogrid">${photoCards||'<p>No job photos saved. Add photos in the field report.</p>'}</div><p id="photo-review-status" role="status"></p></details>
+      ${config.metaEnabled ? `<fieldset><legend>Meta evidence review</legend><p>Only fictional demonstration content is authorized. Select up to three job photos (1 MB total) to send with the saved conversation. Originals stay on this device.</p><p>Only photos checked in the preview above are sent. Filenames and previews do not establish capture time or equipment identity.</p><label class="checkline"><input id="synthetic-review" type="checkbox">This job and its selected photos are synthetic demonstration data.</label><button id="meta-review" type="button" ${busy?'disabled':''}>Review evidence with Meta</button><p>${state.interpretations.length ? `Last review: ${esc(state.interpretations.at(-1).model)} · ${esc(state.interpretations.at(-1).provenance?.latencyMs || '?')} ms · ${esc(state.interpretations.at(-1).provenance?.usage?.total_tokens || '?')} tokens` : 'No Meta interpretation recorded for this job.'}</p></fieldset>` : ''}
       ${state.observations.length ? `<details><summary>Model findings and sources</summary>${state.observations.map(o=>`<article class="source"><p>${esc(o.claim)}${o.supersededBy?' (corrected)':''}</p><small>${esc(o.sourceIds.join(', '))} · ${esc(o.model)}</small></article>`).join('')}</details>` : ''}
       <details><summary>Unresolved work and sources</summary><p>Supported means evidence for a technician-reported claim, not independent verification or Operations acceptance.</p><ul>${Object.values(state.branches).map(b => `<li><strong>${esc(order.checks.find(c => c.id === b.id)?.label)}</strong>: ${esc(b.state)}${b.owner ? ` · ${esc(b.owner)}` : ''}<p>${esc(b.reason)}</p>${b.state === 'deferred' ? `<button data-reopen="${esc(b.id)}" type="button">Reopen</button>` : ''}</li>`).join('')}</ul></details>
       <p id="interview-status" role="status">${esc(message)}</p></section>`;
@@ -122,7 +132,11 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       await persistDraft();
       draw();
     }}).catch(error=>{if(voiceRoot.isConnected)voiceRoot.textContent=`Voice capture unavailable: ${error.message}. Use text.`;});
-    for (const box of root.querySelectorAll('[data-review-photo]')) box.onchange = () => { if(box.checked) selected.add(box.dataset.reviewPhoto); else selected.delete(box.dataset.reviewPhoto); };
+    for (const box of root.querySelectorAll('[data-review-photo]')) box.onchange = () => {
+      const next=new Set(selected);if(box.checked)next.add(box.dataset.reviewPhoto);else next.delete(box.dataset.reviewPhoto);
+      try{selectReviewPhotos(photos,next,order.id);selected.clear();for(const id of next)selected.add(id);root.querySelector('#photo-review-status').textContent=`${selected.size} photo(s) selected. Review runs only when you request it.`;}
+      catch(error){box.checked=selected.has(box.dataset.reviewPhoto);root.querySelector('#photo-review-status').textContent=error.message;}
+    };
     const metaButton = root.querySelector('#meta-review');
     if(metaButton) metaButton.onclick = () => {
       if (!root.querySelector('#synthetic-review').checked) { message = 'Confirm that this is synthetic demonstration data before sending it to Meta.'; draw(); return; }

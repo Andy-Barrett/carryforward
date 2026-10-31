@@ -71,7 +71,7 @@ npm test
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
 - Responsive layouts checked at desktop and phone widths.
 
-An evidence reference is a technician’s reference to a record; the app does not yet inspect the referenced file. “Documented” means the required information is present, not that the underlying work has been independently verified.
+A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview now previews those originals before selection. “Documented” means the required information is present, not that the underlying work has been independently verified.
 
 ## Where we’re taking it
 

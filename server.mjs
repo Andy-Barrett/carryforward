@@ -16,6 +16,10 @@ let reviewBusy = false;
 const reviews = new Map();
 const files = {
   "/": ["index.html", "text/html"],
+  "/sw.js": ["sw.js", "text/javascript"],
+  "/offline.js": ["offline.js", "text/javascript"],
+  "/manifest.webmanifest": ["manifest.webmanifest", "application/manifest+json"],
+  "/app-icon.svg": ["app-icon.svg", "image/svg+xml"],
   "/app.js": ["app.js", "text/javascript"],
   "/engine.js": ["engine.js", "text/javascript"],
   "/evidence.js": ["evidence.js", "text/javascript"],
@@ -35,7 +39,7 @@ const server = http.createServer(async (req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
   if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===`http://${host}`) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
-  if (path === "/api/config" && req.method === "GET") return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled});
+  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", `carryforward_session=${localSession}; HttpOnly; SameSite=Strict; Path=/`); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled}); }
   if (["/api/review", "/api/transcribe"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
     if (req.headers.origin !== `http://${host}` || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});

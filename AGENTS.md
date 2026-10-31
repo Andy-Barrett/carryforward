@@ -39,6 +39,8 @@ Target design is not implemented behavior. Keep that distinction clear in code, 
 
 Use Node.js 24. There are currently no runtime dependencies or build step. Run `npm test` and syntax checks for affected JavaScript. Avoid new packages unless the task has a concrete need; explain the choice and licensing impact.
 
+After changing a cached app-shell file, run `node scripts/refresh-shell-version.mjs`; the offline test refuses a stale content version. Service-worker updates wait for old app windows to close. API responses and evidence must never enter the app-shell cache.
+
 Check UI changes at phone and desktop widths. Label physical-device checks as pending unless actually run. Camera, recording, installation, background persistence, and offline behavior need real iPhone and Android testing before claiming support.
 
 Before committing, review status and the staged diff, confirm no secrets/customer data/generated files are staged, and run the relevant checks. Do not add a license or accept external agreements without the owner's decision.

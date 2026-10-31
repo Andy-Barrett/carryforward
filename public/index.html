@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#183c31" />
     <title>CarryForward · Field operations</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
@@ -31,6 +33,7 @@
         ><button data-step="capture">03 / Field report</button
         ><button data-step="review">04 / Closeout review</button>
       </nav>
+      <p id="connection-status" role="status"></p>
       <p id="message" role="status"></p>
       <div id="view"></div>
       <div id="operations-root"></div>
@@ -41,5 +44,6 @@
       </footer>
     </main>
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/offline.js"></script>
   </body>
 </html>

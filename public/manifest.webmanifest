@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "CarryForward",
+  "short_name": "CarryForward",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f5ec",
+  "theme_color": "#183c31",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

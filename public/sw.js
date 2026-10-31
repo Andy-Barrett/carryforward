@@ -1,0 +1,20 @@
+// App shell only. Never cache API responses, evidence or arbitrary requests.
+const CACHE='carryforward-shell-a46a71837d667864';
+const SHELL=["/", "/app-icon.svg", "/app.js", "/audio.js", "/capture-lifecycle.js", "/engine.js", "/evidence.js", "/interview.js", "/investigation.js", "/jobstore.js", "/manifest.webmanifest", "/offline.js", "/operations-client.js", "/review-request.js", "/style.css", "/voice.js"];
+const allowed=new Set(SHELL);
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ const cache=await caches.open(CACHE);
+ try{await cache.addAll(SHELL);}catch(error){await caches.delete(CACHE);throw error;}
+})()));
+// An update waits for old app windows to close; do not mix cached module versions.
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ for(const key of await caches.keys())if(key.startsWith('carryforward-shell-')&&key!==CACHE)await caches.delete(key);
+})()));
+self.addEventListener('fetch',event=>{
+ const url=new URL(event.request.url);
+ if(event.request.method!=='GET'||url.origin!==self.location.origin||url.search||!allowed.has(url.pathname))return;
+ event.respondWith((async()=>{
+  const cache=await caches.open(CACHE);const hit=await cache.match(url.pathname);
+  return hit||fetch(event.request);
+ })());
+});

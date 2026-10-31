@@ -772,6 +772,8 @@ render();
 initStore();
 if (storageMessage) notify(storageMessage);
 
+// Refresh the local session when an offline shell outlives a server restart.
+await fetch("/api/config",{signal:AbortSignal.timeout(5000)}).catch(()=>null);
 mountOperations($("#operations-root"), {
   getContext: async (requireConfirmation) => {
     collect();

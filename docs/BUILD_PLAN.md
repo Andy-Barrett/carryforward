@@ -14,7 +14,7 @@ These do not establish conversational reasoning, physical-device support, live i
 
 ## Current checkpoint
 
-The local end-to-end path is implemented and exercised. See [readiness evidence](READINESS_REVIEW.md) for what is verified and what remains. The slices below retain their original acceptance intent; a local prototype is not a completed field deployment.
+The local end-to-end path is implemented and exercised. Andrew’s October 30 cloud-interface direction is now the default local workspace, with job-scoped source recall, PDF inspection, supplied clips and the existing reviewed-voice/text path. General document ingestion/retrieval and continuous voice remain unbuilt; see [cloud interface](CLOUD_INTERFACE.md). See [readiness evidence](READINESS_REVIEW.md) for what is verified and what remains. The slices below retain their original acceptance intent; a local prototype is not a completed field deployment.
 
 ## Slice 1 — durable job evidence
 
@@ -40,7 +40,7 @@ Done means a technician can narrate, add a photo mid-session, correct a statemen
 
 ## Slice 4 — Meta-backed review
 
-Implementation checkpoint: guarded `muse-spark-1.3` review and `muse-voice-transcribe-1.0` transcription are connected. Actual synthetic calls, usage and latency are retained. The fixed twelve-case comparison and three-case development retest are documented; no accuracy advantage over a strong summary was demonstrated. Original-preserving review copies were exercised through actual model interpretation, export and simulator readback. Spoken output and full-duplex conversation remain unimplemented; readable text is the accepted contest fallback.
+Implementation checkpoint: guarded `muse-spark-1.3` review and `muse-voice-transcribe-1.0` transcription are connected. Actual synthetic calls, usage and latency are retained. The fixed twelve-case comparison and three-case development retest are documented; no accuracy advantage over a strong summary was demonstrated. Original-preserving review copies were exercised through actual model interpretation, export and simulator readback. An explicit local-browser read-aloud action is implemented when a local voice is available; full-duplex conversation remains unimplemented and physical voice checks remain pending. Readable text is the accepted contest fallback.
 
 Only after credits, billing route, data handling and a numeric coding/product budget are confirmed. Verify actual model capabilities and implement bounded transcription/image/text adapters. Capture model IDs, usage, latency, validation failures, and conservative cost reservations. Do not assume a paid coding subscription is covered by API promotional credits.
 

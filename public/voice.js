@@ -6,7 +6,7 @@ import {hashBytes,newEvidenceId} from './evidence.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const base64=bytes=>{let text='';for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(text);};
 const recovery=new Map();
-export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceSaved,onCaptureState}){
+export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceSaved,onCaptureState,onRecordingState}){
   let clips=await listAudioByJob(db,jobId),message='',busy=false,recorder=null,stream=null,timer=null,interrupted=false,releaseInterruptions=()=>{};
   const urls=[];
   const stop=()=>{if(recorder&&recorder.state!=='inactive')recorder.stop();else stream?.getTracks().forEach(t=>t.stop());};
@@ -42,17 +42,19 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
         recorder.ondataavailable=e=>{if(e.data.size){chunks.push(e.data);bytes+=e.data.size;if(bytes>AUDIO_LIMITS.originalBytes)stop();}};
         recorder.onerror=()=>{interrupted=true;stop();};
         recorder.onstop=async()=>{
+          onRecordingState?.(false);
           clearTimeout(timer);releaseInterruptions();stream.getTracks().forEach(t=>t.stop());
           try{await keep(new Blob(chunks,{type:recorder.mimeType}),`Voice answer ${new Date().toLocaleTimeString()}`,interrupted);}catch(error){message=error.message;}
           busy=false;onCaptureState?.(false);if(root.isConnected)draw();
         };
         recorder.start(500);
+        onRecordingState?.(true);
         releaseInterruptions=watchCaptureInterruptions({page:document,windowTarget:window,tracks:stream.getTracks(),onInterrupt:()=>{interrupted=true;stop();}});
         if(document.visibilityState==='hidden'){interrupted=true;stop();}
         timer=setTimeout(stop,30000);
         root.querySelector('#voice-record').disabled=true;root.querySelector('#voice-stop').disabled=false;
         root.querySelector('[role=status]').textContent='Recording… Stops automatically after 30 seconds. Stop before reviewing your answer.';
-      }catch(error){releaseInterruptions();clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());busy=false;onCaptureState?.(false);message=`Microphone unavailable: ${error.message}. Upload a clip or use text.`;draw();}
+      }catch(error){releaseInterruptions();clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());busy=false;onCaptureState?.(false);onRecordingState?.(false);message=`Microphone unavailable: ${error.message}. Upload a clip or use text.`;draw();}
     };
     root.querySelector('#voice-stop').onclick=stop;
     root.querySelector('#voice-upload').onchange=e=>{const f=e.target.files[0];if(f)run(()=>keep(f,f.name,false));};
@@ -73,4 +75,5 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     });
   }
   draw();
+  return {start:()=>root.querySelector('#voice-record')?.click(),stop,dispose:()=>{interrupted=true;stop();releaseInterruptions();observer.disconnect();onRecordingState?.(false);for(const url of urls)URL.revokeObjectURL(url);}};
 }

@@ -1,0 +1,2 @@
+# PDF fixtures contain byte offsets and must not receive text normalization.
+*.pdf binary

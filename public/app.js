@@ -26,6 +26,7 @@ import * as jobStore from "./jobstore.js";
 import { mountInterview, loadInterview } from "./interview.js";
 import { mountOperations } from "./operations-client.js";
 import { interviewHandoff } from "./investigation.js";
+import { mountCloudSession } from "./cloud-session.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) =>
@@ -45,7 +46,7 @@ let order = validateOrder(demoOrder),
     entries: {},
   },
   review = null,
-  step = "briefing";
+  step = "companion";
 let storageMessage = "";
 try {
   const saved = JSON.parse(
@@ -81,6 +82,11 @@ let photoOperation = false;
 let interviewPacket = null;
 let renderGeneration = 0;
 const thumbUrls = new Map();
+let cloudSession = null;
+function navigateStep(next) {
+  if (cloudSession?.canNavigate && !cloudSession.canNavigate()) { notify("Stop recording and wait for the local save before switching views."); return; }
+  collect(); step = next; render();
+}
 function notify(s) {
   $("#message").textContent = s;
 }
@@ -122,21 +128,21 @@ async function persistSession() {
   }
 }
 async function refreshJobData() {
-  if (!db) return;
-  photos = await jobStore.listPhotosByJob(db, order.id);
-  jobSessions = await jobStore.listSessions(db);
-  const sess = await jobStore.getSession(db, order.id);
-  sessionConfirmation = sess?.confirmation || null;
-  interviewPacket = interviewHandoff(await loadInterview(db, order));
+  if (!db) return false;
+  const store = db, job = structuredClone(order), targetReport = report, generation = renderGeneration;
+  const [nextPhotos, nextSessions, sess, state, audio] = await Promise.all([
+    jobStore.listPhotosByJob(store, job.id), jobStore.listSessions(store),
+    jobStore.getSession(store, job.id), loadInterview(store, job), jobStore.listAudioByJob(store, job.id),
+  ]);
+  if (db !== store || order.id !== job.id || report !== targetReport || generation !== renderGeneration) return false;
+  if (Number.isFinite(report.interviewRevision) && state.seq < report.interviewRevision) return false;
+  photos = nextPhotos; jobSessions = nextSessions; sessionConfirmation = sess?.confirmation || null;
+  interviewPacket = interviewHandoff(state);
   report.interviewRevision = interviewPacket.revision;
-  report.evidenceRevision = evidenceRevision(photos, await jobStore.listAudioByJob(db,order.id));
-  const alive = new Set(photos.map((p) => p.id));
-  for (const [id, url] of thumbUrls) {
-    if (!alive.has(id)) {
-      URL.revokeObjectURL(url);
-      thumbUrls.delete(id);
-    }
-  }
+  report.evidenceRevision = evidenceRevision(photos, audio);
+  const present = new Set(photos.map(p => p.id));
+  for (const [id, url] of thumbUrls) if (!present.has(id)) { URL.revokeObjectURL(url); thumbUrls.delete(id); }
+  return true;
 }
 function thumbUrl(photo) {
   if (!photo.blob) return "";
@@ -188,14 +194,15 @@ async function checkDecodable(blob) {
   }
 }
 async function admitFiles(fileList) {
-  if (photoOperation) return;
+  if (photoOperation) return {saved:0,failed:1,message:"Wait for the current photo save."};
+  let savedCount = 0, failedCount = 0;
   collect();
   if (!db) {
     photoMsg =
       storeError ||
       "Local photo storage is not ready yet. Your draft is unchanged.";
     render();
-    return;
+    return {saved:0,failed:1,message:photoMsg};
   }
   photoOperation = true;
   const files = [...(fileList || [])];
@@ -244,17 +251,21 @@ async function admitFiles(fileList) {
           sha256,
         },
       });
+      savedCount++;
       await refreshJobData();
       photoMsg = `Photo ${record.id} saved locally for ${order.id}.`;
     } catch (err) {
-      photoMsg = err?.message || String(err);
+      failedCount++;
+      photoMsg = `${savedCount ? `${savedCount} photo(s) saved. ` : "Nothing new was saved. "}${err?.message || String(err)}`;
       break;
     }
   }
   save();
   await persistSession();
   photoOperation = false;
-  render();
+  if (step === "companion" && cloudSession) await cloudSession.refresh();
+  else render();
+  return {saved:savedCount,failed:failedCount,message:photoMsg || "No new photo selected."};
 }
 async function setExcluded(photoId, excluded) {
   collect();
@@ -480,18 +491,42 @@ function jobListHtml() {
     .join("")}</ul>`;
 }
 function render() {
+  if (cloudSession?.canNavigate && !cloudSession.canNavigate()) { notify("Finish the recording or current save before changing views."); return; }
+  cloudSession?.(); cloudSession = null;
+  document.body.classList.toggle("cloud-workspace", step === "companion");
   const generation = ++renderGeneration;
   document.querySelectorAll("[data-step]").forEach((b) => {
     b.classList.toggle("active", b.dataset.step === step);
     b.setAttribute("aria-current", b.dataset.step === step ? "step" : "false");
   });
   const heading = `<div class="sectionhead"><div><p class="eyebrow">${esc(order.id)} / ${esc(order.systemId)}</p><h2>${esc(order.customer)}</h2><p>${esc(order.property)}</p></div><span class="pill">${confirmationToPersist(review?.confirmation || sessionConfirmation,report) ? "Technician confirmed" : "Local draft"}</span></div>`;
-  if (step === "briefing") {
+  if (step === "companion") {
+    $("#view").innerHTML = '<div id="cloud-root"><p>Opening your saved job…</p></div>';
+    const root = $("#cloud-root"), jobId = order.id;
+    if (!db) { root.textContent = storeError || "Opening local job storage…"; return; }
+    const current = () => order.id === jobId && generation === renderGeneration && root.isConnected;
+    mountCloudSession(root, {
+      db, order: structuredClone(order), onNavigate: target => { if(current()) navigateStep(target === "sources" ? "capture" : target); },
+      onGetPhotos: async () => current() ? await jobStore.listPhotosByJob(db, jobId) : [],
+      onPhotoFiles: async files => { if(current()) return await admitFiles(files); throw Error("This job view changed; no upload was started."); },
+      onReview: () => { if(current()) navigateStep("interview"); },
+      onSaved: async packet => {
+        if(!current()) return;
+        interviewPacket = packet; report.interviewRevision = packet.revision; review = null;
+        save(); await persistSession();
+      },
+      onEvidenceSaved: async () => {
+        if(!current()) return;
+        await refreshJobData(); if(!current()) return;
+        review = null; save(); await persistSession();
+      },
+    }).then(cleanup => { if(current()) cloudSession = cleanup; else cleanup?.(); })
+      .catch(err => { if(current()) root.textContent = `Conversation could not open: ${err.message}`; });
+  } else if (step === "briefing") {
     $("#view").innerHTML =
       `${heading}<div class="workspace"><section class="panel"><h2>The reported problem</h2><p>${esc(order.reportedIssue)}</p><h4>Assigned scope</h4><ul>${order.requestedWork.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><h4>Source history</h4>${order.history.map((h) => `<article class="source"><div>${esc(h.id)} / ${esc(h.date)}</div><blockquote>${esc(h.text)}</blockquote></article>`).join("")}<button id="begin" class="primary">Start visit interview →</button></section><aside><p class="eyebrow">COLLECT BEFORE YOU LEAVE</p><h2>Make the next step clear.</h2>${order.checks.map((c) => `<article class="source"><h4>${esc(c.label)}</h4><p>${esc(c.question)}</p></article>`).join("")}<h4>Jobs on this device</h4>${jobListHtml()}<label class="import">Import an exported work order (JSON)<input id="import" type="file" accept="application/json,.json"></label><p>Use the sample format. No live Operations access. Use synthetic records in this prototype. Importing keeps your other saved jobs.</p></aside></div>`;
     $("#begin").onclick = () => {
-      step = "interview";
-      render();
+      navigateStep("companion");
     };
     document.querySelectorAll("[data-switch]").forEach((b) => {
       b.onclick = () => switchJob(b.dataset.switch);
@@ -745,8 +780,7 @@ function render() {
 document.querySelectorAll("[data-step]").forEach(
   (b) =>
     (b.onclick = () => {
-      step = b.dataset.step;
-      render();
+      navigateStep(b.dataset.step);
     }),
 );
 $("#sample").onclick = () =>

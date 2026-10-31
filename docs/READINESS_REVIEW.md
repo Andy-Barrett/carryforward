@@ -14,7 +14,8 @@ CarryForward's local evidence-to-handoff loop is implemented. The full field-pro
 | Explicit style without weakening requirements | Direct/conversational saved preference; common core instructions; browser reload and actual review | Implemented; benefit unmeasured |
 | Voice input, playback and reviewed transcription | Synthetic WAV persistence/playback, actual ASR and original-byte readback | Uploaded-audio path verified |
 | Real microphone and camera | Recording/camera controls and interruption handlers exist; unit events do not establish OS behavior | Physical devices pending |
-| Spoken conversation | Text response fallback is implemented; no realtime or full-duplex voice claim | Spoken output absent |
+| Cloud workspace and job-source recall | Actual PDF/image/video reference viewers; job-local recall, zoom and unavailable-warning checks in `CLOUD_INTERFACE.md`; 80 tests total | Desktop and phone-width verified; general retrieval pending |
+| Spoken conversation | Existing reviewed-input path plus explicit local-browser read-aloud if available; no continuous or full-duplex voice claim | Implemented in part; physical voice checks pending |
 | Offline startup and local capture | Backend stopped, app reloaded, answer saved/reloaded; reconnect authenticated inbox read | Desktop verified; phone pending |
 | Unambiguous observation times | Offset/calendar validator, explicit form field, legacy-open behavior and browser roundtrip | Local verified |
 | Accurate review and exact confirmation | Separate reported/documented/open outcomes; v4 contract; stale report/media/event rejection | Local verified |

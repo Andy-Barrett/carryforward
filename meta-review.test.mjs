@@ -35,3 +35,13 @@ test('model cannot cite photo bytes omitted from this review',async()=>{
  const fake={...valid,baseRevision:2,observations:[{id:'o1',claim:'Image shows output',sourceIds:['photo1']}]};
  await assert.rejects(reviewWithMeta({...input,events:[...events,source]},{token:'fixture',fetchImpl:async()=>response(fake)}),/not sent/);
 });
+
+test('style is constrained by saved events and leaves source evidence and core instructions identical',()=>{
+ const direct=prepareReview(input).request;
+ const conversational=prepareReview({...input,events:[...events,{id:'style',jobId:demoOrder.id,seq:2,type:'preference.changed',payload:{communicationStyle:'conversational'}}]}).request;
+ assert.match(direct.instructions,/Communication style: direct/);assert.match(conversational.instructions,/Communication style: conversational/);
+ assert.equal(direct.instructions.split('\nCommunication style:')[0],conversational.instructions.split('\nCommunication style:')[0]);
+ const a=JSON.parse(direct.input[0].content[0].text),b=JSON.parse(conversational.input[0].content[0].text);
+ assert.deepEqual(a.sources,b.sources);assert.deepEqual(a.branches,b.branches);assert.equal(a.followups,b.followups);
+ assert.throws(()=>prepareReview({...input,events:[...events,{id:'style',jobId:demoOrder.id,seq:2,type:'preference.changed',payload:{communicationStyle:'unbounded'}}]}),/Invalid communication style/);
+});

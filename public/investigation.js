@@ -16,7 +16,7 @@ export function createInvestigation(order) {
     }});
   }
   return { jobId: order.id, seq: 0, inputRevision: 0, events: [], sources: {},
-    observations: [], branches, questions: [], activeQuestion: null, followups: 0, interpretations: [], reviewRequired: false };
+    observations: [], branches, questions: [], activeQuestion: null, followups: 0, interpretations: [], communicationStyle: 'direct', reviewRequired: false };
 }
 
 function requireSources(state, ids) {
@@ -155,6 +155,11 @@ export function reduceInvestigation(previous, event) {
     if (p.action === 'reopen') b.epoch++;
     state.activeQuestion = null;
     state.inputRevision++;
+  } else if (event.type === 'preference.changed') {
+    if (!['direct','conversational'].includes(p.communicationStyle)) fail('Invalid communication style');
+    state.communicationStyle = p.communicationStyle;
+    // Invalidate in-flight wording without reopening evidence or resetting question limits.
+    state.inputRevision++;
   } else if (event.type === 'review.continue') {
     // Explicit technician choice starts another bounded pass.
     state.followups = 0;
@@ -186,7 +191,7 @@ export function reduceInvestigation(previous, event) {
       }
     }
     state.reviewRequired = false;
-    state.interpretations.push({ model: proposal.model, inputRevision: proposal.baseRevision, eventId: event.id, provenance: proposal.provenance || null });
+    state.interpretations.push({ model: proposal.model, inputRevision: proposal.baseRevision, eventId: event.id, communicationStyle: state.communicationStyle || 'direct', provenance: proposal.provenance || null });
   } else fail('Unknown investigation event');
   state.seq = event.seq;
   state.events.push(clone(event));
@@ -203,6 +208,7 @@ export function nextInterviewQuestion(state) {
 
 export function interviewHandoff(state) {
   return {
+    communicationStyle: state.communicationStyle || 'direct',
     version: 'carryforward.interview.v1', jobId: state.jobId, revision: state.seq, inputRevision: state.inputRevision,
     mode: state.interpretations.length
       ? 'Technician testimony with source-linked model interpretations; not independent verification'

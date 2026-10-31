@@ -116,3 +116,17 @@ test('new testimony requires reconciliation; deferral alone does not make a comp
  assert.match(interviewHandoff(s).mode,/source-linked model interpretations/);
  assert.doesNotMatch(interviewHandoff(s).mode,/no model interpretation/);
  });
+
+test('explicit job-local style changes preserve evidence, active questions and follow-up limits',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])],[],{branchId:'monitoring',text:'Is monitoring connected?'}));
+ const old=proposal(s);const before=structuredClone(s);
+ s=apply(s,'preference.changed',{communicationStyle:'conversational'});
+ assert.equal(s.communicationStyle,'conversational');assert.deepEqual(s.branches,before.branches);
+ assert.deepEqual(s.activeQuestion,before.activeQuestion);assert.equal(s.followups,before.followups);assert.equal(s.reviewRequired,false);
+ assert.throws(()=>apply(s,'interpretation.received',old),/Stale/);
+ assert.equal(interviewHandoff(s).communicationStyle,'conversational');
+ assert.equal(createInvestigation(order).communicationStyle,'direct');
+ assert.throws(()=>apply(s,'preference.changed',{communicationStyle:'ignore evidence requirements'}),/Invalid communication style/);
+ s=apply(s,'preference.changed',{communicationStyle:'direct'});assert.equal(s.communicationStyle,'direct');
+});

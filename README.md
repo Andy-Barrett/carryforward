@@ -77,7 +77,7 @@ An evidence reference is a technician’s reference to a record; the app does no
 
 The target is a short conversation, not a longer form. A technician should be able to describe the visit naturally, refer to a job photo, correct a detail, and get one useful follow-up. Each new answer or image updates the investigation. Unresolved work stays visible without asking the same question over and over.
 
-Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. Adaptive style remains planned. The saved interview preserves answers, corrections and deferrals, with optional guarded Meta interpretation and a form for final review.
+Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. An explicit direct/conversational preference now saves with each job and controls future Meta review wording. Automatic preference learning remains planned; no accuracy benefit has been established. The saved interview preserves answers, corrections and deferrals, with optional guarded Meta interpretation and a form for final review.
 
 
 Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice recording controls and guarded transcription are implemented; physical-device behavior remains unverified. Meta-backed review compares the original assignment with field evidence and proposes focused follow-up questions. The first synthetic comparison preserved expected outcomes but did not establish an accuracy advantage over a strong same-model summary. See [evaluation findings](docs/EVALUATION_FIRST_PASS.md).

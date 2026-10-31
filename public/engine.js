@@ -1,3 +1,4 @@
+import {isOffsetObservationTime} from './observation-time.js';
 export const demoOrder = {
   version: "carryforward.work-order.v1",
   id: "DEMO-WO-1042",
@@ -103,8 +104,8 @@ export function reviewReport(order, report, interview = null) {
   const technician = clean(report.technician, "Technician", 200);
   const summary = clean(report.summary, "Visit summary");
   const recordedAt = clean(report.recordedAt, "Recorded time", 100);
-  if (!Number.isFinite(Date.parse(recordedAt)))
-    throw new Error("Recorded time must be a valid timestamp.");
+  if (!isOffsetObservationTime(recordedAt))
+    throw new Error("Recorded time must be a valid timestamp with UTC offset.");
   let findings = checked.checks.map((check) => {
     const entry = report.entries?.[check.id] || {};
     const status = statuses.includes(entry.status)
@@ -118,7 +119,7 @@ export function reviewReport(order, report, interview = null) {
         : "";
     const observedAt =
       typeof entry.observedAt === "string" ? entry.observedAt.trim() : "";
-    const validTime = Number.isFinite(Date.parse(observedAt));
+    const validTime = isOffsetObservationTime(observedAt);
     const hasEvidence =
       status === "observed" && !!note && !!reference && validTime;
     const documentedNA = status === "not_applicable" && !!note;
@@ -141,7 +142,7 @@ export function reviewReport(order, report, interview = null) {
           : check.question,
       reason:
         status === "observed" && !hasEvidence
-          ? "An observed result needs a note, evidence reference, and valid observation time."
+          ? "An observed result needs a note, evidence reference, and a valid observation time with UTC offset."
           : status === "pending"
             ? "Work remains pending."
             : status === "not_applicable" && !note

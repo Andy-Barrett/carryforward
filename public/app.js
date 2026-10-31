@@ -1,3 +1,4 @@
+import {observationInputParts,deviceOffsetAt,collectObservationTime} from './observation-time.js';
 import {
   demoOrder,
   validateOrder,
@@ -412,7 +413,7 @@ function collect() {
         c.id,
         {
           status: d.get(`status-${i}`),
-          observedAt: d.get(`time-${i}`),
+          observedAt: collectObservationTime(d.get(`time-${i}`), d.get(`offset-${i}`), report.entries?.[c.id]?.observedAt || ""),
           note: d.get(`note-${i}`),
           reference: d.get(`ref-${i}`),
           // Linked local photo IDs live outside the form fields, so they
@@ -608,11 +609,16 @@ function render() {
             )
             .join(
               "",
-            )}</select></label><label>Observation time<input type="datetime-local" name="time-${i}" value="${esc(e.observedAt)}"></label></div><label>Observation or explanation<textarea rows="2" name="note-${i}" maxlength="4000">${esc(e.note)}</textarea></label><label>Evidence reference<input name="ref-${i}" maxlength="500" value="${esc(e.reference)}" placeholder="Photo filename, meter reading record, or work-note ID"></label>${linkedRow(c)}</fieldset>`;
+            )}</select></label><label>Observation time<input type="datetime-local" name="time-${i}" step="1" data-observation-time data-default-offset="${!e.observedAt}" value="${esc(observationInputParts(e.observedAt).wall)}"></label><label>UTC offset at observation<input name="offset-${i}" data-observation-offset maxlength="6" placeholder="-05:00 or Z" value="${esc(e.observedAt ? observationInputParts(e.observedAt).offset : deviceOffsetAt())}"></label></div>${e.observedAt && !observationInputParts(e.observedAt).offset ? '<p class="warn">This saved time has no UTC offset. Confirm the offset at the site before using it as a documented observation.</p>' : ''}<label>Observation or explanation<textarea rows="2" name="note-${i}" maxlength="4000">${esc(e.note)}</textarea></label><label>Evidence reference<input name="ref-${i}" maxlength="500" value="${esc(e.reference)}" placeholder="Photo filename, meter reading record, or work-note ID"></label>${linkedRow(c)}</fieldset>`;
         })
         .join(
           "",
         )}<label>Promises made to the customer / remaining actions<textarea name="promises" maxlength="4000" rows="3">${esc(report.promises)}</textarea></label>${photoSection()}<p>Files are treated as untrusted uploads. A photo counts as saved only after it shows “Saved locally”.</p><button class="primary">Review closeout →</button><button type="button" id="save">Save draft</button></form>`;
+    for(const time of document.querySelectorAll('[data-observation-time]')){
+      const offset=time.closest('fieldset').querySelector('[data-observation-offset]');
+      time.oninput=()=>{if(time.dataset.defaultOffset==='true')offset.value=deviceOffsetAt(time.value);};
+      offset.oninput=()=>{time.dataset.defaultOffset='false';};
+    }
     $("#field-form").oninput = () => {
       collect();
       save();

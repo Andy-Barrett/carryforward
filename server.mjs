@@ -21,6 +21,7 @@ const files = {
   "/manifest.webmanifest": ["manifest.webmanifest", "application/manifest+json"],
   "/app-icon.svg": ["app-icon.svg", "image/svg+xml"],
   "/app.js": ["app.js", "text/javascript"],
+  "/observation-time.js": ["observation-time.js", "text/javascript"],
   "/engine.js": ["engine.js", "text/javascript"],
   "/evidence.js": ["evidence.js", "text/javascript"],
   "/investigation.js": ["investigation.js", "text/javascript"],

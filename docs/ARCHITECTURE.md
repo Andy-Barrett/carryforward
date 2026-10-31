@@ -10,7 +10,15 @@ CarryForward is a small browser application served by Node’s built-in HTTP ser
 | `public/app.js`    | Briefing, report capture, local draft storage, review, confirmation, and export       |
 | `public/engine.js` | Work-order validation, evidence-completeness rules, confirmation, and export envelope |
 | `public/style.css` | Desktop and phone layouts                                                             |
-| `engine.test.mjs`  | Focused domain checks using Node’s test runner                                        |
+| `public/interview.js`, `public/investigation.js` | Saved interview, explicit preferences, evidence loop and bounded proposal validation |
+| `public/jobstore.js` | IndexedDB sessions, events, media and separate unsent drafts |
+| `public/voice.js`, `public/audio.js` | Local recording/playback, normalized transcription audio and reviewed transcript links |
+| `public/review-copy.js` | Bounded JPEG copies with original-source provenance |
+| `lib/meta-review.mjs`, `lib/meta-transcribe.mjs` | Guarded actual Meta interpretation/transcription adapters |
+| `lib/operations*.mjs` | Persistent local simulator, byte admission and exact-revision handoff/acceptance |
+| `public/sw.js`, `public/offline.js` | Versioned app-shell cache and actual service-connectivity status |
+| `public/observation-time.js` | Offset-aware calendar validation and lossless form roundtrip |
+| `*.test.mjs` | Node domain, guard and local HTTP integration checks |
 
 ## Work-order input
 
@@ -22,36 +30,36 @@ The validator requires nonempty bounded text, limits the number of work items an
 
 Each check records a status, observation or explanation, evidence reference, and observation time.
 
-- **Documented:** an observed result includes a note, reference, and parseable observation time. This is a completeness check, not independent verification of the source.
+- **Documented:** an observed result includes a note, reference, and valid calendar observation time with explicit UTC offset. This is a completeness check, not independent verification of the source.
 - **Reported:** a source-linked interview branch supports a narrow technician claim. It is not independently verified or silently upgraded to a measured observation.
 - **Open:** the check is pending, deferred, contradicted or unverified, or required supporting information is missing.
 - **Exception:** the technician supplies a not-applicable explanation. Operations still needs to review it.
 
 The engine reviews each check independently. A documented repair cannot resolve production, monitoring, or warranty checks by implication. New customer commitments and open work require a follow-up owner; an absent owner is flagged.
 
-Technician confirmation records a name and timestamp. It is an attestation within this prototype, not authenticated identity or an electronic signature. The Operations status remains `Awaiting Operations acceptance`.
+Technician confirmation records a name and timestamp. It is an attestation within this prototype, not authenticated identity or an electronic signature. Confirmation is separate from source receipt and Operations acceptance of the exact packet revision.
 
 ## Persistence and export
 
-The work order and field draft use the browser’s `localStorage` under `carryforward.field.v1`. They are local to this browser and origin. IndexedDB holds job sessions, ordered events, photo blobs and revision-bound confirmations. Importing another work order preserves saved jobs. Active text drafts also use localStorage; multi-tab conflict resolution remains unimplemented.
+The work order and field draft use the browser’s `localStorage` under `carryforward.field.v1`. They are local to this browser and origin. IndexedDB holds job sessions, ordered events, photo/audio blobs, separate unsent interview drafts and revision-bound confirmations. Importing another work order preserves saved jobs. Active text drafts also use localStorage; multi-tab conflict resolution remains unimplemented.
 
-The JSON download contains the validated work order and `carryforward.closeout.v1` report together. It preserves original history, individual findings, open items, new commitments, and confirmation when present. No report is sent to a provider or Operations.
+The JSON download contains the validated work order and `carryforward.closeout.v1` report together. It preserves original history, individual findings, open items, new commitments, and confirmation when present. Downloading sends nothing to a provider or Operations. Explicit guarded review sends selected fictional evidence to Meta; explicit simulator delivery admits evidence bytes and queues a confirmed packet over the local HTTP API.
 
 ## Limits to address before operational use
 
-There is no production user authentication or multi-user access control. The loopback simulator persists admitted records and evidence bytes, and guarded Meta review is opt-in. Source receipt and acceptance are local simulation, not a live Perihelion connection. Browser storage is not a backup. Observation times entered through the form use the device’s local time without an explicit timezone in the current export; cross-system use needs an offset-aware timestamp contract.
+There is no production user authentication or multi-user access control. The loopback simulator persists admitted records and evidence bytes, and guarded Meta review is opt-in. Source receipt and acceptance are local simulation, not a live Perihelion connection. Browser storage is not a backup. New form observations carry the displayed UTC offset. Legacy offset-free times remain unresolved until the technician supplies an offset; no historical timezone is inferred. Report creation times also require an explicit offset. The `carryforward.review.v4` confirmation contract prevents reuse of earlier completeness approvals.
 
-Phone-width layout checks have been performed. Physical-device camera, microphone, installability, and offline behavior still need implementation and testing.
+Phone-width layout checks have been performed. Recording controls, the standalone manifest and offline shell are implemented. Physical-device camera, microphone, installation, interruption and airplane-mode behavior remain unverified. Server-stopped desktop reopening and local persistence were verified; see `docs/OFFLINE.md` and `docs/PHONE_VALIDATION.md`.
 
 ## Model and integration direction
 
 Keep the assignment, technician testimony, source evidence, model findings, and human acceptance distinct. Model-generated findings must refer to admitted records, and malformed or unsupported output must remain incomplete rather than silently closing work.
 
-API secrets belong on the server. The planned integration boundary accepts work orders and returns closeouts using stable external IDs. Authentication, duplicate handling, retries, and explicit acceptance must precede live Operations synchronization.
+API secrets belong on the server. The local integration boundary accepts work orders and returns closeouts using stable external IDs. Authentication, duplicate handling, retries, and explicit acceptance must precede live Operations synchronization.
 
 ## Target architecture: one job, an evidence-driven loop
 
-The sections above describe the current implementation. Everything below is a target design, not an existing service or accepted Operations contract.
+The diagram describes the accepted product architecture. The local evidence loop, adapters and simulator now implement its main path; physical-device validation, spoken responses, broader integrations and production access remain future work. See `docs/READINESS_REVIEW.md` for requirement-level evidence. This is not an adopted Perihelion contract.
 
 ```mermaid
 flowchart TD
@@ -73,7 +81,7 @@ flowchart TD
 
 Retain a single Node backend and browser client initially. Add domain modules for sessions, evidence, investigation, and adapters; do not introduce a workflow service, vector database, per-question agents, or PRISM dependency to finish the contest.
 
-Use IndexedDB for phone drafts and media. Use a local SQLite store for admitted sessions/events and media metadata, with blobs in an ignored application-data directory. Node 24's SQLite API is a candidate to verify during implementation; do not introduce an ORM or production migration for this prototype. Browser-local save and server admission are distinct states. A blob is admitted only after the server acknowledges its identity and hash.
+Use IndexedDB for phone drafts and media. The local SQLite store holds admitted sessions/events, evidence metadata and bytes under ignored `.local/`. Node 24’s SQLite API is implemented and tested; do not introduce an ORM or production migration for this prototype. Browser-local save and server admission are distinct states. A blob is admitted only after the server acknowledges its identity and hash.
 
 ### Domain records
 
@@ -107,13 +115,13 @@ Model context is a bounded projection of stored records, not the authoritative j
 
 Prioritize material questions whose answers can change an outcome and are easiest to obtain now. An onsite-only measurement outranks an office paperwork lookup. Hold routine questions until the technician finishes speaking. Capture a mid-response interruption as a new turn; cancel obsolete spoken output and keep the unsaid portion distinct from what the user heard.
 
-Start with configurable ceilings of one active question, three proactive follow-ups per review pass, and one automatic retry for a transient provider error. These are proposed defaults, not observed optimums. A technician may choose to continue. Reaching a limit produces an incomplete/deferred handoff, never a fabricated completion.
+Start with configurable ceilings of one active question, three proactive follow-ups per review pass, and no automatic provider retries. These are bounded defaults, not observed optimums. A technician may choose to continue. Reaching a limit produces an incomplete/deferred handoff, never a fabricated completion.
 
 `Already answered`, `can't verify`, and `follow up later` update branch state. Do not repeatedly ask equivalent questions without new evidence. Final review exposes material unresolved items, exceptions, and unassigned commitments.
 
 ### Style and memory
 
-Company requirements, technician preferences, and job facts are separate scopes. Begin with explicit style and detail settings plus session-local vocabulary corrections. Do not infer personality traits, competence, or risk tolerance. Later preference suggestions need provenance, user confirmation, edit/reset controls, and bounded retention.
+Company requirements, technician preferences, and job facts are separate scopes. Direct/conversational style is now an explicit saved job preference. Detail settings and vocabulary suggestions remain future work. Do not infer personality traits, competence, or risk tolerance. Later preference suggestions need provenance, user confirmation, edit/reset controls, and bounded retention.
 
 Humor affects wording, not truth standards or procedure requirements. Use responsive brief humor, not compulsory banter. Safety instructions come from approved applicable procedures and explicit rules. Web-discovered documents are candidates requiring provenance and applicability checks; they do not silently become approved instructions.
 
@@ -123,7 +131,7 @@ Use server-side adapters for transcription and multimodal interpretation. Choose
 
 The server owns credentials, per-request input/output limits, per-session call/token budgets, timeouts, and accounting. Reserve a conservative maximum cost before dispatch, including model-assisted retries or tool-review calls, then reconcile actual usage. Disable further dispatch if budget or price information cannot be established. A billing notification is not a hard cap.
 
-No model call is authorized until the owner confirms posted credits and a bounded run. Test adapters with synthetic recorded responses while disabled, clearly labeled as such. Do not claim a fixture proves live model behavior.
+The October 30 owner approval authorizes CarryForward code and fictional examples under a $10 aggregate guard shared by coding and product inference; it does not authorize customer evidence or new subscriptions. Test adapters with synthetic recorded responses while disabled, clearly labeled as such. Do not claim a fixture proves live model behavior.
 
 ### Integration surface for the contest
 
@@ -142,10 +150,10 @@ A local simulator polls for the closeout and records receipt and acceptance sepa
 
 A photo or recording moves through `saving_local`, `saved_local`, `pending_upload`, `admitted`, and optionally `failed`. Show the actual state; never call local media synced. Preserve the immutable original alongside corrected transcripts and generated derivatives. Duplicate retries must not create new evidence or jobs.
 
-Network loss does not prevent local capture of an already opened job. AI review requires admitted evidence and connectivity. A service worker can cache the app shell later; do not claim fresh offline startup before it is tested. Browser eviction, permission refusal, storage exhaustion, recorder interruption, and unsupported image formats need visible recovery paths.
+Network loss does not prevent local capture of an already opened job. AI review requires admitted evidence and connectivity. The implemented service worker caches only the content-versioned app shell. Server-stopped reopening was tested on desktop; physical-phone offline startup remains unverified. Browser eviction, permission refusal, storage exhaustion, recorder interruption, and unsupported image formats need visible recovery paths.
 
 Photo inspection and final confirmation are parked activities. No continuous driving interview, background camera collection, full-library access, or glasses dependency.
 
 ## Investigation implementation checkpoint
 
-`public/investigation.js` and `investigation.test.mjs` implement the pure job projection and interpretation validator described above. Source admission, correction history, excluded support, explicit human deferral/reopening, bounded follow-ups and branch/evidence-based question suppression are implemented in the module. The UI still uses the original completeness engine; no live provider or interview integration is claimed. Test model names explicitly identify synthetic fixtures.
+`public/investigation.js` and `investigation.test.mjs` implement the pure job projection and interpretation validator described above. Source admission, correction history, excluded support, explicit human deferral/reopening, bounded follow-ups and branch/evidence-based question suppression are implemented in the module. The UI combines the completeness engine with the saved interview, actual guarded Meta review, source-linked findings and local Operations delivery. First-pass evaluation and development retests are documented in `docs/EVALUATION_FIRST_PASS.md`; they do not prove an accuracy advantage over a strong same-model summary. Test model names explicitly identify synthetic fixtures.

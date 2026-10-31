@@ -12,6 +12,10 @@ Build one service visit end to end. The technician speaks naturally, adds job ph
 
 These do not establish conversational reasoning, physical-device support, live inference, or actual Operations delivery.
 
+## Current checkpoint
+
+The local end-to-end path is implemented and exercised. See [readiness evidence](READINESS_REVIEW.md) for what is verified and what remains. The slices below retain their original acceptance intent; a local prototype is not a completed field deployment.
+
 ## Slice 1 — durable job evidence
 
 Start with docs/MUSE_HANDOFF.md. Store sessions/events/photo blobs in IndexedDB, keep jobs isolated, handle failed writes visibly, preserve confirmations against exact revisions, and export actual media. Keep the form working as a fallback. No model or service-worker work in this slice.
@@ -20,7 +24,7 @@ Done means two photos survive reload and job switching; actual bytes/hashes surv
 
 ## Slice 2 — investigation state and contracts
 
-Implementation checkpoint: `public/investigation.js` now provides a pure event reducer and bounded model-output validator, with synthetic unit cases covering correction history, stale output, excluded/cross-job sources, human deferral, duplicate events and equivalent-question suppression. It is connected to the saved interview and guarded Meta review; broader evaluation remains pending.
+Implementation checkpoint: `public/investigation.js` now provides a pure event reducer and bounded model-output validator, with synthetic unit cases covering correction history, stale output, excluded/cross-job sources, human deferral, duplicate events and equivalent-question suppression. It is connected to the saved interview and guarded Meta review; the first twelve-case same-model comparison is documented in `docs/EVALUATION_FIRST_PASS.md`. Independent and human-effort evaluation remain pending.
 
 Implement a pure reducer over ordered job events, with branch states and evidence ownership checks. Add a schema validator for proposed model observations, branch changes, and one next question. Use explicitly labeled fixtures, not live calls.
 
@@ -28,7 +32,7 @@ Done means a new photo can open one branch while another stays resolved; a corre
 
 ## Slice 3 — simple interview capture
 
-Partial implementation: a job-local text interview is connected to the event reducer. Answers, explicit corrections, already-answered responses and owner-assigned deferrals persist through reload. Question selection has a labeled deterministic fallback plus guarded live Meta interpretation. Local recording controls, playback, synthetic audio transcription and reviewed transcript-to-answer links now exist. Uploaded WAV persistence and delivery were verified; microphone/interruption on physical devices remains unverified.
+Partial implementation: a job-local text interview is connected to the event reducer. Answers, explicit corrections, already-answered responses and owner-assigned deferrals persist through reload. Question selection has a labeled deterministic fallback plus guarded live Meta interpretation. Local recording controls, playback, synthetic audio transcription and reviewed transcript-to-answer links now exist. Unsent text and reviewed voice drafts recover separately from submitted testimony. Explicit job-local direct/conversational style is implemented. Uploaded WAV persistence and delivery were verified; microphone/interruption on physical devices remains unverified.
 
 Add voice recording, explicit capture state, playback, interruption recovery, and a text fallback. The UI offers one question at a time plus already answered, can't verify, and follow up later. Use explicit direct/conversational style settings; keep requirements identical. No inferred personality profile or cross-job memory.
 
@@ -36,7 +40,7 @@ Done means a technician can narrate, add a photo mid-session, correct a statemen
 
 ## Slice 4 — Meta-backed review
 
-Partial implementation: guarded `muse-spark-1.3` review of saved testimony and selected job images is connected to the interview. Model proposals and references are validated; actual usage/latency is retained in the event projection. Four live development calls exercised incomplete testimony, prompt refinement, an unreadable image and a more complete narrative. This is not a held-out evaluation or a finished voice path.
+Implementation checkpoint: guarded `muse-spark-1.3` review and `muse-voice-transcribe-1.0` transcription are connected. Actual synthetic calls, usage and latency are retained. The fixed twelve-case comparison and three-case development retest are documented; no accuracy advantage over a strong summary was demonstrated. Original-preserving review copies were exercised through actual model interpretation, export and simulator readback. Spoken output and full-duplex conversation remain unimplemented; readable text is the accepted contest fallback.
 
 Only after credits, billing route, data handling and a numeric coding/product budget are confirmed. Verify actual model capabilities and implement bounded transcription/image/text adapters. Capture model IDs, usage, latency, validation failures, and conservative cost reservations. Do not assume a paid coding subscription is covered by API promotional credits.
 
@@ -54,7 +58,7 @@ Done means an assignment enters through an API, captured evidence advances the s
 
 Prepare about 12 synthetic cases and expected findings before prompt tuning. Hold some cases out. Compare with a plain same-model summary prompt. Report actual omissions, unsupported closure, unnecessary questions, reference validity, user effort, latency and cost. Adaptive personality is a testable hypothesis, not a claimed accuracy gain.
 
-Freeze feature work by November 2 if feasible; use November 3 for fixes, phone checks and the three-minute recording. Target November 4 at 5 PM Central for submission, three hours before the published deadline. These are targets, not completion claims; posted credits remain a dependency.
+Freeze feature work by November 2 if feasible; use November 3 for fixes, phone checks and the three-minute recording. Target November 4 at 5 PM Central for submission, three hours before the published deadline. These are targets, not completion claims. The bounded October 30 inference approval is active; actual-device validation and release approval remain dependencies.
 
 Before release: hosted-access review, repository/data review, owner-approved public visibility and license choice, tested links, accurate disclosure of AI assistance and newly built work. Do not turn a fixture into a claimed live result to meet the deadline.
 

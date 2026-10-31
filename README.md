@@ -86,7 +86,7 @@ An installable web app for iPhone and Android is the delivery target. Voice capt
 
 See [guarded Meta development](docs/META_DEVELOPMENT.md) for the local inference boundary.
 
-See the [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md), and [technical notes](docs/ARCHITECTURE.md). Developers should start with [AGENTS.md](AGENTS.md) and the [Muse Code handoff](docs/MUSE_HANDOFF.md).
+See the [readiness review](docs/READINESS_REVIEW.md), [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md), and [technical notes](docs/ARCHITECTURE.md). Developers should start with [AGENTS.md](AGENTS.md) and the [Muse Code handoff](docs/MUSE_HANDOFF.md).
 
 ## Integration direction
 

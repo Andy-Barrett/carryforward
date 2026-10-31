@@ -28,3 +28,5 @@ CarryForward's local evidence-to-handoff loop is implemented. The full field-pro
 The immediate next acceptance work is a physical-device access path and the checks in `PHONE_VALIDATION.md`, followed by a short technician usability run using `evaluation/usability/README.md`. The prepared kit remains explicitly unrun; it is not participant evidence. Keep the natural interview/evidence loop as the product; additional framework work does not replace those checks. Do not claim completion or production readiness from this local review.
 
 The cloud loop now has an actual synthetic model-to-simulator acceptance exercise; see [October 31 receipt and limits](CLOUD_VISIT_LOOP.md). This does not replace the pending physical-phone and human usability rows.
+
+A native SwiftUI/WKWebView development target now has signing-disabled simulator/device build receipts and executed Mac-side endpoint-policy checks. CoreSimulator's component mismatch blocks launch verification. This adds compile evidence only; storage/relaunch, import/export/share, editing, capture and offline results inside the wrapper remain pending. See [iPhone target](../ios/README.md).

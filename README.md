@@ -105,3 +105,5 @@ The demonstration records are fictional. No Perihelion customer records or appli
 Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. This is a prototype: storage conflicts, quota recovery and physical phone behavior still need validation.
 
 For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).
+
+A private [iPhone development target](ios/README.md) now reuses this web app through SwiftUI/WKWebView. Simulator and device-code builds compile with signing disabled; actual native launch and phone behavior remain pending.

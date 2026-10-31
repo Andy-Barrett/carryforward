@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleDisplayName</key><string>CarryForward Dev</string>
+<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+<key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+<key>CarryForwardDevelopmentOrigin</key><string>$(CF_ORIGIN_SCHEME)://$(CF_ORIGIN_HOST):$(CF_ORIGIN_PORT)/</string>
+<key>CarryForwardWebSourceRevision</key><string>$(CF_WEB_SOURCE_REVISION)</string>
+<key>LSRequiresIPhoneOS</key><true/>
+<key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
+<key>UILaunchScreen</key><dict/>
+<key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+<key>NSCameraUsageDescription</key><string>Take a job photo only when you choose the camera. Use fictional test evidence in this development app.</string>
+<key>NSMicrophoneUsageDescription</key><string>Record a short job note only when you tap Record. Review and send your words separately.</string>
+<key>NSPhotoLibraryUsageDescription</key><string>Select specific job photos to attach. This app does not scan your photo library.</string>
+<key>NSLocalNetworkUsageDescription</key><string>Open the explicitly configured CarryForward development server on your trusted local network.</string>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict></plist>

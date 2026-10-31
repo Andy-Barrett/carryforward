@@ -157,3 +157,7 @@ Photo inspection and final confirmation are parked activities. No continuous dri
 ## Investigation implementation checkpoint
 
 `public/investigation.js` and `investigation.test.mjs` implement the pure job projection and interpretation validator described above. Source admission, correction history, excluded support, explicit human deferral/reopening, bounded follow-ups and branch/evidence-based question suppression are implemented in the module. The UI combines the completeness engine with the saved interview, actual guarded Meta review, source-linked findings and local Operations delivery. First-pass evaluation and development retests are documented in `docs/EVALUATION_FIRST_PASS.md`; they do not prove an accuracy advantage over a strong same-model summary. Test model names explicitly identify synthetic fixtures.
+
+## Private iPhone development target
+
+`ios/CarryForward.xcodeproj` now supplies a small SwiftUI/WKWebView shell over one explicit development origin. It retains the web evidence/API contracts, persistent origin-scoped storage and system TLS validation; it does not load bundled file:// HTML or implement a second investigation engine. Signing-disabled simulator/device compiles passed; native launch/capture/offline acceptance remains pending because the running CoreSimulator service is out of date. See [native build and owner checklist](../ios/README.md).

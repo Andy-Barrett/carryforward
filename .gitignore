@@ -7,3 +7,8 @@ dist/
 .DS_Store
 *.log
 coverage/
+# Machine-local Xcode artifacts and signing configuration.
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/build/
+ios/Local.xcconfig

@@ -56,7 +56,7 @@ Done means an assignment enters through an API, captured evidence advances the s
 
 ## Slice 6 — evaluate and submit
 
-Prepare about 12 synthetic cases and expected findings before prompt tuning. Hold some cases out. Compare with a plain same-model summary prompt. Report actual omissions, unsupported closure, unnecessary questions, reference validity, user effort, latency and cost. Adaptive personality is a testable hypothesis, not a claimed accuracy gain.
+Prepare about 12 synthetic cases and expected findings before prompt tuning. Hold some cases out. Compare with a plain same-model summary prompt. Report actual omissions, unsupported closure, unnecessary questions, reference validity, user effort, latency and cost. Adaptive personality is a testable hypothesis, not a claimed accuracy gain. The paired-style pilot protocol and a no-inference kit generator are in `evaluation/usability/README.md`; preparation does not count as a completed study.
 
 Freeze feature work by November 2 if feasible; use November 3 for fixes, phone checks and the three-minute recording. Target November 4 at 5 PM Central for submission, three hours before the published deadline. These are targets, not completion claims. The bounded October 30 inference approval is active; actual-device validation and release approval remain dependencies.
 

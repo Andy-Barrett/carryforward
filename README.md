@@ -77,10 +77,10 @@ An evidence reference is a technician’s reference to a record; the app does no
 
 The target is a short conversation, not a longer form. A technician should be able to describe the visit naturally, refer to a job photo, correct a detail, and get one useful follow-up. Each new answer or image updates the investigation. Unresolved work stays visible without asking the same question over and over.
 
-Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. Adaptive style and AI interpretation are planned. The text interview now preserves answers, corrections and deferrals, with explicitly labeled work-order questions and a form for final review.
+Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. Adaptive style remains planned. The saved interview preserves answers, corrections and deferrals, with optional guarded Meta interpretation and a form for final review.
 
 
-Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice capture and the adaptive interview are next. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
+Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice recording controls and guarded transcription are implemented; physical-device behavior remains unverified. Meta-backed review compares the original assignment with field evidence and proposes focused follow-up questions. The first synthetic comparison preserved expected outcomes but did not establish an accuracy advantage over a strong same-model summary. See [evaluation findings](docs/EVALUATION_FIRST_PASS.md).
 
 An installable web app for iPhone and Android is the delivery target. Voice capture controls and uploaded-audio transcription are implemented; microphone capture/interruption on physical iPhone and Android devices is not verified. Offline startup and production Operations integration remain unimplemented. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; this is not a completed conversational voice experience.
 

@@ -22,6 +22,6 @@ CarryForward's local evidence-to-handoff loop is implemented. The full field-pro
 | Budget and data boundary | Guard source and tests; persistent aggregate ledger; only CarryForward code and fictional examples | Active; no production/customer authorization |
 | Accuracy/efficiency claim | Strong same-model comparison did not show an accuracy advantage; human interaction time and enjoyment not measured | No improvement claim justified |
 | iPhone/Android installation and interrupted recording | See `PHONE_VALIDATION.md`; loopback-only server is not a phone-access deployment | Pending |
-| Contest publication and demonstration | Professional source/docs prepared locally; no public release, hosted deployment or submission performed | Owner release decision pending |
+| Contest publication and demonstration | Tracked-source candidate independently extracted/tested; see `RELEASE_CANDIDATE.md`. No public release, hosted deployment or submission performed | Owner release decision pending |
 
 The immediate next acceptance work is a physical-device access path and the checks in `PHONE_VALIDATION.md`, followed by a short technician usability run using `evaluation/usability/README.md`. The prepared kit remains explicitly unrun; it is not participant evidence. Keep the natural interview/evidence loop as the product; additional framework work does not replace those checks. Do not claim completion or production readiness from this local review.

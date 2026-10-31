@@ -47,3 +47,100 @@ Phone-width layout checks have been performed. Physical-device camera, microphon
 Keep the assignment, technician testimony, source evidence, model findings, and human acceptance distinct. Model-generated findings must refer to admitted records, and malformed or unsupported output must remain incomplete rather than silently closing work.
 
 API secrets belong on the server. The planned integration boundary accepts work orders and returns closeouts using stable external IDs. Authentication, duplicate handling, retries, and explicit acceptance must precede live Operations synchronization.
+
+## Target architecture: one job, an evidence-driven loop
+
+The sections above describe the current implementation. Everything below is a target design, not an existing service or accepted Operations contract.
+
+```mermaid
+flowchart TD
+    A[Work-order API / local simulator] --> S[Job session and ordered event log]
+    P[Phone capture: voice, text, photos] --> S
+    S --> C[Investigation coordinator]
+    C --> M[Meta interpretation and transcription adapters]
+    M --> V[Validate references and proposed changes]
+    V --> S
+    C --> Q[Choose next useful question or defer]
+    Q --> P
+    C --> H[Reviewable closeout revision]
+    H --> T[Technician confirmation]
+    T --> O[Outbound API delivery / local simulator]
+    O --> X[Separate Operations acceptance]
+```
+
+### Keep the prototype small
+
+Retain a single Node backend and browser client initially. Add domain modules for sessions, evidence, investigation, and adapters; do not introduce a workflow service, vector database, per-question agents, or PRISM dependency to finish the contest.
+
+Use IndexedDB for phone drafts and media. Use a local SQLite store for admitted sessions/events and media metadata, with blobs in an ignored application-data directory. Node 24's SQLite API is a candidate to verify during implementation; do not introduce an ORM or production migration for this prototype. Browser-local save and server admission are distinct states. A blob is admitted only after the server acknowledges its identity and hash.
+
+### Domain records
+
+| Record | Required distinction |
+| --- | --- |
+| Assignment | Source system, external job/site/system IDs, scope, revision, source history, authority |
+| Evidence | Stable ID, job/session ID, content hash, type, capture/upload times, origin, local/server availability |
+| Observation | Claim, equipment/site identity, observed time with UTC offset, source evidence or testimony |
+| Investigation branch | Question, related assignment item, supporting/contradicting evidence, state, owner, reopening reason |
+| Interview turn | Ordered utterance/transcript, speaker, correction/supersession reference, interruption state |
+| Interpretation | Model/provider/version, input evidence IDs, output schema version, usage, validation result |
+| Closeout | Revision, included evidence/events, supported/unknown outcomes, commitments, technician confirmation |
+| Acceptance | Originating-system decision referring to the exact closeout revision; separate from receipt |
+
+Names and serial strings are not canonical identity. Carry source IDs through the adapter without merging jobs or people based on labels alone. Each idempotency key is scoped to its integration and operation, not global across callers.
+
+### Investigation cycle
+
+1. Persist incoming evidence or a turn with a stable event ID and monotonically increasing session sequence.
+2. Assemble bounded context from the assignment, admitted evidence, open branches, and confirmed communication preferences.
+3. Ask the model for proposed observations, branch changes, and at most one next question. Output includes exact evidence references and a reason for material changes.
+4. Validate the output schema, job ownership of references, quoted passages when applicable, and whether a model result still matches the input session revision.
+5. Append accepted changes, retaining prior evidence and corrected interpretations. Do not let stale results overwrite newer human answers. Reconcile again only when there is new material input and budget remains.
+6. Ask, defer, assign, or stop. A missing observation may remain explicitly unknown; no model can reason it into existence.
+
+Branch states: `open`, `supported`, `contradicted`, `needs_verification`, `deferred`. Supported means support for a defined claim, not universal repair or safety verification. Reopen only for material new evidence, a correction, or an assignment revision; record why.
+
+Model context is a bounded projection of stored records, not the authoritative job record. Repeated reasoning without new evidence is not verification.
+
+### Question policy
+
+Prioritize material questions whose answers can change an outcome and are easiest to obtain now. An onsite-only measurement outranks an office paperwork lookup. Hold routine questions until the technician finishes speaking. Capture a mid-response interruption as a new turn; cancel obsolete spoken output and keep the unsaid portion distinct from what the user heard.
+
+Start with configurable ceilings of one active question, three proactive follow-ups per review pass, and one automatic retry for a transient provider error. These are proposed defaults, not observed optimums. A technician may choose to continue. Reaching a limit produces an incomplete/deferred handoff, never a fabricated completion.
+
+`Already answered`, `can't verify`, and `follow up later` update branch state. Do not repeatedly ask equivalent questions without new evidence. Final review exposes material unresolved items, exceptions, and unassigned commitments.
+
+### Style and memory
+
+Company requirements, technician preferences, and job facts are separate scopes. Begin with explicit style and detail settings plus session-local vocabulary corrections. Do not infer personality traits, competence, or risk tolerance. Later preference suggestions need provenance, user confirmation, edit/reset controls, and bounded retention.
+
+Humor affects wording, not truth standards or procedure requirements. Use responsive brief humor, not compulsory banter. Safety instructions come from approved applicable procedures and explicit rules. Web-discovered documents are candidates requiring provenance and applicability checks; they do not silently become approved instructions.
+
+### Meta adapters and usage control
+
+Use server-side adapters for transcription and multimodal interpretation. Choose actual model IDs, request formats, media limits, retention settings, and prices from verified Meta documentation at integration time. Keep contributor/training mode off for coding and product use.
+
+The server owns credentials, per-request input/output limits, per-session call/token budgets, timeouts, and accounting. Reserve a conservative maximum cost before dispatch, including model-assisted retries or tool-review calls, then reconcile actual usage. Disable further dispatch if budget or price information cannot be established. A billing notification is not a hard cap.
+
+No model call is authorized until the owner confirms posted credits and a bounded run. Test adapters with synthetic recorded responses while disabled, clearly labeled as such. Do not claim a fixture proves live model behavior.
+
+### Integration surface for the contest
+
+Implement and document a small versioned HTTP boundary:
+
+- `POST /api/v1/work-orders`: admit a source assignment using integration-scoped idempotency and external IDs.
+- `GET /api/v1/jobs/:jobId`: return a bounded status and revision.
+- `POST /api/v1/jobs/:jobId/evidence`: admit bounded media/text; verify association and content hash.
+- `POST /api/v1/jobs/:jobId/turns`: append a technician turn and schedule a bounded review when inference is enabled.
+- `GET /api/v1/jobs/:jobId/closeout`: obtain a versioned reviewable result, including unresolved items.
+- `POST /api/v1/jobs/:jobId/confirmations`: confirm a specific closeout revision. Reject stale revisions.
+
+A local simulator polls for the closeout and records receipt and acceptance separately. It does not change Perihelion. Webhooks, production authentication and tenant isolation follow after the bounded demo. Demo endpoints still require explicit local authentication and must not be exposed publicly without a hosted-access review. Do not forward arbitrary supplied callback URLs.
+
+### Offline behavior and recovery
+
+A photo or recording moves through `saving_local`, `saved_local`, `pending_upload`, `admitted`, and optionally `failed`. Show the actual state; never call local media synced. Preserve the immutable original alongside corrected transcripts and generated derivatives. Duplicate retries must not create new evidence or jobs.
+
+Network loss does not prevent local capture of an already opened job. AI review requires admitted evidence and connectivity. A service worker can cache the app shell later; do not claim fresh offline startup before it is tested. Browser eviction, permission refusal, storage exhaustion, recorder interruption, and unsupported image formats need visible recovery paths.
+
+Photo inspection and final confirmation are parked activities. No continuous driving interview, background camera collection, full-library access, or glasses dependency.

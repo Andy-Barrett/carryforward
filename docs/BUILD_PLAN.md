@@ -1,51 +1,55 @@
 # Build plan
 
-The first release needs to handle one service visit well: prepare the technician, capture the outcome, identify missing evidence, and produce a useful handoff.
+Build one service visit end to end. The technician speaks naturally, adds job photos, answers a useful question, and returns a closeout that keeps remaining obligations visible. The evidence loop is the product; media capture and APIs support it.
 
-## Working foundation
+## Baseline — implemented
 
-- [x] Work-order briefing and source history.
-- [x] Validated JSON work-order import.
-- [x] Field report with separate checks for work, production, monitoring, and warranty.
-- [x] Browser-local drafts and explicit technician confirmation.
-- [x] Closeout export that preserves unresolved items.
-- [x] Focused tests for partial completion, missing evidence, exceptions, and invalid imports.
+- [x] Work-order briefing with source history and JSON import.
+- [x] Field form and deterministic completeness review.
+- [x] Local text drafts and JSON closeout export.
+- [x] Separate repair, production, monitoring, and warranty outcomes.
+- [x] Five focused domain tests and a passing GitHub Checks run at `c526a52`.
 
-## Next: capture the visit on a phone
+These do not establish conversational reasoning, physical-device support, live inference, or actual Operations delivery.
 
-- [ ] Photo capture with attachments associated with the right work order and observation.
-- [ ] Voice recording with a text-entry fallback.
-- [ ] Durable local attachment storage and clear save/sync state.
-- [ ] Installable web app shell.
-- [ ] Actual iPhone and Android testing, including interrupted connectivity.
+## Slice 1 — durable job evidence
 
-Success means a technician can leave the page, return to the same draft, and tell what has been saved locally. A desktop browser resized to phone dimensions is not sufficient device testing.
+Start with docs/MUSE_HANDOFF.md. Store sessions/events/photo blobs in IndexedDB, keep jobs isolated, handle failed writes visibly, preserve confirmations against exact revisions, and export actual media. Keep the form working as a fallback. No model or service-worker work in this slice.
 
-## Then: review the evidence
+Done means two photos survive reload and job switching; actual bytes/hashes survive export; a failed write cannot be mistaken for a save; changing a confirmed report invalidates that confirmation.
 
-- [ ] Meta model adapter, with usage accounting and bounded requests.
-- [ ] Compare raw assignment text with field notes and attachments.
-- [ ] Link findings to the passages or media that support them.
-- [ ] Ask a focused question when an observation is missing or contradictory.
-- [ ] Update the review after the technician supplies another answer.
-- [ ] Preserve unsupported outcomes as unverified.
+## Slice 2 — investigation state and contracts
 
-Live inference remains disabled until hackathon credits are confirmed. Mock or deterministic results must remain visibly distinct from actual model output.
+Implement a pure reducer over ordered job events, with branch states and evidence ownership checks. Add a schema validator for proposed model observations, branch changes, and one next question. Use explicitly labeled fixtures, not live calls.
 
-## Prove the difference
+Done means a new photo can open one branch while another stays resolved; a correction supersedes the relevant claim without erasing its source; stale interpretation results cannot overwrite newer turns; equivalent questions are suppressed; unknown/deferred outcomes remain visible. Add malformed-output and duplicate-event cases.
 
-Prepare a small set of synthetic service cases before tuning the prompts. Include completed work, partial completion, stale monitoring, conflicting observations, and unsupported closure.
+## Slice 3 — simple interview capture
 
-Compare the evidence-review workflow with a simple visit-summary prompt using the same model. Report missed obligations, unsupported completion claims, unnecessary questions, citation validity, latency, and cost. Publish measured results, not target numbers presented as results.
+Add voice recording, explicit capture state, playback, interruption recovery, and a text fallback. The UI offers one question at a time plus already answered, can't verify, and follow up later. Use explicit direct/conversational style settings; keep requirements identical. No inferred personality profile or cross-job memory.
 
-## Submission
+Done means a technician can narrate, add a photo mid-session, correct a statement, defer a question, and resume the saved job. Inspect real iPhone/Android permission and recorder behavior. Photo review and confirmation remain parked activities.
 
-- [ ] Reliable hosted demo with fictional data.
-- [ ] Three-minute video showing a missing observation caught and resolved.
-- [ ] Accurate disclosure of hackathon work and model use.
-- [ ] Repository reviewed before changing visibility to public.
-- [ ] Submission links tested before the November 4 deadline.
+## Slice 4 — Meta-backed review
 
-## After the core workflow works
+Only after credits, billing route, data handling and a numeric coding/product budget are confirmed. Verify actual model capabilities and implement bounded transcription/image/text adapters. Capture model IDs, usage, latency, validation failures, and conservative cost reservations. Do not assume a paid coding subscription is covered by API promotional credits.
 
-Add authenticated work-order and closeout APIs, external ID mapping, duplicate-request handling, and delivery notifications. Operations acceptance stays separate from technician confirmation. Live Perihelion integration requires its own contract and access review.
+Done means complete, incomplete and contradictory evidence produce different actual model findings/questions; sources remain inspectable; an ambiguous photo candidate requires confirmation; a provider error leaves a recoverable draft; a budget failure prevents a call. Resolve spoken-output support early; retain readable text if speech synthesis is unavailable.
+
+## Slice 5 — API loop and Operations simulator
+
+Implement the bounded versioned interface in the architecture notes. Use a clearly labeled local source-system simulator. Preserve source IDs, reject cross-job access, deduplicate admission/delivery, and separate delivery receipt, technician confirmation, and source-system acceptance.
+
+Done means an assignment enters through an API, captured evidence advances the same session, the simulator receives a closeout with unresolved obligations, and a stale acceptance cannot apply to a newer report. No live Perihelion integration or arbitrary outbound webhooks.
+
+## Slice 6 — evaluate and submit
+
+Prepare about 12 synthetic cases and expected findings before prompt tuning. Hold some cases out. Compare with a plain same-model summary prompt. Report actual omissions, unsupported closure, unnecessary questions, reference validity, user effort, latency and cost. Adaptive personality is a testable hypothesis, not a claimed accuracy gain.
+
+Freeze feature work by November 2 if feasible; use November 3 for fixes, phone checks and the three-minute recording. Target November 4 at 5 PM Central for submission, three hours before the published deadline. These are targets, not completion claims; posted credits remain a dependency.
+
+Before release: hosted-access review, repository/data review, owner-approved public visibility and license choice, tested links, accurate disclosure of AI assistance and newly built work. Do not turn a fixture into a claimed live result to meet the deadline.
+
+## Cut order
+
+Cut advanced personality learning, cross-job history, glasses, full-library access, production integration, and broad web retrieval. If needed, cut spoken responses and semantic image selection in favor of text and a photo picker. Preserve evidence capture, actual Meta review, one adaptive follow-up, and the API closeout loop.

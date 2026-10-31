@@ -71,13 +71,18 @@ npm test
 
 An evidence reference is a technician’s reference to a record; the app does not yet inspect the referenced file. “Documented” means the required information is present, not that the underlying work has been independently verified.
 
-## What comes next
+## Where we’re taking it
+
+The target is a short conversation, not a longer form. A technician should be able to describe the visit naturally, refer to a job photo, correct a detail, and get one useful follow-up. Each new answer or image updates the investigation. Unresolved work stays visible without asking the same question over and over.
+
+Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. That behavior is planned; the current interface is the working form-based foundation.
+
 
 The next milestone is phone capture: photos, voice notes, and reliable local drafts. Meta-backed review will compare the original assignment with the field evidence and ask focused follow-up questions. We’ll measure whether it catches meaningful omissions without creating unnecessary work for the technician.
 
 An installable web app for iPhone and Android is the delivery target. Live inference, media capture, offline attachments, and authenticated Operations integration are not implemented yet.
 
-See the [build plan](docs/BUILD_PLAN.md) and [technical notes](docs/ARCHITECTURE.md).
+See the [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md), and [technical notes](docs/ARCHITECTURE.md). Developers should start with [AGENTS.md](AGENTS.md) and the [Muse Code handoff](docs/MUSE_HANDOFF.md).
 
 ## Integration direction
 

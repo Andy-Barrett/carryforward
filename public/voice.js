@@ -1,3 +1,4 @@
+import {requestReview} from './review-request.js';
 import {watchCaptureInterruptions} from './capture-lifecycle.js';
 import {transcriptionWav,AUDIO_LIMITS,validateAudioOriginal} from './audio.js';
 import {saveAudio,listAudioByJob,updateAudioTranscription} from './jobstore.js';
@@ -61,8 +62,7 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
       const bytes=new Uint8Array(await clip.wavBlob.arrayBuffer());
       if(await hashBytes(bytes)!==clip.wavSha256)throw new Error('Saved transcription audio hash changed.');
       root.querySelector('[role=status]').textContent='Transcribing with Meta… The original clip stays saved.';
-      const response=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':'application/json','X-CarryForward-Intent':'review'},body:JSON.stringify({synthetic:true,jobId,audioId:clip.id,audioBase64:base64(bytes),sha256:clip.wavSha256})});
-      const result=await response.json();if(!response.ok)throw new Error(result.error||'Transcription failed.');
+      const result=await requestReview('/api/transcribe',{synthetic:true,jobId,audioId:clip.id,audioBase64:base64(bytes),sha256:clip.wavSha256},{timeoutMs:110000});
       if(result.jobId!==jobId||result.audioId!==clip.id)throw new Error('Transcript belongs to another voice clip.');
       await updateAudioTranscription(db,clip.id,jobId,result);clips=await listAudioByJob(db,jobId);message='Transcript saved. Listen and correct it before using it in an answer.';
     });

@@ -1,3 +1,4 @@
+import {requestReview} from './review-request.js';
 import { createInvestigation, reduceInvestigation, nextInterviewQuestion, interviewHandoff } from './investigation.js';
 import { listEvents, appendEvent, listPhotosByJob } from './jobstore.js';
 import { mountVoice } from './voice.js';
@@ -67,9 +68,7 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       packed.push({id:photo.id,jobId:order.id,mime:photo.mime,dataBase64:btoa(binary)});
     }
     const revision = state.seq;
-    const response = await fetch('/api/review', {method:'POST',headers:{'Content-Type':'application/json','X-CarryForward-Intent':'review'},body:JSON.stringify({order,events:state.events,photos:packed})});
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Meta review failed.');
+    const data = await requestReview('/api/review', {order,events:state.events,photos:packed});
     const latest = await loadInterview(db, order);
     if (latest.seq !== revision) throw new Error('The job changed during review. Stale result was not applied.');
     await dispatch('interpretation.received',data.proposal);

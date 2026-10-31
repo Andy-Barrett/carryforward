@@ -1,6 +1,6 @@
 import {requestReview} from './review-request.js';
 import { createInvestigation, reduceInvestigation, nextInterviewQuestion, interviewHandoff } from './investigation.js';
-import { listEvents, appendEvent, listPhotosByJob } from './jobstore.js';
+import { listEvents, appendEvent, listPhotosByJob, getInterviewDraft, saveInterviewDraft } from './jobstore.js';
 import { mountVoice } from './voice.js';
 import { newEventId, hashBytes } from './evidence.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,12 +25,32 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
   let correction = '';
   let draftAudio = null;
   let voiceCapture = false;
-  async function dispatch(type, payload) {
+  let draftId=newEventId(),draftSave=Promise.resolve();
+  try{
+    const recovered=await getInterviewDraft(db,order.id);
+    if(recovered){
+      draft=recovered.text;correction=recovered.correction;draftId=recovered.id;
+      if(correction&&(!state.sources[correction]||state.sources[correction].supersededBy))correction='';
+      if(recovered.audio){const audio=state.sources[recovered.audio.audioId];
+        if(!audio||audio.kind!=='audio'||audio.excluded)throw Error('Recovered text has an unavailable voice source; review it before saving.');
+        draftAudio=recovered.audio;
+      }
+      message='Unsent draft restored. Review it and Save answer to add it to job history.';
+    }
+  }catch(error){message=error.message;}
+  function persistDraft(){
+    const snapshot={id:draftId,jobId:order.id,text:draft,correction,audio:draftAudio};
+    draftSave=saveInterviewDraft(db,snapshot).then(()=>{
+      if(root.isConnected){const notice=root.querySelector('#interview-status');if(notice)notice.textContent='Draft saved locally · not yet part of the handoff.';}
+    }).catch(error=>{message=error.message+' Keep this page open; your unsent text is not safely saved.';if(root.isConnected){const notice=root.querySelector('#interview-status');if(notice)notice.textContent=message;}});
+    return draftSave;
+  }
+  async function dispatch(type, payload, clearDraftId) {
     const event = { id: newEventId(), jobId: order.id, seq: state.seq + 1,
       at: new Date().toISOString(), type, payload };
     const next = reduceInvestigation(state, event);
     await appendEvent(db, { id: event.id, jobId: order.id, type: `interview.${type}`,
-      payload: { investigationEvent: event } });
+      payload: { investigationEvent: event }, clearDraftId });
     state = next;
     onSaved?.(interviewHandoff(state));
   }
@@ -40,7 +60,7 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
     busy = true;
     const status = root.querySelector('#interview-status');
     if (status) status.textContent = 'Saving or reviewing evidence… Your saved conversation remains available.';
-    for (const button of root.querySelectorAll('button')) button.disabled = true;
+    for (const control of root.querySelectorAll('button,input,textarea,select')) control.disabled = true;
     try { await action(); message = 'Saved on this device.'; }
     catch (error) { message = `${error.message} Your unsent text is retained.`; }
     finally { busy = false; if (root.isConnected) draw(); }
@@ -99,6 +119,7 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       if(!Object.hasOwn(state.sources,clip.id))await dispatch('source.added',{id:clip.id,kind:'audio',sha256:clip.originalSha256,wavSha256:clip.wavSha256,name:clip.name});
       draft=draft?draft+'\n'+text:text;
       draftAudio={audioId:clip.id,transcription:{rawText:clip.transcription?.transcript||text,reviewed:true,provenance:clip.transcription?.provenance||{model:'manual-transcript'}}};
+      await persistDraft();
       draw();
     }}).catch(error=>{if(voiceRoot.isConnected)voiceRoot.textContent=`Voice capture unavailable: ${error.message}. Use text.`;});
     for (const box of root.querySelectorAll('[data-review-photo]')) box.onchange = () => { if(box.checked) selected.add(box.dataset.reviewPhoto); else selected.delete(box.dataset.reviewPhoto); };
@@ -107,17 +128,18 @@ export async function mountInterview(root, { db, order, onUse, onSaved, onEviden
       if (!root.querySelector('#synthetic-review').checked) { message = 'Confirm that this is synthetic demonstration data before sending it to Meta.'; draw(); return; }
       run(metaReview);
     };
-    root.querySelector('#interview-answer').oninput = e => { draft = e.target.value; };
-    root.querySelector('#correct-turn').onchange = e => { correction = e.target.value; };
+    root.querySelector('#interview-answer').oninput = e => { draft = e.target.value; persistDraft(); };
+    root.querySelector('#correct-turn').onchange = e => { correction = e.target.value; persistDraft(); };
     root.querySelector('#interview-form').onsubmit = e => {
       e.preventDefault();
       run(async () => {
         if (!draft.trim()) throw new Error('Add an answer first.');
+        await draftSave;
         const prior = correction && state.sources[correction];
         await dispatch('turn.recorded', { id: newEventId(), text: draft.trim(),
           branchId: prior ? prior.branchId : state.activeQuestion?.branchId || null,
-          supersedes: correction || null, ...(draftAudio||{}) });
-        draft = ''; correction = ''; draftAudio=null;
+          supersedes: correction || null, ...(draftAudio||{}) }, draftId);
+        draft = ''; correction = ''; draftAudio=null; draftId=newEventId();
         await askNext();
       });
     };

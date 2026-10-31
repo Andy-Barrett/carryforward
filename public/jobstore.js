@@ -19,7 +19,7 @@
 // so the failure UI can be exercised without real quota pressure.
 
 export const DB_NAME = "carryforward.jobs.v1";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export const __faults = { nextWriteFails: false };
 
@@ -62,6 +62,7 @@ export function openDb() {
     }
     req.onupgradeneeded = () => {
       const db = req.result;
+      if (!db.objectStoreNames.contains("interviewDrafts")) db.createObjectStore("interviewDrafts", {keyPath:"jobId"});
       if (!db.objectStoreNames.contains("sessions")) {
         db.createObjectStore("sessions", { keyPath: "jobId" });
       }
@@ -134,9 +135,9 @@ export async function putSession(db, session) {
 
 // Append one ordered event. The sequence number is assigned inside the
 // same transaction so reloads and concurrent tabs keep a total order.
-export async function appendEvent(db, { id, jobId, type, at, payload }) {
+export async function appendEvent(db, { id, jobId, type, at, payload, clearDraftId }) {
   maybeFault("event write");
-  const tx = db.transaction("events", "readwrite");
+  const tx = db.transaction(clearDraftId ? ["events","interviewDrafts"] : ["events"], "readwrite");
   const store = tx.objectStore("events");
   const existing = await requestTo(store.index("by-job").getAll(jobId));
   try { validateEventAppend(existing || [], {jobId,type,payload}); }
@@ -150,6 +151,11 @@ export async function appendEvent(db, { id, jobId, type, at, payload }) {
     at: at || new Date().toISOString(),
     payload: payload || {},
   });
+  if (clearDraftId) {
+    const drafts=tx.objectStore("interviewDrafts");
+    const draft=await requestTo(drafts.get(jobId));
+    if(draft?.id===clearDraftId) drafts.delete(jobId);
+  }
   await txDone(tx);
   return seq;
 }
@@ -246,4 +252,18 @@ export function validateEventAppend(existing,{jobId,type,payload}) {
   if (!logical || logical.jobId!==jobId || logical.type!==type.slice(10) || logical.seq!==prior+1) {
     throw new Error("This job changed in another view. Reopen it before saving; your unsent answer is retained.");
   }
+}
+
+export function validateInterviewDraft(draft,jobId){
+ if(!draft||draft.jobId!==jobId||typeof draft.id!=='string'||!draft.id||draft.id.length>200||typeof draft.text!=='string'||draft.text.length>4000||typeof draft.correction!=='string'||draft.correction.length>200||JSON.stringify(draft).length>20000)throw Error('Invalid or wrong-job interview draft');
+ if(draft.audio && (typeof draft.audio.audioId!=='string'||typeof draft.audio.transcription?.rawText!=='string'||draft.audio.transcription.rawText.length>4000||draft.audio.transcription.reviewed!==true))throw Error('Invalid draft voice reference');
+ return draft;
+}
+export async function getInterviewDraft(db,jobId){
+ const record=await requestTo(db.transaction('interviewDrafts','readonly').objectStore('interviewDrafts').get(jobId));
+ return record?validateInterviewDraft(record,jobId):null;
+}
+export async function saveInterviewDraft(db,record){
+ validateInterviewDraft(record,record.jobId);maybeFault('unsent draft save');
+ const tx=db.transaction('interviewDrafts','readwrite');tx.objectStore('interviewDrafts').put({...record,updatedAt:new Date().toISOString()});await txDone(tx);
 }

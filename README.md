@@ -64,7 +64,7 @@ npm test
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
-- Browser-local drafts, saved interviews, correction history and explicit deferrals.
+- Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
 - Local voice clips and playback, optional guarded Meta transcription of synthetic clips, and reviewed transcript-to-answer links.
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.

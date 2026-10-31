@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createInvestigation, reduceInvestigation, INTERPRETATION_VERSION } from './public/investigation.js';
+import { createInvestigation, reduceInvestigation, interviewHandoff, INTERPRETATION_VERSION } from './public/investigation.js';
 const order = { id: 'job-1', checks: [{ id:'repair', question:'Repair?' }, { id:'monitoring', question:'Monitoring?' }] };
 const event = (s, type, payload) => ({ id:`event-${s.seq+1}`, jobId:s.jobId, seq:s.seq+1, type, payload });
 const apply = (s, type, p) => reduceInvestigation(s,event(s,type,p));
@@ -107,3 +107,12 @@ test('new testimony requires reconciliation; deferral alone does not make a comp
  s=apply(s,'branch.response',{branchId:'monitoring',action:'later',reason:'Office follow-up'});assert.equal(s.reviewRequired,false);
  s=apply(s,'turn.recorded',{id:'new-answer',text:'New observation changes the situation.'});assert.equal(s.reviewRequired,true);
 });
+
+ test('compound model questions are rejected and handoff accurately labels interpretation provenance',()=>{
+ let s=source(createInvestigation(order),'t1');
+ assert.match(interviewHandoff(s).mode,/no model interpretation/);
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[],[],{branchId:'repair',text:'Was it replaced? Can you measure output?'})),/Only one question/);
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ assert.match(interviewHandoff(s).mode,/source-linked model interpretations/);
+ assert.doesNotMatch(interviewHandoff(s).mode,/no model interpretation/);
+ });

@@ -60,6 +60,7 @@ export function validateInterpretation(state, proposal) {
   const q = proposal.nextQuestion;
   if (q !== null && q !== undefined) {
     if (!Object.hasOwn(state.branches, q.branchId) || !text(q.text, 500)) fail('Invalid next question');
+    if ((q.text.match(/[?？]/g) || []).length > 1) fail('Only one question may be offered at a time');
     const proposed = proposal.changes.find(c => c.branchId === q.branchId)?.state || state.branches[q.branchId].state;
     if (proposed === 'supported' || proposed === 'deferred') fail('Question targets closed or deferred work');
   }
@@ -203,7 +204,9 @@ export function nextInterviewQuestion(state) {
 export function interviewHandoff(state) {
   return {
     version: 'carryforward.interview.v1', jobId: state.jobId, revision: state.seq, inputRevision: state.inputRevision,
-    mode: 'Technician testimony with deterministic question selection; no model interpretation',
+    mode: state.interpretations.length
+      ? 'Technician testimony with source-linked model interpretations; not independent verification'
+      : 'Technician testimony with deterministic question selection; no model interpretation',
     turns: Object.values(state.sources).filter(s => s.kind === 'testimony'),
     audioSources: Object.values(state.sources).filter(s => s.kind === 'audio'),
     branches: Object.values(state.branches),

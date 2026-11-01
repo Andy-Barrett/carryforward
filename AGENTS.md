@@ -37,7 +37,7 @@ Target design is not implemented behavior. Keep that distinction clear in code, 
 
 ## Toolchain and checks
 
-Use Node.js 24. There are currently no runtime dependencies or build step. Run `npm test` and syntax checks for affected JavaScript. Avoid new packages unless the task has a concrete need; explain the choice and licensing impact.
+Use Node.js 24. Install the locked MIT-licensed WebSocket dependency with `npm ci --ignore-scripts`. There is no build step. Run `npm test` and syntax checks for affected JavaScript. Avoid new packages unless the task has a concrete need; explain the choice and licensing impact.
 
 After changing a cached app-shell file, run `node scripts/refresh-shell-version.mjs`; the offline test refuses a stale content version. Service-worker updates wait for old app windows to close. API responses and evidence must never enter the app-shell cache.
 

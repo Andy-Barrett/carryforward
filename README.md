@@ -35,11 +35,12 @@ The prototype supports file import/export and a local Operations simulator with 
 
 ## Try it locally
 
-You need **Node.js 24**. There are no runtime dependencies to install.
+You need **Node.js 24**. Install the locked WebSocket dependency before starting. There is no web build step.
 
 ```sh
 git clone https://github.com/Andy-Barrett/carryforward.git
 cd carryforward
+npm ci --ignore-scripts
 npm run dev
 ```
 
@@ -67,7 +68,7 @@ npm test
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
 - Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
-- Local voice clips and playback, optional guarded Meta transcription of synthetic clips, and reviewed transcript-to-answer links.
+- Local voice clips and playback, optional guarded Meta transcription of synthetic clips, and reviewed transcript-to-answer links. The new [live voice slice](docs/LIVE_VOICE.md) adds a local microphone check, streaming ASR and a reviewed-Send/spoken-follow-up path; the owner confirmed the speech → reviewed Send → spoken follow-up loop on iPhone on November 1.
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
@@ -84,7 +85,7 @@ Communication style can be direct or conversational, with room for a little humo
 
 Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice recording controls and guarded transcription are implemented. On October 31, the owner confirmed audible playback of an existing clip and a fresh record/stop/play cycle in the native iPhone development app; interruption and offline behavior remain unverified. Meta-backed review compares the original assignment with field evidence and proposes focused follow-up questions. The first synthetic comparison preserved expected outcomes but did not establish an accuracy advantage over a strong same-model summary. See [evaluation findings](docs/EVALUATION_FIRST_PASS.md).
 
-An installable web app for iPhone and Android is the delivery target. Voice capture controls and uploaded-audio transcription are implemented; the basic record/stop/play cycle is owner-confirmed in the native iPhone development app. Safari/Android capture and interruption behavior remain unverified. A versioned app shell now supports offline reopening after successful initial installation; server-stopped browser reload and local answer persistence were verified. Native iPhone development installation is verified; web-app installation and airplane-mode behavior remain unverified. Production Operations integration remains unimplemented. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; this is not a completed conversational voice experience.
+An installable web app for iPhone and Android is the delivery target. Voice capture controls and uploaded-audio transcription are implemented; the basic record/stop/play cycle is owner-confirmed in the native iPhone development app. Safari/Android capture and interruption behavior remain unverified. A versioned app shell now supports offline reopening after successful initial installation; server-stopped browser reload and local answer persistence were verified. Native iPhone development installation is verified; web-app installation and airplane-mode behavior remain unverified. Production Operations integration remains unimplemented. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; the first bounded live phone turn and spoken follow-up are owner-confirmed; full-duplex conversation and broader phone acceptance remain incomplete.
 
 See [guarded Meta development](docs/META_DEVELOPMENT.md) for the local inference boundary.
 

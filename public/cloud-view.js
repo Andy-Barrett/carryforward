@@ -1,6 +1,6 @@
 /* A conversation surface over the existing job record. No provider or storage writes live here. */
 import {buildVisitBrief,BRIEF_KIND_LABELS} from './visit-brief.js';
-const ACTIVITY = new Set(['ready', 'listening', 'reviewing', 'speaking']);
+const ACTIVITY = new Set(['ready', 'connecting', 'listening', 'reviewing', 'speaking']);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -152,13 +152,15 @@ export function mountCloud(root, {
   typeButton.setAttribute('aria-controls', inputId);
   dock.append(addButton, talkButton, typeButton);
   const activityLabel = el('p', 'cf-activity', 'Ready when you are');
+  const inputMeter = el('meter', 'cf-input-meter');
+  inputMeter.min=0;inputMeter.max=1;inputMeter.value=0;inputMeter.hidden=true;inputMeter.setAttribute('aria-label','Microphone input level');
   const footer = el('p', 'cf-parked-note', 'Pause and park to inspect evidence or confirm the handoff.');
   const fileInput = el('input', 'cf-sr-only');
   fileInput.type = 'file';
   fileInput.accept = 'image/jpeg,image/png,image/webp';
   fileInput.multiple = true;
   fileInput.setAttribute('aria-label', 'Add job photos');
-  lower.append(history, notice, composer, dock, activityLabel, footer, fileInput);
+  lower.append(history, notice, composer, dock, activityLabel, inputMeter, footer, fileInput);
   shell.append(rail, main, lower);
   root.replaceChildren(shell);
 
@@ -171,20 +173,25 @@ export function mountCloud(root, {
   function setActivity(next) {
     if (!valid() || !ACTIVITY.has(next)) return;
     activity = next;
+    if(next==='listening'||next==='connecting')say('');
     shell.dataset.activity = next;
-    activityLabel.textContent = {ready: 'Ready when you are', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
-    talkButton.replaceChildren(icon(next === 'listening' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : typeof onTalk === 'function' ? 'Talk to CarryForward' : 'Talk with text'));
+    activityLabel.textContent = {ready: 'Ready when you are', connecting:'Starting live voice', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
+    talkButton.replaceChildren(icon(next === 'listening' || next === 'connecting' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'connecting' ? 'Cancel live setup' : next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : typeof onTalk === 'function' ? 'Talk to CarryForward' : 'Talk with text'));
     talkButton.setAttribute('aria-pressed', String(next === 'listening'));
     syncControls();
   }
+  function setInputLevel(level) {
+    if(!valid())return;inputMeter.hidden=!level;
+    inputMeter.value=level?Math.max(0,Math.min(1,(20*Math.log10(Math.max(level.rms,0.00001))+75)/60)):0;
+  }
   function syncControls() {
     if (!valid()) return;
-    const locked = busy || activity === 'reviewing';
+    const locked = busy || activity === 'reviewing' || activity === 'connecting';
     reviewButton.disabled = locked || typeof onRefresh !== 'function' || activity === 'listening';
     sendButton.disabled = locked || !input.value.trim() || activity === 'listening';
     addButton.disabled = locked || activity === 'listening' || (!onUpload && !onPhotoFiles);
     hearButton.disabled = locked || activity === 'listening';
-    talkButton.disabled = locked;
+    talkButton.disabled = activity==='connecting'?false:locked;
     jobButton.disabled = locked || activity === 'listening';
     sourcesButton.disabled = !onNavigate || locked || activity === 'listening';
     for (const control of focalEvidence.querySelectorAll('button,a')) {
@@ -366,6 +373,7 @@ export function mountCloud(root, {
     pendingAudio = metadata.audio || pendingAudio;
     input.value = draft;
     return run(async () => {
+      let spokenReply=null;
       await draftSave;
       if (!valid()) return;
       briefOpen = false;
@@ -377,10 +385,11 @@ export function mountCloud(root, {
         if (result.activity && ACTIVITY.has(result.activity)) setActivity(result.activity);
       } else {
         if (typeof onSaveAnswer !== 'function') throw new Error('Saving answers is unavailable. Keep this message until the job is ready.');
-        const saveResult = await onSaveAnswer(message, {branchId: state?.activeQuestion?.branchId || null, supersedes: null, ...metadata, ...(pendingAudio ? {audio: pendingAudio} : {})});
+        const saveResult = await onSaveAnswer(message, {branchId: state?.activeQuestion?.branchId || null, supersedes: null, ...metadata, ...(pendingAudio ? {audio: {...pendingAudio,transcription:{...pendingAudio.transcription,reviewed:true}}} : {})});
         if (!valid()) return;
         clearResponse();
         if (saveResult?.response) setResponse(saveResult.response, {origin: saveResult.origin || 'Saved job response', sourceIds: saveResult.sourceIds});
+        if(saveResult?.speak)spokenReply=saveResult.response;
         say('Answer saved to this job.');
       }
       if (!valid()) return;
@@ -389,6 +398,7 @@ export function mountCloud(root, {
       if (!valid()) return;
       typeButton.setAttribute('aria-expanded', 'false');
       await refresh();
+      if(spokenReply&&valid()){try{await onSpeak?.(spokenReply,{onState:next=>{if(valid())setActivity(next);},onError:error=>{if(valid()){setActivity('ready');say(error.message,true);}}});}catch(error){say(error.message,true);}}
     });
   }
   function sourceLink(item) {
@@ -542,8 +552,8 @@ export function mountCloud(root, {
   talkButton.onclick = async () => {
     if (!valid() || busy) return;
     if (activity === 'speaking') { await onStopSpeaking?.(); if (valid()) setActivity('ready'); return; }
-    if (activity === 'listening') {
-      try { await onStopTalk?.(); if (typeof talkCleanup === 'function') await talkCleanup(); talkCleanup = null; if (valid()) setActivity('ready'); }
+    if (activity === 'listening'||activity==='connecting') {
+      try { await onStopTalk?.(); if (typeof talkCleanup === 'function') await talkCleanup(); talkCleanup = null; if (valid()&&(activity==='listening'||activity==='connecting')) setActivity('ready'); }
       catch (error) { say(error.message || 'Recording could not be stopped.', true); }
       return;
     }
@@ -576,6 +586,6 @@ export function mountCloud(root, {
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {refresh, submit, setActivity, setResponse, showEvidence, setDraft, zoomEvidence, openBrief});
+  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief});
   return cleanup;
 }

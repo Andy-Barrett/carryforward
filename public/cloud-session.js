@@ -1,3 +1,4 @@
+import {createLocalSpeaker} from './local-speech.js';
 import { mountCloud } from './cloud-view.js';
 import {chooseCloudReview,prepareCloudHandoff} from './cloud-dialogs.js';
 import {reviewEvidence} from './evidence-review.js';
@@ -14,7 +15,7 @@ import { mountVoice } from './voice.js';
 // Source lookup is deterministic; it is never represented as model reasoning.
 export async function mountCloudSession(root, {
   db, order: suppliedOrder, onNavigate, onSaved, onEvidenceSaved,
-  onPhotoFiles, onPrepareHandoff, onGetReport, onGetPhotos,
+  onPhotoFiles, onPrepareHandoff, onGetReport, onGetPhotos, onNewVoiceDemo,
 }) {
   if (!db || !root || !suppliedOrder?.id) throw new Error('A saved job is required before opening its conversation.');
   const order = structuredClone(suppliedOrder), jobId = order.id;
@@ -27,6 +28,7 @@ export async function mountCloudSession(root, {
   let alive = true, saving = false, capture = false, voice = null, view = null;
   let state = await loadInterview(db, order), context = createJobContext(order);
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
+  const speaker=createLocalSpeaker();
   let callbackError = '';
   let config = {metaEnabled:false,transcriptionEnabled:false};
   const photoUrls = new Map();
@@ -38,17 +40,17 @@ export async function mountCloudSession(root, {
     if (saving) throw new Error('Wait for this answer to finish saving.');
   };
 
-  function checkedAudio(audio) {
+  function checkedAudio(audio, {allowUnreviewed=false}={}) {
     if (!audio) return null;
     if (typeof audio.audioId !== 'string' || audio.audioId.length > 200 ||
-        audio.transcription?.reviewed !== true || typeof audio.transcription.rawText !== 'string' ||
+        (audio.transcription?.reviewed !== true && !(allowUnreviewed && audio.transcription?.reviewed === false)) || typeof audio.transcription.rawText !== 'string' ||
         audio.transcription.rawText.length > 4000) throw new Error('Review the voice transcript before using it.');
     return structuredClone(audio);
   }
   function saveDraft(text, { audio = null } = {}) {
     if (!valid()) return;
     if (typeof text !== 'string' || text.length > 4000) throw new Error('Keep this draft under 4,000 characters.');
-    const nextAudio = checkedAudio(audio);
+    const nextAudio = checkedAudio(audio,{allowUnreviewed:true});
     const record = { id: draftId, jobId, text, audio: nextAudio };
     if (JSON.stringify(record).length > 20000) throw new Error('This voice-linked draft is too large to save.');
     try {
@@ -64,7 +66,7 @@ export async function mountCloudSession(root, {
     if (saved) {
       if (saved.jobId !== jobId || typeof saved.text !== 'string' || saved.text.length > 4000) throw new Error('Invalid saved cloud draft.');
       if (typeof saved.id === 'string' && saved.id.length <= 200) draftId = saved.id;
-      draft = saved.text; draftAudio = checkedAudio(saved.audio); restored = true;
+      draft = saved.text; draftAudio = checkedAudio(saved.audio,{allowUnreviewed:true}); restored = true;
     }
   } catch { /* An unreadable cloud draft must not replace the interview's separate draft. */ }
 
@@ -220,6 +222,15 @@ export async function mountCloudSession(root, {
         id: draftId, text, branchId: prior?.branchId || metadata.branchId || null,
         supersedes: metadata.supersedes || null, ...(audio || {}),
       });
+      if(audio?.liveReview===true && config.metaEnabled===true && !callbackError){
+        view.setActivity('reviewing');
+        try {
+          await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:requireCurrent});
+          const open=Object.values(state.branches).filter(branch=>branch.state!=='supported').length;
+          return {response:state.activeQuestion?.text||`Saved. ${open} ${open===1?'item still needs':'items still need'} verification for the handoff.`,origin:'Model interpretation · muse-spark-1.3',speak:true};
+        }catch(error){return {response:`Your answer is saved. AI review did not finish: ${error.message}`,origin:'Saved testimony · AI review incomplete'};}
+        finally{if(valid())view.setActivity('ready');}
+      }
       return { response: callbackError ? `Answer saved. Reopen the interview to refresh the report: ${callbackError}` :
         'Saved to this job. Review the evidence when you are ready.', origin: 'Technician testimony · saved locally' };
     } finally { saving = false; }
@@ -295,24 +306,8 @@ export async function mountCloudSession(root, {
       return {response:action==='already_answered'?'Saved your reference to the earlier answers. This remains unverified until review.':`Kept open for ${owner.trim()}.`,origin:'Technician decision · saved locally'};
     }finally{saving=false;}
   }
-  function stopSpeaking() {
-    if (speech) { speech.onend = null; speech.onerror = null; speech = null; }
-    globalThis.speechSynthesis?.cancel();
-    if (valid()) view?.setActivity('ready');
-  }
-  function speak(text, callbacks = {}) {
-    requireIdle();
-    const synth = globalThis.speechSynthesis;
-    const localVoice = synth?.getVoices().find(item => item.localService === true);
-    if (!synth || !localVoice || typeof SpeechSynthesisUtterance === 'undefined') throw new Error('A local speech voice is unavailable. Read the response on screen instead.');
-    stopSpeaking();
-    speech = new SpeechSynthesisUtterance(text);
-    speech.voice = localVoice;
-    speech.onstart = () => { if (valid()) callbacks.onState?.('speaking'); };
-    speech.onend = () => { speech = null; if (valid()) callbacks.onState?.('ready'); };
-    speech.onerror = () => { speech = null; if (valid()) callbacks.onError?.(new Error('Local speech stopped. The response remains on screen.')); };
-    synth.speak(speech);
-  }
+  function stopSpeaking() { speaker.stop(); if(valid())view?.setActivity('ready'); }
+  function speak(text,callbacks={}) { requireIdle();speaker.speak(text,callbacks); }
 
   requireCurrent();
   view = mountCloud(root, {
@@ -336,7 +331,7 @@ export async function mountCloudSession(root, {
       if (voice?.start) await voice.start();
       else { voiceRoot.querySelector('#voice-record')?.focus(); view.setResponse('Use Record below, then review your words before sending.', { origin: 'Voice capture controls' }); }
     },
-    onStopTalk: async () => { voice?.stop?.(); },
+    onStopTalk: async () => { voice?.stop?.();if(valid())view.setActivity('reviewing'); },
     onStopSpeaking: stopSpeaking, onSpeak: speak,
   });
   const voicePanel = document.createElement('details');
@@ -350,9 +345,18 @@ export async function mountCloudSession(root, {
   if (valid()) {
     try {
       voice = await mountVoice(voiceRoot, {
-        db, jobId, enabled: config.transcriptionEnabled === true,
-        onCaptureState: value => { capture = value; },
-        onRecordingState: value => { if (valid()) view.setActivity(value ? 'listening' : 'ready'); },
+        db, jobId, onNewDemo:async()=>{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}, enabled: config.transcriptionEnabled === true,liveEnabled:config.liveVoiceEnabled===true,
+        onInputLevel:level=>{if(valid())view.setInputLevel(level);},
+        onVoiceState:next=>{if(valid())view.setActivity(next);},
+        onPreview:(text,setup)=>{if(valid())view.setResponse(text||'Listening…',{origin:setup?'Live voice setup':'Live transcript · provisional'});},
+        onLiveDraft:async({clip,text})=>{
+          requireIdle();
+          if(draft.trim()||draftAudio){view.setResponse('Live clip saved. Your earlier draft is still here; review the clip below when ready.',{origin:'Local recording saved'});return;}
+          const audio={audioId:clip.id,liveReview:true,transcription:{rawText:text,reviewed:false,provenance:clip.transcription.provenance}};
+          saveDraft(text,{audio});view.setDraft(text,{audio});view.setResponse('Review these words, then Send. I’ll check the answer and read the follow-up.',{origin:'Live transcript · awaiting your review'});
+        },
+        onCaptureState: value => { capture = value;if(!value&&valid())view.setActivity('ready'); },
+        onRecordingState: value => { if (valid()) view.setActivity(value ? 'listening' : 'reviewing'); },
         onEvidenceSaved: async () => {
           if (!valid()) return;
           await onEvidenceSaved?.({ jobId });

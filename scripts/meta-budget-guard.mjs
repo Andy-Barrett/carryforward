@@ -1,3 +1,4 @@
+import {attachLiveRelay,connectMetaVoice,metaVoiceHandshake,sessionAcknowledgement} from '../lib/live-transport.mjs';
 import http from 'node:http';
 import {readFile,writeFile,open,unlink} from 'node:fs/promises';
 import {randomUUID,randomBytes} from 'node:crypto';
@@ -75,6 +76,21 @@ const server=http.createServer(async(req,res)=>{
  res.writeHead(upstream.status,{'Content-Type':upstream.headers.get('content-type')||'application/json','Cache-Control':'no-store'});
  if(upstream.body)await new Promise((resolve,reject)=>{const stream=Readable.fromWeb(upstream.body);stream.on('error',reject);res.on('close',resolve);stream.on('end',resolve);stream.pipe(res);});else res.end();
  }catch(e){console.log('Guard:',e.message);if(!res.headersSent)fail(400,e.message);else res.end();}finally{busy=false;}
+});
+attachLiveRelay(server,{
+ path:'/v1/asr/realtime',
+ authorize:req=>req.headers.host===`127.0.0.1:${server.address().port}` && req.headers.authorization===`Bearer ${token}`,
+ claim:()=>{if(busy)return false;busy=true;return true;},release:()=>{busy=false;},
+ prepare:async()=>{
+  // Reserve the entire bounded 30-second stream, with margin, before connecting.
+  const reserve=Math.max(0.01,Math.ceil(31*0.18/3600*1e6)/1e6);
+  if(ledger.reservedUsd+reserve>ledger.capUsd)throw Error('Aggregate $10 budget exhausted; live speech not connected');
+  const entry={id:randomUUID(),at:new Date().toISOString(),model:'muse-voice-transcribe-1.0',transport:'realtime',maxAudioSeconds:30,rateUsdPerHour:0.18,reservedUsd:reserve,state:'reserved'};
+  ledger.requests.push(entry);ledger.reservedUsd=Number((ledger.reservedUsd+reserve).toFixed(6));
+  await writeFile(ledgerPath,JSON.stringify(ledger,null,2),{mode:0o600});
+  console.log(JSON.stringify({event:'live_audio_reserved',request:ledger.requests.length,totalReservedUsd:ledger.reservedUsd}));
+ },
+ connect:connectMetaVoice,handshake:()=>metaVoiceHandshake(key),acknowledgement:sessionAcknowledgement,
 });
 server.listen(Number(process.env.CF_GUARD_PORT || 4421),'127.0.0.1',()=>console.log(`Budget guard listening on loopback:${server.address().port}. Aggregate reservation cap $10.`));
 

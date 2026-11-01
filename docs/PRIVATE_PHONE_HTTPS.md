@@ -1,6 +1,6 @@
 # Private Wi-Fi phone trial
 
-Andy authorized a private Wi-Fi HTTPS test on October 31, 2026. This is a paired development endpoint, not a public deployment or production authentication system. No router forwarding, tunnel, firewall change or system trust installation is performed by the preparation script. Real phone capture remains pending until observed.
+Andy authorized a private Wi-Fi HTTPS test on October 31, 2026. This is a paired development endpoint, not a public deployment or production authentication system. No router forwarding, tunnel, firewall change or system trust installation is performed by the preparation script. The owner subsequently confirmed local record/stop/play and one bounded live voice cycle on iPhone; see [live voice](LIVE_VOICE.md) for precise scope. Broader phone acceptance remains pending.
 
 ## Prepare
 

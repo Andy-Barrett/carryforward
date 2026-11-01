@@ -1,3 +1,4 @@
+import {attachLiveRelay,connectGuardVoice,sessionAcknowledgement} from './lib/live-transport.mjs';
 import http from "node:http";
 import https from "node:https";
 import {phoneConfig, phoneGate} from "./lib/private-phone.mjs";
@@ -16,10 +17,15 @@ const localSession = randomBytes(32).toString("hex");
 const gate = phone ? phoneGate({code:phone.pairingCode,session:localSession}) : null;
 const sessionCookie = `carryforward_session=${localSession}; HttpOnly; SameSite=Strict; Path=/${phone ? "; Secure" : ""}`;
 const enabled = process.env.CARRYFORWARD_META_ENABLED === "1";
+const liveEnabled = enabled && process.env.CARRYFORWARD_LIVE_VOICE_ENABLED === "1";
 const guardToken = enabled ? (await readFile(process.env.CARRYFORWARD_GUARD_TOKEN_FILE, "utf8")).trim() : null;
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/live-protocol.js": ["live-protocol.js", "text/javascript"],
+  "/live-voice.js": ["live-voice.js", "text/javascript"],
+  "/pcm-worklet.js": ["pcm-worklet.js", "text/javascript"],
+  "/local-speech.js": ["local-speech.js", "text/javascript"],
   "/": ["index.html", "text/html"],
   "/sw.js": ["sw.js", "text/javascript"],
   "/offline.js": ["offline.js", "text/javascript"],
@@ -62,7 +68,7 @@ const handler = async (req, res) => {
   if (gate && await gate(req,res,path,origin)) return;
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
   if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===origin) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
-  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled}); }
+  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled,liveVoiceEnabled:liveEnabled}); }
   if (["/api/review", "/api/transcribe"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
     if (req.headers.origin !== origin || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});
@@ -99,7 +105,7 @@ const handler = async (req, res) => {
       ...(path === "/" ? {"Set-Cookie": sessionCookie} : {}),
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy":
-        "default-src 'self'; img-src 'self' blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        `default-src 'self'; img-src 'self' blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self' ${origin.replace(/^http/,"ws")}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`,
     });
     res.end(body);
   } catch {
@@ -108,6 +114,18 @@ const handler = async (req, res) => {
   }
 };
 const server = phone ? https.createServer({key:phone.key,cert:phone.cert,minVersion:"TLSv1.2"},handler) : http.createServer(handler);
+attachLiveRelay(server,{
+  path:'/api/voice/live',
+  authorize:req=>{
+    const host=`${phone?.host||'127.0.0.1'}:${server.address().port}`;
+    return liveEnabled && req.headers.host===host && req.headers.origin===`${phone?'https':'http'}://${host}` && (req.headers.cookie||'').split('; ').includes(`carryforward_session=${localSession}`);
+  },
+  claim:()=>{if(reviewBusy)return false;reviewBusy=true;return true;},
+  release:()=>{reviewBusy=false;},
+  prepare:async input=>{const id=`live:${input.jobId}`;if((reviews.get(id)||0)>=5)throw Error('Five live sessions reached for this job. Use local recording or text.');reviews.set(id,(reviews.get(id)||0)+1);},
+  connect:()=>connectGuardVoice(guardToken),handshake:input=>input,
+  acknowledgement:raw=>raw.type==='ready'?sessionAcknowledgement(raw):null,
+});
 server.listen(Number(process.env.PORT || 4310), phone?.host || "127.0.0.1", () =>
   console.log(`CarryForward: ${phone ? "https" : "http"}://${phone?.host || "127.0.0.1"}:${server.address().port}`),
 );

@@ -1,3 +1,4 @@
+import {WebSocket} from 'ws';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -20,4 +21,20 @@ test('real guard refuses duration-priced audio before dispatch when aggregate ca
   assert.equal(response.status,400);assert.match((await response.json()).error.message,/budget exhausted/);
   assert.deepEqual(JSON.parse(await readFile(join(dir,'ledger'),'utf8')),ledger);
  }finally{if(child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}await rm(dir,{recursive:true,force:true});}
+});
+
+
+test('real guard refuses a live socket at exhausted budget without changing the existing ledger',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'carryforward-live-budget-test-'));
+ const ledger={capUsd:10,reservedUsd:9.999,requests:[{id:'retained-fixture',reservedUsd:9.999}]};
+ await writeFile(join(dir,'key'),'non-provider-fixture-key');await writeFile(join(dir,'ledger'),JSON.stringify(ledger));
+ const child=spawn(process.execPath,['scripts/meta-budget-guard.mjs'],{cwd:new URL('.',import.meta.url),env:{...process.env,CF_GUARD_KEY_FILE:join(dir,'key'),CF_GUARD_LEDGER_FILE:join(dir,'ledger'),CF_GUARD_TOKEN_FILE:join(dir,'token'),CF_GUARD_LOCK_FILE:join(dir,'lock'),CF_GUARD_PORT:'0'},stdio:['ignore','pipe','pipe']});
+ let ws;
+ try{
+  const port=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('Guard startup timeout')),10000);child.once('exit',code=>{clearTimeout(timer);reject(Error('Guard exited '+code));});child.stdout.on('data',data=>{output+=data;const match=output.match(/loopback:(\d+)/);if(match){clearTimeout(timer);resolve(match[1]);}});});
+  const token=(await readFile(join(dir,'token'),'utf8')).trim();ws=new WebSocket(`ws://127.0.0.1:${port}/v1/asr/realtime`,{headers:{Authorization:`Bearer ${token}`}});
+  const events=[];ws.on('message',raw=>events.push(JSON.parse(raw.toString())));
+  await once(ws,'open');const closed=once(ws,'close');ws.send(JSON.stringify({type:'start',version:1,synthetic:true,jobId:'DEMO-BUDGET',audioId:'ev-0123456789abcdef'}));await closed;
+  assert.equal(events[0].type,'error');assert.match(events[0].message,/budget exhausted/);assert.deepEqual(JSON.parse(await readFile(join(dir,'ledger'),'utf8')),ledger);
+ }finally{ws?.terminate();if(child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}await rm(dir,{recursive:true,force:true});}
 });

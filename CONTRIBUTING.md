@@ -2,7 +2,7 @@
 
 Keep the technician’s job at the center of the change. A useful improvement makes the briefing clearer, field capture easier, or the returned report more reliable.
 
-Use Node.js 24. Run `npm test` and check the affected workflow in the browser. For interface changes, check phone and desktop widths. Camera, recording, installation, and offline changes also need testing on real devices.
+Use Node.js 24 and install the lockfile with `npm ci --ignore-scripts`. The live transport uses `ws` under the MIT license; no native package is required. Run `npm test` and check the affected workflow in the browser. For interface changes, check phone and desktop widths. Camera, recording, installation, and offline changes also need testing on real devices.
 
 Use fictional records in fixtures, screenshots, and issue reports. Do not commit credentials, customer information, recordings, or service photos. Keep integrations independent of any one work-order system.
 

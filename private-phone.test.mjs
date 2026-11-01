@@ -14,6 +14,8 @@ test('private phone config fails closed for public interfaces, inference and sha
  const base={CARRYFORWARD_PHONE_HTTPS:'1',CARRYFORWARD_PHONE_HOST:'192.168.1.10'};
  await assert.rejects(phoneConfig({...base,CARRYFORWARD_META_ENABLED:'1'}),/inference disabled/);
  await assert.rejects(phoneConfig(base),/separate explicit/);
+ await assert.rejects(phoneConfig({...base,CARRYFORWARD_META_ENABLED:'1',CARRYFORWARD_PHONE_META_TRIAL:'yes'}),/inference disabled/);
+ await assert.rejects(phoneConfig({...base,CARRYFORWARD_META_ENABLED:'1',CARRYFORWARD_PHONE_META_TRIAL:'synthetic-live-voice'}),/separate explicit/);
 });
 test('phone pairing protects application shell, config, evidence and simulator routes',async()=>{
  const gate=phoneGate({code,session});

@@ -32,3 +32,7 @@ Limits: 10 original JPEG/PNG/WebP files per job, 5 MB each, 25 MB combined; HTTP
 `CARRYFORWARD_OPERATIONS_DB` can point tests at an isolated temporary database. Tests create and remove only their own temporary fixtures. Production source revision updates, broader integrations, access control, durable retry queues and deployed hosting remain unimplemented.
 
 A second fictional job was used to check browser isolation. It initially showed no first-job voice clips. After a local report was confirmed, adding an unlinked original voice clip displayed a stale-confirmation warning and re-enabled confirmation. Switching back restored only the first job's independent clip and raw transcript. No additional provider calls were needed for that check. Desktop (1100 px) and phone-width (390 px) layouts had no horizontal document overflow; physical phone testing remains distinct.
+
+## November 1 live input checkpoint
+
+The optional fictional live mode now adds a local input meter/check, guarded streaming transcription, reviewed Send and locally spoken follow-up. The owner confirmed one complete cycle on the physical iPhone Air. Original-recording fallback remains available; interruption, camera, Safari/Android and broader phone acceptance remain pending. See [live voice](LIVE_VOICE.md).

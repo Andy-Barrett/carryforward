@@ -407,6 +407,17 @@ async function switchJob(jobId) {
   }
   render();
 }
+async function newVoiceDemo() {
+  if(!db||photoOperation)throw Error('Wait for local storage and any photo save before starting another demo.');
+  if(cloudSession?.canNavigate&&!cloudSession.canNavigate())throw Error('Finish capture or saving before starting another demo.');
+  collect();if(!save()||!await persistSession())throw Error('The current visit could not be safely saved.');
+  const next=validateOrder({...structuredClone(demoOrder),id:`DEMO-VOICE-${crypto.randomUUID()}`});
+  const nextReport={technician:'',summary:'',promises:'',followupOwner:'',entries:{}};
+  await jobStore.putSession(db,{jobId:next.id,order:next,report:nextReport,createdAt:new Date().toISOString(),confirmation:null});
+  order=next;report=nextReport;review=null;sessionConfirmation=null;photoMsg='';
+  await refreshJobData();if(!save())throw Error('The new demo is stored, but the active-job pointer could not be saved.');
+  notify('Fresh fictional voice trial. Earlier jobs and recordings stay saved on this device.');render();
+}
 function collect() {
   const form = $("#field-form");
   if (!form) return;
@@ -506,7 +517,7 @@ function render() {
     if (!db) { root.textContent = storeError || "Opening local job storage…"; return; }
     const current = () => order.id === jobId && generation === renderGeneration && root.isConnected;
     mountCloudSession(root, {
-      db, order: structuredClone(order), onNavigate: target => { if(current()) navigateStep(target === "sources" ? "capture" : target); },
+      db, order: structuredClone(order), onNewVoiceDemo:newVoiceDemo, onNavigate: target => { if(current()) navigateStep(target === "sources" ? "capture" : target); },
       onGetPhotos: async () => current() ? await jobStore.listPhotosByJob(db, jobId) : [],
       onPhotoFiles: async files => { if(current()) return await admitFiles(files); throw Error("This job view changed; no upload was started."); },
       onGetReport: () => structuredClone(report),

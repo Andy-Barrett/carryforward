@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-CarryForward is a small browser application served by Node’s built-in HTTP server. It has no framework, build step or runtime package dependencies. The local Operations simulator uses Node 24 built-in SQLite under ignored `.local/`; browser drafts and attachments remain in IndexedDB.
+CarryForward is a small browser application served by Node’s built-in HTTP server. It has no framework or web build step. The exact locked MIT-licensed `ws` package supplies the bounded WebSocket relay. The local Operations simulator uses Node 24 built-in SQLite under ignored `.local/`; browser drafts and attachments remain in IndexedDB.
 
 | File               | Responsibility                                                                        |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -12,6 +12,8 @@ CarryForward is a small browser application served by Node’s built-in HTTP ser
 | `public/style.css` | Desktop and phone layouts                                                             |
 | `public/interview.js`, `public/investigation.js` | Saved interview, explicit preferences, evidence loop and bounded proposal validation |
 | `public/jobstore.js` | IndexedDB sessions, events, media and separate unsent drafts |
+| `public/live-voice.js`, `public/pcm-worklet.js`, `lib/live-transport.mjs` | Local input preflight, bounded live ASR and authenticated guarded relay; see [live voice](LIVE_VOICE.md) |
+| `public/local-speech.js`, `ios/CarryForward/VisitBrowser.swift` | Local spoken follow-up and native audio-session lifecycle |
 | `public/voice.js`, `public/audio.js` | Local recording/playback, normalized transcription audio and reviewed transcript links |
 | `public/review-copy.js` | Bounded JPEG copies with original-source provenance |
 | `lib/meta-review.mjs`, `lib/meta-transcribe.mjs` | Guarded actual Meta interpretation/transcription adapters |

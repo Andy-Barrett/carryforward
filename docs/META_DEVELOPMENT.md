@@ -1,6 +1,6 @@
 # Guarded Meta review
 
-Meta review is disabled by default. The local development server can enable it with `CARRYFORWARD_META_ENABLED=1` and `CARRYFORWARD_GUARD_TOKEN_FILE` pointing to the existing loopback guard's credential file. The application only calls the loopback guard at `/v1/responses` and `/v1/asr/transcribe`; it never accepts a provider URL or provider key from the browser. The separate guard must already be running with its original persistent ledger. Do not replace or reset that ledger to obtain a fresh budget.
+Meta review is disabled by default. The local development server can enable it with `CARRYFORWARD_META_ENABLED=1` and `CARRYFORWARD_GUARD_TOKEN_FILE` pointing to the existing loopback guard's credential file. The application only calls the loopback guard at `/v1/responses`, `/v1/asr/transcribe` and `/v1/asr/realtime`; it never accepts a provider URL or provider key from the browser. The separate guard must already be running with its original persistent ledger. Do not replace or reset that ledger to obtain a fresh budget.
 
 The October 30 owner approval is $10 aggregate across Muse development and product calls, not $10 per app launch. The current session guard reserves uncached input plus a 10,000-token margin and maximum output cost before dispatch, with no refunds for failures. An unavailable guard fails closed. Five review attempts and five transcription attempts per job per app process are an additional convenience bound, not a durable financial cap; the aggregate guard is the authority.
 
@@ -8,7 +8,7 @@ The October 30 owner approval is $10 aggregate across Muse development and produ
 
 Output is parsed as JSON, validated against the current job/input revision and admitted source IDs, and rejected if malformed, stale or referencing an image not actually sent. The browser rechecks its saved event revision before applying a returned result. Model findings remain interpretations; technician confirmation and Operations acceptance stay separate.
 
-The UI asks for confirmation that selected content is fictional demonstration data. Only those examples are within current source authority. No existing customer evidence or retained call recordings are authorized for these routes. Live voice checks used newly generated fictional speech only. Microphone audio stays local unless its user explicitly requests transcription of a synthetic demonstration clip. No retries run automatically. Failures preserve locally saved evidence.
+The UI asks for confirmation that selected content is fictional demonstration data. Only those examples are within current source authority. No existing customer evidence or retained call recordings are authorized for these routes. Live voice checks used newly generated fictional speech only. Microphone audio stays local unless its user explicitly selects a synthetic live demo or requests transcription of a synthetic demonstration clip. The live route checks input locally before opening its guarded session; see [live voice](LIVE_VOICE.md). No retries run automatically. Failures preserve locally saved evidence.
 
 Official request references checked during implementation:
 - https://dev.meta.ai/docs/protocols/responses

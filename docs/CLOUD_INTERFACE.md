@@ -11,7 +11,7 @@ Andrew requested a modern field companion that feels like talking to a cloud, br
 - PDF page images and text excerpts retain title, page, source ID, revision and an original-source link. Inspection opens a zoomable source view. Images and actual supplied video files have dedicated viewers.
 - Original work-order history and saved photos are available in Sources. The exact fictional sample job also supplies an explicitly labeled two-page reference PDF, rendered page, display illustration and three-second generated video. They are reference fixtures, not measurements or equipment instructions, and are not automatically admitted as field evidence.
 - Voice uses the existing short recording/upload, playback and reviewed-transcript flow. A microphone starts only after a user action. Raw ASR is not executed as a command. Reviewed words enter an editable draft until Send. This is not continuous, full-duplex conversation.
-- Read aloud uses only an available local browser speech voice after an explicit action. If no local voice is available, text remains usable. No new speech provider or subscription is introduced.
+- Read aloud uses a local system voice after an explicit action. The native wrapper has an Apple speech-synthesis bridge; browsers use an available local voice. The optional fictional live turn reads its follow-up after reviewed Send. If speech is unavailable, text remains usable; no new speech provider or subscription is introduced.
 - Cloud drafts have their own per-job storage and do not overwrite an unfinished detailed interview answer. Saves keep source provenance and invalidate the existing report confirmation as appropriate.
 
 ## Source and warning boundary
@@ -35,3 +35,5 @@ The current build passes 95 Node 24 tests, including thirteen job-context tests 
 Real microphone permissions and voice capture on iPhone/Android, naturalness and field usability still require the prepared device/pilot checks. General job-document ingestion, video indexing and an actual retrieval pipeline remain separate work. Do not describe the supplied fictional packet as complete RAG coverage.
 
 The October 31 [cloud visit loop](CLOUD_VISIT_LOOP.md) now keeps explicit Meta review and owned question deferral in the cloud, and prepares report notes before the existing confirmation/simulator flow. Its actual synthetic model/API exercise is separate from the earlier UI-only increments above; physical-device and human usability acceptance remain pending.
+
+November 1: the owner confirmed one complete live iPhone turn with Meta transcription, human-reviewed Send and an audible follow-up. This is push-to-talk, with a local input check and text fallback; see [live voice](LIVE_VOICE.md). Other device/OS behavior and naturalness still require separate checks.

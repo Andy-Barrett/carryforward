@@ -42,7 +42,7 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     const full=clips.length>=AUDIO_LIMITS.clipsPerJob;
     start.disabled=full;
     const limit=document.createElement('p');limit.textContent=full?'This visit has five saved clips. Start a fresh fictional visit to keep testing; existing recordings stay saved.':'';
-    const fresh=document.createElement('button');fresh.type='button';fresh.textContent='Start fresh fictional visit';fresh.hidden=!full||!onNewDemo;
+    const fresh=document.createElement('button');fresh.type='button';fresh.textContent='Start fresh fictional visit';fresh.hidden=!onNewDemo;
     fresh.onclick=()=>{accepted=true;dialog.close();run(async()=>{await onNewDemo();});};
     dialog.addEventListener('close',()=>{consentDialog=null;dialog.remove();if(!accepted)onPreview?.('Live mode cancelled. Local recording and text are available.',true);});dialog.append(title,note,limit,start,check,fresh,cancel);root.append(dialog);dialog.showModal();
   }

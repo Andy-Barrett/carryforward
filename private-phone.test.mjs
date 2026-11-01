@@ -25,6 +25,13 @@ test('phone pairing protects application shell, config, evidence and simulator r
  const headers={origin,'content-type':'application/x-www-form-urlencoded'};
  assert.equal((await call(gate,{path:'/pair',method:'POST',body:`code=${code}`,headers:{...headers,origin:'https://other.example'}})).status,403);
  assert.equal((await call(gate,{path:'/pair',method:'POST',body:'code='+encodeURIComponent('é'.repeat(32)),headers})).status,403);
+ const failed=await call(gate,{path:'/pair',method:'POST',body:'code=wrong',headers});
+ assert.equal(failed.status,403);assert.equal(failed.headers['Content-Type'],'text/html');
+ assert.match(failed.body,/Pairing code did not match/);assert.match(failed.body,/<form method="post" action="\/pair">/);
+ assert.ok(!failed.body.includes('code=wrong'));assert.equal(failed.headers['Cache-Control'],'no-store');
+ assert.match(form.headers['Content-Security-Policy'],/default-src 'none'/);
+ assert.match(form.headers['Content-Security-Policy'],/style-src 'sha256-[A-Za-z0-9+/=]+'/);
+ assert.ok(!form.headers['Content-Security-Policy'].includes('unsafe-inline'));
  const paired=await call(gate,{path:'/pair',method:'POST',body:`code=${code}`,headers});
  assert.equal(paired.status,303);assert.match(paired.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Strict/);
  assert.equal((await call(gate,{path:'/api/config',headers:{cookie:`carryforward_session=${session}`}})).handled,false);

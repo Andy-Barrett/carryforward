@@ -93,3 +93,17 @@ This implementation applies the retained PRISM audit lessons supplied to this ch
 Build 2 adds a bounded local speech-synthesis bridge for reading a follow-up after reviewed Send. It compiled for both Simulator and signed physical iOS and was installed on the owner's phone. The normal local recorder remains available. The paired server now has an explicitly selected fictional live-voice trial; the October 31 inference-disabled setup remains the default configuration, not the current live-test state.
 
 The first two physical live captures saved silence. The owner then confirmed the revised audio-session/resume setup with a moving input meter and audible temporary local check. The owner then confirmed live Meta words appearing, followed by a visible and audible question after reviewed Send. One complete physical push-to-talk turn is now verified; interruption/offline/permission-denial and the full technician trial remain pending. See [live voice](../docs/LIVE_VOICE.md) for boundaries, observed results and limits.
+
+
+## Build 3 — explicit recovery and retained visit
+
+Build 3 replaces Reconnect's reload with a fresh GET to the configured origin, after stopping capture. This avoids replaying a failed pairing POST. A failed code now leaves a usable phone-sized form. The physical phone verified invalid-code recovery, clean reconnect, successful pairing, retained notes/media and fresh v5 confirmation. The updated packet was separately received and accepted with four open follow-ups; authenticated downloads matched both photos and the original WAV. Signed-device and unsigned-Simulator builds passed, along with all 114 Node 24 checks. No model calls were made. See [phone validation](../docs/PHONE_VALIDATION.md) for the exact receipt and remaining interruption/offline cases.
+
+
+## Builds 4–5 — offline startup and explicit reconnect
+
+Build 4 enables WebKit app-bound navigation for only `CF_ORIGIN_HOST`, also used to populate the single `WKAppBoundDomains` entry. The existing service worker can then cache the web shell. Its signed physical and unsigned Simulator builds passed; the compiled host lists were checked against each configured origin. On the physical iPhone, cold startup with the private server stopped opened the saved visit. The owner also confirmed that the interruption-test clip survived the build update and remained audible.
+
+The Home/background case passed in build 3: capture stopped without restarting and the owner heard the saved partial clip. Lock, competing-call and OS-kill behavior are separate pending cases. Server-stopped cold startup does not establish offline microphone capture or complete radio disconnection.
+
+Build 5 adds a fixed query to the explicit same-origin Reconnect GET, bypassing the shell cache so an expired server session can reach pairing. Normal startup keeps its cached path. Both build 5 targets compile; physical installation/reconnect and a new offline recording remain pending. See [phone validation](../docs/PHONE_VALIDATION.md) for the actual sequence and limits.

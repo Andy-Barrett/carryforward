@@ -19,6 +19,8 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     override init() {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        // Enable service workers only for the configured app-bound host.
+        config.limitsNavigationsToAppBoundDomains = true
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = .all
         webView = WKWebView(frame: .zero, configuration: config)
@@ -74,7 +76,13 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     func back() { if webView.canGoBack { webView.goBack() } }
     func confirmReload() {
         confirm("Reconnect to this same origin? Capture may stop. Saved job data stays in this app; requests will not be automatically replayed.") { [weak self] accepted in
-            if accepted { self?.status = "Reopening configured origin…"; self?.webView.reload() }
+            guard accepted, let self, let policy = self.policy else { return }
+            self.interruptCapture()
+            self.status = "Reopening configured origin…"
+            // A query bypasses the shell cache so the server can renew pairing.
+            // Keep the same origin and use GET, never replay a failed form POST.
+            let reconnectURL = policy.origin.appending(queryItems: [URLQueryItem(name: "reconnect", value: "1")])
+            self.webView.load(URLRequest(url: reconnectURL))
         }
     }
     func interruptCapture() {

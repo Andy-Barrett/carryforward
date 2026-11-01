@@ -11,6 +11,7 @@
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>CarryForwardDevelopmentOrigin</key><string>$(CF_ORIGIN_SCHEME)://$(CF_ORIGIN_HOST):$(CF_ORIGIN_PORT)/</string>
 <key>CarryForwardWebSourceRevision</key><string>$(CF_WEB_SOURCE_REVISION)</string>
+<key>WKAppBoundDomains</key><array><string>$(CF_ORIGIN_HOST)</string></array>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UILaunchScreen</key><dict/>

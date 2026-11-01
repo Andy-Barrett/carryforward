@@ -1,25 +1,227 @@
 // !$*UTF8*$!
-{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
-A10000000000000000000000 = {isa = PBXBuildFile; fileRef = A20000000000000000000000; };
-A20000000000000000000000 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarryForwardApp.swift; sourceTree = "<group>"; };
-A10000000000000000000001 = {isa = PBXBuildFile; fileRef = A20000000000000000000001; };
-A20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndpointPolicy.swift; sourceTree = "<group>"; };
-A10000000000000000000002 = {isa = PBXBuildFile; fileRef = A20000000000000000000002; };
-A20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitBrowser.swift; sourceTree = "<group>"; };
-A20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-A20000000000000000000004 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = CarryForward.app; sourceTree = BUILT_PRODUCTS_DIR; };
-A30000000000000000000000 = {isa = PBXGroup; children = (A30000000000000000000001,A30000000000000000000002); sourceTree = "<group>"; };
-A30000000000000000000001 = {isa = PBXGroup; path = CarryForward; sourceTree = "<group>"; children = (A20000000000000000000000,A20000000000000000000001,A20000000000000000000002,A20000000000000000000003); };
-A30000000000000000000002 = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (A20000000000000000000004); };
-A40000000000000000000000 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000000,A10000000000000000000001,A10000000000000000000002); runOnlyForDeploymentPostprocessing = 0; };
-A40000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-A40000000000000000000002 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-A50000000000000000000000 = {isa = PBXNativeTarget; buildConfigurationList = A70000000000000000000001; buildPhases = (A40000000000000000000000,A40000000000000000000001,A40000000000000000000002); buildRules = (); dependencies = (); name = CarryForward; productName = CarryForward; productReference = A20000000000000000000004; productType = "com.apple.product-type.application"; };
-A60000000000000000000000 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = YES; LastSwiftUpdateCheck = 2720; LastUpgradeCheck = 2720; }; buildConfigurationList = A70000000000000000000000; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en,Base); mainGroup = A30000000000000000000000; productRefGroup = A30000000000000000000002; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000000); };
-A70000000000000000000000 = {isa = XCConfigurationList; buildConfigurations = (A80000000000000000000000,A80000000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
-A70000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (A80000000000000000000002,A80000000000000000000003); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
-A80000000000000000000000 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 18.4; SWIFT_VERSION = 5.0; ENABLE_USER_SCRIPT_SANDBOXING = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; DEBUG_INFORMATION_FORMAT = dwarf;}; };
-A80000000000000000000001 = {isa = XCBuildConfiguration; name = Release; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 18.4; SWIFT_VERSION = 5.0; ENABLE_USER_SCRIPT_SANDBOXING = YES; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";}; };
-A80000000000000000000002 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; PRODUCT_BUNDLE_IDENTIFIER = com.andybarrett.carryforward.development; PRODUCT_NAME = "$(TARGET_NAME)"; INFOPLIST_FILE = CarryForward/Info.plist; GENERATE_INFOPLIST_FILE = NO; TARGETED_DEVICE_FAMILY = 1; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 0.1.0; CF_ORIGIN_SCHEME = http; CF_ORIGIN_HOST = 127.0.0.1; CF_ORIGIN_PORT = 4350; CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; DEBUG_INFORMATION_FORMAT = dwarf;}; };
-A80000000000000000000003 = {isa = XCBuildConfiguration; name = Release; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; PRODUCT_BUNDLE_IDENTIFIER = com.andybarrett.carryforward.development; PRODUCT_NAME = "$(TARGET_NAME)"; INFOPLIST_FILE = CarryForward/Info.plist; GENERATE_INFOPLIST_FILE = NO; TARGETED_DEVICE_FAMILY = 1; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 0.1.0; CF_ORIGIN_SCHEME = http; CF_ORIGIN_HOST = 127.0.0.1; CF_ORIGIN_PORT = 4350; CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";}; };
-}; rootObject = A60000000000000000000000; }
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000000 /* CarryForwardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000000 /* CarryForwardApp.swift */; };
+		A10000000000000000000001 /* EndpointPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* EndpointPolicy.swift */; };
+		A10000000000000000000002 /* VisitBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* VisitBrowser.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000000 /* CarryForwardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarryForwardApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000001 /* EndpointPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndpointPolicy.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* VisitBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitBrowser.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000004 /* CarryForward.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = CarryForward.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000005 /* Development.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Development.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A30000000000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				A30000000000000000000001 /* CarryForward */,
+				A30000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A30000000000000000000001 /* CarryForward */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000000 /* CarryForwardApp.swift */,
+				A20000000000000000000001 /* EndpointPolicy.swift */,
+				A20000000000000000000002 /* VisitBrowser.swift */,
+				A20000000000000000000003 /* Info.plist */,
+				A20000000000000000000005 /* Development.xcconfig */,
+			);
+			path = CarryForward;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000004 /* CarryForward.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000000 /* CarryForward */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000001 /* Build configuration list for PBXNativeTarget "CarryForward" */;
+			buildPhases = (
+				A40000000000000000000000 /* Sources */,
+				A40000000000000000000001 /* Frameworks */,
+				A40000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CarryForward;
+			productName = CarryForward;
+			productReference = A20000000000000000000004 /* CarryForward.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A60000000000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 2720;
+				LastUpgradeCheck = 2720;
+			};
+			buildConfigurationList = A70000000000000000000000 /* Build configuration list for PBXProject "CarryForward" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A30000000000000000000000;
+			productRefGroup = A30000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000000 /* CarryForward */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A40000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A40000000000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000000 /* CarryForwardApp.swift in Sources */,
+				A10000000000000000000001 /* EndpointPolicy.swift in Sources */,
+				A10000000000000000000002 /* VisitBrowser.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A80000000000000000000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A80000000000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A80000000000000000000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000005 /* Development.xcconfig */;
+			buildSettings = {
+				CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CarryForward/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andybarrett.carryforward.development;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A80000000000000000000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000005 /* Development.xcconfig */;
+			buildSettings = {
+				CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CarryForward/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andybarrett.carryforward.development;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A70000000000000000000000 /* Build configuration list for PBXProject "CarryForward" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000000 /* Debug */,
+				A80000000000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A70000000000000000000001 /* Build configuration list for PBXNativeTarget "CarryForward" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000002 /* Debug */,
+				A80000000000000000000003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A60000000000000000000000 /* Project object */;
+}

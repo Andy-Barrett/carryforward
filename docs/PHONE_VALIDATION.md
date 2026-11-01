@@ -1,8 +1,8 @@
 # Physical-phone validation
 
-Status: pending on both iPhone Safari and Android Chrome. Desktop layout checks and event-target unit tests are not physical-device evidence.
+Status: a bounded native iPhone record/stop/play pass is owner-confirmed; the full matrix below remains pending on iPhone Safari and Android Chrome. Desktop layout checks and event-target unit tests are not physical-device evidence.
 
-Use only a fictional assignment and newly recorded synthetic narration. Keep provider transcription disabled unless the recording is synthetic and the existing guarded development route is used. Do not expose the local development server publicly for this check. Phone microphone access requires an appropriate secure origin; the current loopback-only server is not yet a phone-access deployment.
+Use only a fictional assignment and newly recorded synthetic narration. Keep provider transcription disabled unless the recording is synthetic and the existing guarded development route is used. Do not expose the local development server publicly for this check. Phone microphone access requires an appropriate secure origin. Use the owner-authorized paired private HTTPS trial below; the default loopback-only server remains Mac-only.
 
 Record the device, OS, browser version, origin, source commit, exact actions, observed result and any console/error evidence. Mark each case pass, fail or not run; do not infer results across platforms.
 
@@ -24,3 +24,16 @@ The interruption handlers request stop on hidden-page, pagehide and track-ended 
 ## Private Wi-Fi access prepared October 31
 
 See [private phone HTTPS](PRIVATE_PHONE_HTTPS.md) for the owner-authorized paired local-network trial. Its encrypted access checks and 83 passing local tests do not complete any physical-device row above. Capture-only mode keeps inference disabled and uses a separate simulator database. Certificate installation/trust and actual iPhone actions remain owner steps until observed.
+
+## Native iPhone audio checkpoint — October 31, 2026
+
+Tested destination: physical iPhone Air, iOS 27.0.1; private SwiftUI/WKWebView development app version 0.1.0/build 1, Xcode/SDK 27.2. The origin was the owner-approved paired private HTTPS service; Meta review/transcription were disabled. Web-source base is `209b4307ed59b7e817d3f0351c43200aa3420dcd`; the native playback change and build/install logs are recorded separately. This build number alone does not identify the exact native source.
+
+| Check | Observed result |
+| --- | --- |
+| Existing recording | The original failure was a moving timer with no sound. After the native playback-session adapter was installed and the phone paired again, the owner confirmed audible playback. The console reported the speaker route. |
+| Fresh capture after playback | The owner recorded a new short fictional line, stopped it and confirmed the new clip played audibly. |
+| Inference | Disabled throughout this phone pass; no recording was sent to Meta. |
+| Remaining acceptance | Permission denial, microphone-indicator release, background/lock/interruption, duration limit, reload/offline recovery, job isolation and exact-revision handoff were not established by these two playback confirmations. |
+
+The adapter applies the explicit local playback-session lifecycle identified during the owner-requested bounded PRISM source review. It is new WebKit glue, not a port of PRISM's continuous conversation system. Original recordings and transcripts remain in the existing local web store.

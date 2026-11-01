@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AVFAudio
 
 @MainActor
 final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
@@ -10,6 +11,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     let webView: WKWebView
     weak var presenter: UIViewController?
     private var started = false
+    private let playbackSession = LocalPlaybackSession()
     private var downloads: [ObjectIdentifier: URL] = [:]
     var route: String { policy?.origin.absoluteString ?? "No valid origin configured" }
 
@@ -33,6 +35,25 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         super.init()
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        playbackSession.webView = webView
+        playbackSession.policy = policy
+        playbackSession.onFailure = { [weak self] in self?.status = $0 }
+        let controller = webView.configuration.userContentController
+        controller.add(playbackSession, name: "carryForwardPlayback")
+        controller.addUserScript(WKUserScript(source: """
+            (() => {
+              const send = value => window.webkit.messageHandlers.carryForwardPlayback.postMessage(value);
+              document.addEventListener('play', event => {
+                if (event.target instanceof HTMLMediaElement) send('play');
+              }, true);
+              const stopIfIdle = () => {
+                if (![...document.querySelectorAll('audio,video')].some(media => !media.paused && !media.ended)) send('stop');
+              };
+              document.addEventListener('pause', stopIfIdle, true);
+              document.addEventListener('ended', stopIfIdle, true);
+              window.addEventListener('pagehide', () => send('stop'));
+            })();
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         #if DEBUG
         webView.isInspectable = true
         #endif
@@ -56,6 +77,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.setMicrophoneCaptureState(.none)
         webView.setCameraCaptureState(.none)
         webView.pauseAllMediaPlayback()
+        playbackSession.deactivate()
         if wasCapturing { status = "Capture interrupted. Review local save status before recording again." }
     }
     private func show(_ message: String) {
@@ -183,4 +205,38 @@ struct VisitWebView: UIViewControllerRepresentable {
         return host
     }
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) { /* Retain the same web view and origin across SwiftUI updates. */ }
+}
+
+// Adapted from PRISM's explicit local playback-session lifecycle. Only fixed
+// playback controls cross this bridge; recordings and transcripts remain in WebKit.
+@MainActor
+private final class LocalPlaybackSession: NSObject, WKScriptMessageHandler {
+    weak var webView: WKWebView?
+    var policy: EndpointPolicy?
+    var onFailure: ((String) -> Void)?
+    private var active = false
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "carryForwardPlayback", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, policy?.allows(url) == true,
+              let action = message.body as? String,
+              webView?.microphoneCaptureState == WKMediaCaptureState.none else { return }
+        if action == "stop" { deactivate(); return }
+        guard action == "play" else { return }
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true)
+            active = true
+            NSLog("CarryForward local playback active; output=%@", session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ","))
+        } catch {
+            onFailure?("Audio output could not start. Check the selected audio output and tap Play again.")
+        }
+    }
+
+    func deactivate() {
+        guard active else { return }
+        active = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
 }

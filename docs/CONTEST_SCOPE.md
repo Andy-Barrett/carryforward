@@ -34,7 +34,7 @@ Use complete, incomplete, and contradictory evidence variants. Do not hard-code 
 - Working API input and output against a clearly labeled local simulator.
 - A closeout whose claims can be traced back to observations or testimony.
 
-The local prototype now exercises the evidence-review and simulator handoff path using actual Meta calls. See `docs/READINESS_REVIEW.md` for evidence and remaining gaps. Physical-phone capture, installation and a technician usability run remain unverified; this is not a finished field deployment or submitted contest entry.
+The local prototype now exercises the evidence-review and simulator handoff path using actual Meta calls. See `docs/READINESS_REVIEW.md` for evidence and remaining gaps. Native iPhone installation and a basic record/stop/play cycle are now verified; full capture/interruption acceptance and a technician usability run remain pending. This is not a finished field deployment or submitted contest entry.
 
 ## Cut before compromising the core
 

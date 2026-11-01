@@ -49,7 +49,7 @@ The JSON download contains the validated work order and `carryforward.closeout.v
 
 There is no production user authentication or multi-user access control. The loopback simulator persists admitted records and evidence bytes, and guarded Meta review is opt-in. Source receipt and acceptance are local simulation, not a live Perihelion connection. Browser storage is not a backup. New form observations carry the displayed UTC offset. Legacy offset-free times remain unresolved until the technician supplies an offset; no historical timezone is inferred. Report creation times also require an explicit offset. The `carryforward.review.v4` confirmation contract prevents reuse of earlier completeness approvals.
 
-Phone-width layout checks have been performed. Recording controls, the standalone manifest and offline shell are implemented. Physical-device camera, microphone, installation, interruption and airplane-mode behavior remain unverified. Server-stopped desktop reopening and local persistence were verified; see `docs/OFFLINE.md` and `docs/PHONE_VALIDATION.md`.
+Phone-width layout checks have been performed. Recording controls, the standalone manifest and offline shell are implemented. Native iPhone development installation, saved-clip playback and a fresh record/stop/play cycle are verified by installation receipts and owner testing. Camera, permission-denial, interruption, airplane-mode and Safari/Android behavior remain unverified. Server-stopped desktop reopening and local persistence were verified; see `docs/OFFLINE.md` and `docs/PHONE_VALIDATION.md`.
 
 ## Model and integration direction
 
@@ -160,4 +160,4 @@ Photo inspection and final confirmation are parked activities. No continuous dri
 
 ## Private iPhone development target
 
-`ios/CarryForward.xcodeproj` now supplies a small SwiftUI/WKWebView shell over one explicit development origin. It retains the web evidence/API contracts, persistent origin-scoped storage and system TLS validation; it does not load bundled file:// HTML or implement a second investigation engine. Signing-disabled simulator/device compiles passed; native launch/capture/offline acceptance remains pending because the running CoreSimulator service is out of date. See [native build and owner checklist](../ios/README.md).
+`ios/CarryForward.xcodeproj` now supplies a small SwiftUI/WKWebView shell over one explicit development origin. It retains the web evidence/API contracts, persistent origin-scoped storage and system TLS validation; it does not load bundled file:// HTML or implement a second investigation engine. Simulator and signed physical-device builds passed; the current brief renders on both. The owner confirmed saved-clip playback and a fresh record/stop/play cycle on the physical iPhone after an explicit native playback-session adapter. Full capture/interruption, offline and handoff acceptance remain pending. See [native build and owner checklist](../ios/README.md).

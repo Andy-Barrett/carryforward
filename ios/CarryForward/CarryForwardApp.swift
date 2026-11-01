@@ -24,6 +24,7 @@ struct CarryForwardApp: App {
                     VisitWebView(browser: browser)
                 }
             }
+            .task { browser.startOnce() }
             .onChange(of: phase) { _, next in
                 if next == .background { browser.interruptCapture() }
                 // Activation deliberately does not reload, start capture or retry a request.

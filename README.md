@@ -106,4 +106,4 @@ Drafts and photo attachments stay in this browser. IndexedDB stores job sessions
 
 For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).
 
-A private [iPhone development target](ios/README.md) now reuses this web app through SwiftUI/WKWebView. The app renders the brief and visit workspace in an iPhone Air simulator. An owner-approved Personal Team build is installed on the connected iPhone; first phone launch awaits developer-certificate trust. Physical capture and full native acceptance remain pending.
+A private [iPhone development target](ios/README.md) now reuses this web app through SwiftUI/WKWebView. The app renders the brief and visit workspace in an iPhone Air simulator. An owner-approved Personal Team build now launches on the connected iPhone; connecting the visit still requires installation and trust of the private HTTPS server certificate. Physical capture and full native acceptance remain pending.

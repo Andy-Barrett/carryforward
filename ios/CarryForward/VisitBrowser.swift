@@ -179,7 +179,7 @@ struct VisitWebView: UIViewControllerRepresentable {
             browser.webView.topAnchor.constraint(equalTo: host.view.topAnchor),
             browser.webView.bottomAnchor.constraint(equalTo: host.view.bottomAnchor)
         ])
-        browser.startOnce()
+        // Start from the SwiftUI task after this view update completes.
         return host
     }
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) { /* Retain the same web view and origin across SwiftUI updates. */ }

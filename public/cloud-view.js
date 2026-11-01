@@ -566,6 +566,7 @@ export function mountCloud(root, {
         onError: error => { if (!valid()) return; setActivity('ready'); say(error?.message || String(error), true); },
       });
       if (!valid()) { if (typeof result === 'function') result(); return; }
+      say('');
       if (typeof result === 'function') talkCleanup = result;
       if (result?.activity && ACTIVITY.has(result.activity)) setActivity(result.activity);
     } catch (error) { if (valid()) { setActivity('ready'); say(error.message || 'Microphone unavailable. You can type instead.', true); } }

@@ -248,7 +248,8 @@ export function reviewReport(order, report, interview = null) {
     if (interview.jobId !== checked.id || !Array.isArray(interview.branches)) throw new Error("Interview belongs to another job or is malformed.");
     findings = findings.map(finding => {
       const branch = interview.branches.find(b => b.id === finding.id);
-      if (!branch || (!branch.sourceIds?.length && branch.state === "open")) return finding;
+      if (!branch) return finding;
+      if (branch.state === "open") return {...finding,followupOwner:branch.owner || null};
       const sources = Array.isArray(branch.sourceIds) ? [...branch.sourceIds] : [];
       if (branch.state === "supported" && interview.reviewRequired) {
         return {...finding,outcome:"open",note:finding.note || branch.reason,sourceIds:sources,reason:"New material evidence has not been reconciled with earlier model findings."};

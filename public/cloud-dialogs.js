@@ -57,8 +57,17 @@ export async function prepareCloudHandoff(root,{report,packet,unsent}){
   const promises=field(ui.form,'Customer commitments',report.promises||'',{area:true,max:4000});
   const unresolved=packet.branches.filter(b=>b.state!=='supported');
   ui.form.append(node('p',`${unresolved.length} unresolved ${unresolved.length===1?'item remains':'items remain'}. Preparing this report does not resolve them.`));
+  const assignOwners=node('input');assignOwners.type='checkbox';
+  if(unresolved.length){
+    const list=node('ul');
+    for(const branch of unresolved)list.append(node('li',`${branch.question} — Owner: ${branch.owner||'Not assigned'}`));
+    const label=node('label');label.append(assignOwners,document.createTextNode(' Assign every open check to the follow-up owner above'));
+    ui.form.append(list,label,node('p','Leave this unchecked to keep the individual owners. Assigning an owner preserves open outcomes and earlier history.'));
+  }
+  const status=node('p');status.setAttribute('role','status');ui.form.append(status);
   const submit=node('button','Review this handoff');submit.type='submit';ui.form.append(submit,ui.cancel);
   ui.form.onsubmit=event=>{event.preventDefault();if(!summary.value.trim()||!technician.value.trim())return;
-    ui.finish({summary:summary.value.trim(),technician:technician.value.trim(),followupOwner:owner.value.trim(),promises:promises.value.trim(),interviewRevision:packet.revision,recordedAt:new Date().toISOString()});};
+    if(assignOwners.checked&&!owner.value.trim()){status.textContent='Name the person or team who will own these checks.';owner.focus();return;}
+    ui.finish({summary:summary.value.trim(),technician:technician.value.trim(),followupOwner:owner.value.trim(),promises:promises.value.trim(),assignOpenOwners:assignOwners.checked,interviewRevision:packet.revision,recordedAt:new Date().toISOString()});};
   ui.open();return ui.result;
 }

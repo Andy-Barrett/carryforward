@@ -326,3 +326,12 @@ body.cloud-workspace { background: #f5f7f0; }
 
 .cf-input-meter {display:block;width:min(180px,80%);height:12px;margin:10px auto 0;accent-color:#366650;}
 .cf-input-meter[hidden] {display:none;}
+
+/* Keep the follow-up owner separate from the response choices on a phone. */
+@media (max-width:760px) {
+  .cf-cloud input,.cf-cloud textarea,.cf-flow-dialog input:not([type=checkbox]),.cf-flow-dialog textarea {font-size:16px;}
+  .cf-cloud .cf-question-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(520px,100%);margin:20px auto;gap:12px;align-items:stretch;}
+  .cf-question-actions label,.cf-question-actions .cf-pending-question {grid-column:1/-1;}
+  .cf-cloud .cf-question-actions .cf-text-action {justify-content:center;min-height:48px;padding:12px;font-size:15px;border:1px solid #b9cbc3;border-radius:12px;background:#f6f9f1;}
+  .cf-cloud .cf-question-actions .cf-text-action:last-child {grid-column:1/-1;}
+}

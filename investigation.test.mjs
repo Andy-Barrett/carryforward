@@ -143,3 +143,28 @@ test('review copies retain immutable original links and excluding the original r
  s=apply(s,'source.excluded',{id:'copy'});assert.equal(s.sources.copy.excluded,true);
  s=apply(s,'source.restored',{id:'original'});assert.equal(s.sources.copy.excluded,true);
 });
+
+test('explicit owner correction preserves outcomes, evidence and question limits with append-only history',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'branch.response',{branchId:'repair',action:'later',reason:'Check later',owner:'Previous owner'});
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'monitoring',text:'Is monitoring connected?'}));
+ const before=structuredClone(s),old=proposal(s);
+ s=apply(s,'branches.owner-assigned',{branchIds:['repair','monitoring'],owner:' Operations '});
+ assert.equal(s.branches.repair.owner,'Operations');assert.equal(s.branches.monitoring.owner,'Operations');
+ for(const id of ['repair','monitoring'])assert.deepEqual(s.branches[id],{...before.branches[id],owner:'Operations'});
+ assert.deepEqual(s.activeQuestion,before.activeQuestion);assert.equal(s.followups,before.followups);
+ assert.deepEqual(s.sources,before.sources);assert.equal(s.reviewRequired,before.reviewRequired);
+ assert.equal(s.events.find(e=>e.type==='branch.response').payload.owner,'Previous owner');
+ assert.throws(()=>apply(s,'interpretation.received',old),/Stale/);
+ assert.equal(interviewHandoff(s).revision,before.seq+1);
+});
+
+test('owner assignment refuses unsupported scope and empty or unbounded payloads',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ for(const branchIds of [[],['unknown'],['repair'],['monitoring','monitoring'],Array(21).fill('monitoring')])
+   assert.throws(()=>apply(s,'branches.owner-assigned',{branchIds,owner:'Operations'}),/assignment|unresolved/);
+ for(const owner of ['',null,'x'.repeat(201)])
+   assert.throws(()=>apply(s,'branches.owner-assigned',{branchIds:['monitoring'],owner}),/assignment/);
+ assert.equal(s.branches.repair.owner,null);assert.equal(s.branches.monitoring.owner,null);
+});

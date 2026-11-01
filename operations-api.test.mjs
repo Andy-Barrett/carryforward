@@ -36,7 +36,16 @@ test('real HTTP assignment, confirmed delivery, source receipt and acceptance re
   assert.equal((await call(path+'/acceptances',{revision:packet.revision})).status,400);
   assert.equal((await call(path+'/receipts',{revision:packet.revision})).status,200);
   assert.equal((await call(path+'/acceptances',{revision:packet.revision})).data.decision,'accepted_with_followups');
-  const changed=await call(path+'/closeout',{report:{...report,summary:'Correction: site visit postponed.'},eventRevision:0});assert.notEqual(changed.data.revision,packet.revision);
+  const ownerEvent={id:'owner-correction',jobId:demoOrder.id,seq:1,type:'branches.owner-assigned',payload:{branchIds:['production'],owner:'Operations'}};
+  assert.equal((await call(path+'/turns',{events:[ownerEvent]})).status,200);
+  assert.equal((await call(path)).data.accepted,false);
+  assert.equal((await call(path+'/acceptances',{revision:packet.revision})).status,400);
+  const revisedReport={...report,interviewRevision:1};
+  const reassigned=await call(path+'/closeout',{report:revisedReport,eventRevision:1});
+  assert.equal(reassigned.status,200);assert.notEqual(reassigned.data.revision,packet.revision);
+  assert.equal(reassigned.data.closeout.findings.find(f=>f.id==='production').followupOwner,'Operations');
+  assert.equal(reassigned.data.closeout.openCount,4);
+  const changed=await call(path+'/closeout',{report:{...revisedReport,summary:'Correction: site visit postponed.'},eventRevision:1});assert.notEqual(changed.data.revision,packet.revision);
   assert.equal((await call(path+'/acceptances',{revision:packet.revision})).status,400);
   assert.equal((await call(path)).data.accepted,false);
  }finally{if(child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}await rm(dir,{recursive:true,force:true});}

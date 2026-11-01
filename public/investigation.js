@@ -159,6 +159,14 @@ export function reduceInvestigation(previous, event) {
     if (p.action === 'reopen') b.epoch++;
     state.activeQuestion = null;
     state.inputRevision++;
+  } else if (event.type === 'branches.owner-assigned') {
+    if (!text(p.owner, 200) || !Array.isArray(p.branchIds) || !p.branchIds.length || p.branchIds.length > 20 || new Set(p.branchIds).size !== p.branchIds.length) fail('Invalid follow-up assignment');
+    for (const id of p.branchIds) {
+      if (!Object.hasOwn(state.branches, id) || state.branches[id].state === 'supported') fail('Follow-up assignment requires unresolved work');
+    }
+    for (const id of p.branchIds) state.branches[id].owner = p.owner.trim();
+    // Ownership is a human decision, not new evidence or permission to repeat a question.
+    state.inputRevision++;
   } else if (event.type === 'preference.changed') {
     if (!['direct','conversational'].includes(p.communicationStyle)) fail('Invalid communication style');
     state.communicationStyle = p.communicationStyle;

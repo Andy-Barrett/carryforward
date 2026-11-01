@@ -138,7 +138,15 @@ export async function mountCloudSession(root, {
       requireIdle();if(!prepared)return;
       const latest=await loadInterview(db,order);requireCurrent();
       if(latest.seq!==revision)throw Error('The conversation changed. Reopen the handoff to review the latest answers.');
-      await onPrepareHandoff(prepared,{jobId});
+      state=latest;
+      const {assignOpenOwners,...reportDraft}=prepared;
+      if(assignOpenOwners){
+        saving=true;
+        try{await dispatch('branches.owner-assigned',{branchIds:Object.values(state.branches).filter(b=>b.state!=='supported').map(b=>b.id),owner:reportDraft.followupOwner});}
+        finally{saving=false;}
+      }
+      reportDraft.interviewRevision=state.seq;
+      await onPrepareHandoff(reportDraft,{jobId});
     }
     const executed = {id:draftId,text:draft};
     await onNavigate?.(step, { jobId });

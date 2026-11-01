@@ -169,7 +169,7 @@ function canonicalMaterial(report) {
   const entries = report.entries || {};
   const keys = Object.keys(entries).sort();
   return JSON.stringify({
-    reviewContract: "carryforward.review.v4",
+    reviewContract: "carryforward.review.v5",
     evidenceRevision: report.evidenceRevision ?? null,
     interviewRevision: report.interviewRevision ?? null,
     technician: report.technician || "",

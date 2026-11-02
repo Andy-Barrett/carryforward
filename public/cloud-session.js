@@ -1,3 +1,6 @@
+import {conversationIntent,spokenVisitSummary} from './visit-flow.js';
+import {buildVisitBrief} from './visit-brief.js';
+import {requestReview} from './review-request.js';
 import {createLocalSpeaker} from './local-speech.js';
 import { mountCloud } from './cloud-view.js';
 import {chooseCloudReview,prepareCloudHandoff} from './cloud-dialogs.js';
@@ -27,7 +30,7 @@ export async function mountCloudSession(root, {
   const briefRevision = await hashBytes(new TextEncoder().encode(JSON.stringify(order)));
   let startWithBrief = true;
   try { startWithBrief = localStorage.getItem(briefKey) !== briefRevision; } catch { /* Show the brief if view-state storage is unavailable. */ }
-  let alive = true, saving = false, capture = false, voice = null, view = null;
+  let alive = true, saving = false, capture = false, conversationBusy=false, voice = null, view = null;
   let state = await loadInterview(db, order), context = createJobContext(order);
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
   const speaker=createLocalSpeaker();
@@ -207,15 +210,15 @@ export async function mountCloudSession(root, {
       state = await loadInterview(db, order);
       requireCurrent();
       callbackError = '';
-      const audio = checkedAudio(metadata.audio);
-      const alreadySaved = state.sources[draftId];
+      const audio = checkedAudio(metadata.audio,{allowUnreviewed:metadata.fromHold===true});
+      let answerId=metadata.turnId||draftId;
+      const alreadySaved = state.sources[answerId];
       if (alreadySaved?.kind === 'testimony') {
         if (alreadySaved.text === text && (alreadySaved.audioId || null) === (audio?.audioId || null) &&
             (alreadySaved.supersedes || null) === (metadata.supersedes || null)) {
           return { response: 'This answer is already saved to the job.', origin: 'Technician testimony · saved locally' };
         }
-        draftId = newEventId();
-        saveDraft(text, { audio });
+        answerId=newEventId();if(!metadata.fromHold){draftId=answerId;saveDraft(text,{audio});}
       }
       if (audio) {
         const clips = await listAudioByJob(db, jobId);
@@ -229,15 +232,16 @@ export async function mountCloudSession(root, {
       }
       const prior = metadata.supersedes && state.sources[metadata.supersedes];
       await dispatch('turn.recorded', {
-        id: draftId, text, branchId: prior?.branchId || metadata.branchId || null,
+        id: answerId, text, branchId: prior?.branchId || metadata.branchId || null,
         supersedes: metadata.supersedes || null, ...(audio || {}),
       });
-      if(audio?.liveReview===true && config.metaEnabled===true && !callbackError){
+      if((audio?.liveReview===true||metadata.fromHold===true) && config.metaEnabled===true && !callbackError){
         view.setActivity('reviewing');
         try {
-          await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:requireCurrent});
+          await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:requireCurrent,...(metadata.fromHold?{request:(_url,payload)=>requestReview('/api/conversation/review',payload)}:{})});
           const open=Object.values(state.branches).filter(branch=>branch.state!=='supported').length;
-          return {response:state.activeQuestion?.text||`Saved. ${open} ${open===1?'item still needs':'items still need'} verification for the handoff.`,origin:'Model interpretation · muse-spark-1.3',speak:true};
+          const acknowledgement=metadata.fromHold?state.interpretations.at(-1)?.acknowledgement:null;
+          return {response:(acknowledgement?acknowledgement+' ':'')+(state.activeQuestion?.text||`Got it. ${open} ${open===1?'item still needs':'items still need'} verification for the handoff.`),origin:'Model interpretation · muse-spark-1.3',speak:true};
         }catch(error){return {response:`Your answer is saved. AI review did not finish: ${error.message}`,origin:'Saved testimony · AI review incomplete'};}
         finally{if(valid())view.setActivity('ready');}
       }
@@ -322,12 +326,42 @@ export async function mountCloudSession(root, {
       return {response:action==='already_answered'?'Saved your reference to the earlier answers. This remains unverified until review.':`Kept open for ${owner.trim()}.`,origin:'Technician decision · saved locally'};
     }finally{saving=false;}
   }
+
+  async function spokenTurn({clip,text}) {
+    requireIdle();conversationBusy=true;stopSpeaking();view.setHeard(text);view.setActivity('reviewing');
+    try {
+      state=await loadInterview(db,order);requireCurrent();
+      const intent=conversationIntent(text);let reply,origin='From this work order';
+      if(intent==='final'){view.changePhase('final');reply=spokenVisitSummary(order,state);origin='Draft visit update';}
+      else if(intent==='onsite'){view.changePhase('onsite');reply='You’re onsite. What are you finding?';}
+      else if(intent==='report'){view.changePhase('report');reply='Go ahead. What did you do, and what still needs attention?';}
+      else {
+        const lookup=routeJobCommand(text,await refreshContext());requireCurrent();
+        if(lookup.kind==='briefing'){view.openBrief();reply=buildVisitBrief(order).spoken;}
+        else if(lookup.kind!=='not_command'&&intent!=='correction'){
+          context=lookup.context;rememberFocus();reply=lookup.message;
+          if(lookup.kind==='present')view.showEvidence(evidence(lookup.resource));
+          if(lookup.kind==='navigate'&&!/^zoom_/.test(lookup.action||''))reply='I can brief you, answer from this work order, record findings, or give you the final update.';
+        }else{
+          const prior=intent==='correction'?Object.values(state.sources).filter(s=>s.kind==='testimony'&&!s.supersededBy).at(-1):null;
+          const result=await saveAnswer(text,{fromHold:true,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
+            audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
+          requireCurrent();reply=result.response;origin=result.origin;
+        }
+      }
+      view.setResponse(reply,{origin});await view.refresh();requireCurrent();
+      conversationBusy=false;if(document.visibilityState==='hidden'){view.setActivity('ready');return;}view.setActivity('speaking');
+      speak(reply,{onState:next=>{if(valid())view.setActivity(next);},onError:error=>{if(valid()){view.setActivity('ready');view.setResponse(reply+' '+error.message,{origin});}}});
+    }finally{conversationBusy=false;}
+  }
+
   function stopSpeaking() { speaker.stop(); if(valid())view?.setActivity('ready'); }
   function speak(text,callbacks={}) { requireIdle();speaker.speak(text,callbacks); }
 
   requireCurrent();
   view = mountCloud(root, {
-    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief, startPhase,
+    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief, startPhase, voiceOnly:true,
+    onHold:()=>{requireIdle();if(conversationBusy)throw Error('Wait for the reply.');stopSpeaking();if(!config.transcriptionEnabled)throw Error('Voice is unavailable. Reconnect to talk.');if(!voice)throw Error('The microphone is getting ready. Hold again in a moment.');return voice.hold();},
     onPhaseChanged:value=>{try{localStorage.setItem(phaseKey,value);}catch{}},
     onReconnect:async()=>{requireIdle();if(needsPairing){window.location.assign('/pair');return;}await refreshConnection();},
     onBriefViewed: () => { try { localStorage.setItem(briefKey,briefRevision); } catch { /* Viewing is not confirmation or work authorization. */ } },
@@ -357,21 +391,22 @@ export async function mountCloudSession(root, {
   voicePanel.className = 'cf-voice-panel';
   const summary = document.createElement('summary'); summary.textContent = 'Saved voice notes';
   const voiceRoot = document.createElement('div');
-  voicePanel.append(summary, voiceRoot); root.append(voicePanel);
+  voicePanel.append(summary, voiceRoot); view.extraTools.append(voicePanel);
+  const newVisit=document.createElement('button');newVisit.type='button';newVisit.textContent='New fictional work order';newVisit.onclick=async()=>{try{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}catch(error){view.setResponse(error.message);}};view.extraTools.append(newVisit);
   if (restored) view.setDraft?.(draft, { audio: draftAudio, focus: false });
 
   async function refreshConnection() {
     let ready=false;needsPairing=false;
     try{const response=await fetch('/api/config',{signal:AbortSignal.timeout(5000)});needsPairing=response.status===401;if(!response.ok)throw Error('Service unavailable');config=await response.json();ready=true;}
     catch{config={metaEnabled:false,transcriptionEnabled:false,liveVoiceEnabled:false};}
-    if(valid()){view.setConnection({ready,liveEnabled:config.liveVoiceEnabled===true,needsPairing});voice?.setAvailability?.({enabled:config.transcriptionEnabled===true,liveEnabled:config.liveVoiceEnabled===true});}
+    if(valid()){view.setConnection({ready,liveEnabled:config.transcriptionEnabled===true,needsPairing});voice?.setAvailability?.({enabled:config.transcriptionEnabled===true,liveEnabled:false});}
     return ready;
   }
   await refreshConnection();
   if (valid()) {
     try {
       voice = await mountVoice(voiceRoot, {
-        db, jobId, onClipsChanged:count=>{if(valid()){summary.textContent=`Saved voice notes${count?` · ${count}`:''}`;view.setClips(count);}}, onNewDemo:async()=>{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}, enabled: config.transcriptionEnabled === true,liveEnabled:config.liveVoiceEnabled===true,
+        db, jobId, onClipsChanged:count=>{if(valid()){summary.textContent=`Saved voice notes${count?` · ${count}`:''}`;view.setClips(count);}}, onNewDemo:async()=>{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}, enabled: config.transcriptionEnabled === true,liveEnabled:false,onSpokenTurn:spokenTurn,
         onInputLevel:level=>{if(valid())view.setInputLevel(level);},
         onVoiceState:next=>{if(valid())view.setActivity(next);},
         onPreview:(text,setup)=>{if(valid())view.setResponse(text||'Listening…',{origin:setup?'Live voice setup':'Live transcript · provisional'});},
@@ -406,7 +441,7 @@ export async function mountCloudSession(root, {
   observer.observe(document.body, { childList: true, subtree: true });
   function dispose(force = false) {
     if (!alive) return true;
-    if (!force && (capture || saving)) {
+    if (!force && (capture || saving || conversationBusy)) {
       view.setResponse('Stop the recording and wait for its save before leaving.', { origin: 'Local save status' });
       return false;
     }
@@ -419,7 +454,7 @@ export async function mountCloudSession(root, {
     return true;
   }
   const cleanup = () => dispose(false);
-  cleanup.canNavigate = () => !capture && !saving;
+  cleanup.canNavigate = () => !capture && !saving && !conversationBusy;
   cleanup.refresh = () => view.refresh();
   cleanup.setResponse = (...args) => view.setResponse(...args);
   return cleanup;

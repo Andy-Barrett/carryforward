@@ -1,3 +1,4 @@
+import {bindHoldToSpeak} from './held-voice.js';
 /* A conversation surface over the existing job record. No provider or storage writes live here. */
 import {buildVisitBrief,BRIEF_KIND_LABELS} from './visit-brief.js';
 import {VISIT_STAGES,visitStage,finalVisitUpdate} from './visit-flow.js';
@@ -69,7 +70,7 @@ function originForQuestion(state) {
 export function mountCloud(root, {
   order, db, onNavigate, onSaveAnswer, onPhotoFiles, onRefresh, onGetState, onCommand,
   onTalk, onStopTalk, onStopSpeaking, onSpeak, onUpload, onDraftChange,
-  startWithBrief = true, onBriefViewed, onQuestionResponse, startPhase, onPhaseChanged, onReconnect,
+  startWithBrief = true, onBriefViewed, onQuestionResponse, startPhase, onPhaseChanged, onReconnect, voiceOnly=false, onHold,
 } = {}) {
   if (!root || !order?.id) throw new Error('A job and a mount point are required.');
   void db; // Persistence remains in the integration adapter.
@@ -80,7 +81,7 @@ export function mountCloud(root, {
   let phase = visitStage(startPhase,startWithBrief ? 'brief' : 'onsite');
   let briefOpen = phase.id === 'brief', liveAvailable = false, clipCount = 0;
   const shell = el('section', 'cf-cloud');
-  shell.dataset.activity = 'ready';
+  shell.dataset.activity = 'ready'; shell.classList.toggle('cf-voice-first',voiceOnly);document.body.classList.toggle('voice-first',voiceOnly);
   shell.setAttribute('aria-label', 'CarryForward field conversation');
   const rail = el('header', 'cf-rail');
   const brand = el('div', 'cf-brand');
@@ -96,6 +97,9 @@ export function mountCloud(root, {
   const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow'); handoffButton.hidden=true;
   actions.append(jobButton, sourcesButton, handoffButton);
   rail.append(brand, jobIdentity, actions);
+  const tools=el('details','cf-tools');tools.append(el('summary','','Details'));
+  const toolsContent=el('div','cf-tools-content');tools.append(toolsContent);
+  const heard=el('p','cf-heard');heard.hidden=true;
   const journey = el('div','cf-journey');
   const phaseLabel = el('p','cf-phase-label');
   const connection = el('div','cf-service'); connection.setAttribute('role','status');
@@ -176,7 +180,20 @@ export function mountCloud(root, {
   previous.onclick=()=>{if(!busy&&activity==='ready')changePhase(VISIT_STAGES[Math.max(0,VISIT_STAGES.indexOf(phase)-1)].id);};
   next.onclick=()=>run(async()=>{if(phase.id==='final'){await onNavigate?.('review');return;}changePhase(VISIT_STAGES[VISIT_STAGES.indexOf(phase)+1].id);});
   phaseActions.append(previous,next);
-  lower.append(notice,composer,dock,activityLabel,inputMeter,savedState,phaseActions,history,footer,fileInput);
+  if(voiceOnly){
+    const customer=el('div','cf-contact');customer.append(el('p','cf-customer',order.customer||'Current visit'));
+    const contact=order.customerContact;
+    if(contact?.phone){const row=el('div','cf-contact-phone');row.append(el('span','cf-phone-number',contact.phone));const number=contact.phone.replace(/[^+0-9]/g,'');for(const [label,scheme] of [['Call','tel:'],['Text','sms:']]){const action=el('a','cf-contact-link',label);action.href=scheme+number;action.setAttribute('aria-label',`${label} ${order.customer} at ${contact.phone}`);row.append(action);}customer.append(row);}
+    const address=contact?.address||order.property;
+    if(address){const location=el('a','cf-contact-link',address);location.href='https://maps.apple.com/?q='+encodeURIComponent(address);location.setAttribute('aria-label',`Open address in Maps: ${address}`);customer.append(location);}
+    rail.replaceChildren(customer);
+    toolsContent.append(jobButton,sourcesButton,handoffButton,typeButton,composer,addButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
+    handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
+    composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
+    responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
+    talkButton.classList.add('cf-hold');dock.replaceChildren(talkButton);
+    lower.append(heard,notice,activityLabel,inputMeter,dock,footer,tools,fileInput);
+  }else lower.append(notice,composer,dock,activityLabel,inputMeter,savedState,phaseActions,history,footer,fileInput);
   shell.append(rail,journey,main,lower);
   root.replaceChildren(shell);
 
@@ -191,8 +208,8 @@ export function mountCloud(root, {
     activity = next; activityLabel.hidden = next === 'ready';
     if(next==='listening'||next==='connecting')say('');
     shell.dataset.activity = next;
-    activityLabel.textContent = {ready: 'Ready when you are', connecting:'Starting live voice', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
-    talkButton.replaceChildren(icon(next === 'listening' || next === 'connecting' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'connecting' ? 'Cancel setup' : next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : liveAvailable ? 'Talk to CarryForward' : 'Live interview unavailable'));
+    activityLabel.textContent = voiceOnly?({ready:'',connecting:'Opening microphone…',listening:'Listening — release when you’re done',reviewing:'Thinking…',speaking:'Replying…'}[next]):{ready: 'Ready when you are', connecting:'Starting live voice', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
+    if(voiceOnly){const label=next==='listening'?'Listening — release to send':next==='connecting'?'Keep holding…':next==='reviewing'?'Thinking…':'Hold to speak';talkButton.replaceChildren(icon('mic'),el('span','',label));talkButton.setAttribute('aria-label',label);}else talkButton.replaceChildren(icon(next === 'listening' || next === 'connecting' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'connecting' ? 'Cancel setup' : next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : liveAvailable ? 'Talk to CarryForward' : 'Live interview unavailable'));
     talkButton.setAttribute('aria-pressed', String(next === 'listening'));
     syncControls();
   }
@@ -207,7 +224,7 @@ export function mountCloud(root, {
     sendButton.disabled = locked || !input.value.trim() || activity === 'listening';
     addButton.disabled = locked || activity === 'listening' || (!onUpload && !onPhotoFiles);
     hearButton.disabled = locked || activity === 'listening';
-    talkButton.disabled = activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
+    talkButton.disabled = voiceOnly?(busy||activity==='reviewing'||(!liveAvailable&&activity==='ready')):activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
     previous.disabled=locked||activity!=='ready'; next.disabled=locked||activity!=='ready'||(phase.id==='final'&&!finalVisitUpdate(order,state).hasReport);
     jobButton.disabled = locked || activity === 'listening';
     sourcesButton.disabled = !onNavigate || locked || activity === 'listening';
@@ -233,6 +250,7 @@ export function mountCloud(root, {
     return `${BRIEF_KIND_LABELS[note.kind]} · ${source.title} · ${source.id} · ${source.revision}${source.page ? ` · p. ${source.page}` : ''}`;
   }
   function renderBrief() {
+    if(voiceOnly)toolsContent.querySelector('.cf-full-brief')?.remove();
     briefPane.hidden = !briefOpen;
     if (!briefOpen || briefPane.childElementCount) return;
     const grid = el('div','cf-brief-grid');
@@ -259,12 +277,12 @@ export function mountCloud(root, {
     for (const record of visitBrief.history) scope.append(el('p','cf-brief-history',`${record.date} · ${record.text}`),el('p','cf-brief-source',`Original work-order history · ${record.id}`));
     const full=el('details','cf-full-brief');full.append(el('summary','','Access, customer notes and job details'),grid,scope);
     const compact=el('div','cf-work-order');compact.append(el('h2','','Work order'),el('p','',order.reportedIssue||''));
-    const assigned=el('ul');for(const text of order.requestedWork||[])assigned.append(el('li','',text));compact.append(assigned);
+    const assigned=el('ul');for(const text of order.requestedWork||[])assigned.append(el('li','',text));if(!voiceOnly)compact.append(assigned);
     const controls = el('div','cf-brief-controls');
     const tools = button('Work order and job selection','cf-text-action','source');
     tools.onclick = () => navigate('briefing');
     controls.append(tools); full.append(controls);
-    briefPane.append(compact,full);
+    briefPane.append(compact);if(voiceOnly)toolsContent.prepend(full);else briefPane.append(full);
   }
   function openBrief() {
     if (!valid()) return;
@@ -275,13 +293,13 @@ export function mountCloud(root, {
     if (!valid()) return;
     const question = state?.activeQuestion;
     shell.classList.toggle('cf-has-brief',briefOpen);
-    eyebrow.textContent = `STEP ${VISIT_STAGES.indexOf(phase)+1} OF 4 · ${phase.label.toUpperCase()}`;
+    eyebrow.textContent = voiceOnly?'':`STEP ${VISIT_STAGES.indexOf(phase)+1} OF 4 · ${phase.label.toUpperCase()}`;
     phaseLabel.textContent=phase.label;next.replaceChildren(el('span','',phase.next),icon('arrow'));previous.hidden=phase.id==='brief';
     input.placeholder=phase.id==='brief'?'Ask about this work order…':phase.id==='onsite'?'Add a finding or ask a job question…':'Tell me what happened on this visit…';
-    composer.hidden=phase.id==='final';dock.hidden=phase.id==='final';
-    responseText.textContent = phase.id==='final'?phase.title:response?.text||(phase.id==='report'?question?.text:null)||phase.title;
+    if(!voiceOnly)composer.hidden=phase.id==='final';dock.hidden=!voiceOnly&&phase.id==='final';
+    responseText.textContent = phase.id==='final'?phase.title:response?.text||(voiceOnly?question?.text:null)||(phase.id==='report'?question?.text:null)||(voiceOnly?'What would you like to know?':phase.title);
     responseText.classList.toggle('cf-response-short', !!evidence);
-    context.textContent = response&&phase.id!=='final'?(response.detail||''):phase.hint;
+    context.textContent = voiceOnly?'':response&&phase.id!=='final'?(response.detail||''):phase.hint;
     context.hidden = !context.textContent;
     provenance.replaceChildren();
     if (briefOpen) provenance.append(el('span','cf-origin-badge',`Work-order briefing · ${order.customer}`));
@@ -306,20 +324,20 @@ export function mountCloud(root, {
     const update=finalVisitUpdate(order,state);finalPane.replaceChildren();
     if(!update.hasReport){finalPane.append(el('p','','No report has been sent yet. A saved recording needs reviewed words before it becomes a report. Go back to add your update.'));return;}
     finalPane.append(el('p','cf-final-status',update.confirmation),el('h2','','What you reported'));
-    for(const note of update.notes)finalPane.append(el('p','cf-final-note',note.text));
+    for(const note of update.notes){if(!note.reviewed)finalPane.append(el('small','','Machine transcript · awaiting confirmation'));finalPane.append(el('p','cf-final-note',note.text));}
     finalPane.append(el('h2','','Outcome and follow-up'));
     for(const check of update.checks){const row=el('article','cf-outcome');row.append(el('h3','',check.label),el('p','',check.status),el('p','',check.note));if(!check.reported)row.append(el('p','',check.owner?`Follow-up owner: ${check.owner}`:'Follow-up owner still needed'));finalPane.append(row);}
   }
   function setConnection({ready=false,liveEnabled=false,needsPairing=false}={}) {
     if(!valid())return;liveAvailable=ready&&liveEnabled;
     connection.classList.toggle('is-offline',!ready);
-    connectionText.textContent=needsPairing?'Reconnect this phone to use the live interview. Saved notes are still here.':liveAvailable?'Live interview available. New speech goes to Meta after you choose Start.':ready?'Service connected · live speech is unavailable. You can type your update.':'Live interview offline. Type your update or save a local voice note below. Nothing is being sent.';
+    connectionText.textContent=voiceOnly?(needsPairing?'Reconnect to talk.':liveAvailable?'':ready?'Voice is unavailable.':'Connection unavailable.'):(needsPairing?'Reconnect this phone to use the live interview. Saved notes are still here.':liveAvailable?'Live interview available. New speech goes to Meta after you choose Start.':ready?'Service connected · live speech is unavailable. You can type your update.':'Live interview offline. Type your update or save a local voice note below. Nothing is being sent.');connection.hidden=voiceOnly&&liveAvailable;
     retry.hidden=ready;setActivity(activity);
   }
   function setClips(count) {clipCount=count;renderHistory();}
   function renderQuestionActions() {
     questionActions.replaceChildren();
-    if(phase.id!=='report'||briefOpen||evidence||!state?.activeQuestion||!onQuestionResponse)return;
+    if(voiceOnly||phase.id!=='report'||briefOpen||evidence||!state?.activeQuestion||!onQuestionResponse)return;
     if(response?.text&&response.text!==state.activeQuestion.text)questionActions.append(el('p','cf-pending-question',state.activeQuestion.text));
     const label=el('label','','Follow-up owner'),owner=el('input');owner.maxLength=200;owner.placeholder='For example, Operations';label.append(owner);questionActions.append(label);
     for(const [action,text] of [['cannot_verify',"Can't verify"],['later','Follow up later'],['already_answered','Already answered']]){
@@ -348,7 +366,7 @@ export function mountCloud(root, {
     for (const turn of turns) {
       const li = el('li', `cf-turn${turn.supersededBy ? ' is-superseded' : ''}`);
       const head = el('div', 'cf-turn-head');
-      head.append(el('span', 'cf-origin-badge', turn.audioId ? 'Technician · reviewed voice transcript' : 'Technician · typed testimony'));
+      head.append(el('span', 'cf-origin-badge', turn.audioId ? (turn.transcription?.reviewed===false?'Speech transcript · not yet reviewed':'Technician · reviewed voice transcript') : 'Technician · typed testimony'));
       if (timeLabel(turn.at)) head.append(el('time', '', timeLabel(turn.at)));
       li.append(head, el('p', '', turn.text), el('small', 'cf-turn-source', `${turn.id}${turn.supersedes ? ` · corrects ${turn.supersedes}` : ''}${turn.supersededBy ? ` · corrected by ${turn.supersededBy}` : ''}`));
       if (turn.audioId) li.append(el('small', 'cf-turn-source', `Audio source · ${turn.audioId}`));
@@ -436,7 +454,7 @@ export function mountCloud(root, {
         say('Answer saved to this job.');
       }
       if (!valid()) return;
-      draft = ''; pendingAudio = null; input.value = ''; input.blur(); composer.hidden = phase.id==='final';
+      draft = ''; pendingAudio = null; input.value = ''; input.blur(); composer.hidden = voiceOnly||phase.id==='final';
       await notifyDraft();
       if (!valid()) return;
       typeButton.setAttribute('aria-expanded', 'false');
@@ -581,7 +599,7 @@ export function mountCloud(root, {
   typeButton.onclick = () => { if (composer.hidden) openComposer(); else { composer.hidden = true; typeButton.setAttribute('aria-expanded', 'false'); } };
   hideComposer.onclick = () => { composer.hidden = true; typeButton.setAttribute('aria-expanded', 'false'); typeButton.focus(); };
   input.addEventListener('input', () => { draft = input.value; notifyDraft(); syncControls(); });
-  input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && window.matchMedia('(min-width: 700px)').matches) { event.preventDefault(); if (!sendButton.disabled) composer.requestSubmit(); } });
+  input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && (voiceOnly||window.matchMedia('(min-width: 700px)').matches)) { event.preventDefault(); if (!sendButton.disabled) composer.requestSubmit(); } });
   composer.onsubmit = event => { event.preventDefault(); submit(input.value, pendingAudio ? {audio: pendingAudio} : {}); };
   reviewButton.onclick = () => run(async () => {
     const result = await onRefresh?.();
@@ -614,6 +632,8 @@ export function mountCloud(root, {
       if (result?.activity && ACTIVITY.has(result.activity)) setActivity(result.activity);
     } catch (error) { if (valid()) { setActivity('ready'); say(error.message || 'Microphone unavailable. You can type instead.', true); } }
   };
+  let releaseHold=()=>{};
+  if(voiceOnly){talkButton.onclick=null;releaseHold=bindHoldToSpeak(talkButton,{start:()=>{if(!valid()||busy)return null;return onHold?.();},onError:error=>{if(valid()){setActivity('ready');say(error.message,true);}}});}
   hearButton.onclick = async () => {
     if (activity === 'speaking') { await onStopSpeaking?.(); if (valid()) setActivity('ready'); return; }
     try { await onSpeak?.(briefOpen ? visitBrief.spoken : responseText.textContent, {onState: next => { if (valid()) setActivity(next); }, onError: error => { if (valid()) { setActivity('ready'); say(error?.message || String(error), true); } }}); }
@@ -623,13 +643,13 @@ export function mountCloud(root, {
   refresh();
   const cleanup = () => {
     if (!alive) return;
-    alive = false; refreshId++; currentAction++;
+    releaseHold();document.body.classList.remove('voice-first');alive = false; refreshId++; currentAction++;
     if (typeof talkCleanup === 'function') { try { talkCleanup(); } catch { /* adapter owns capture recovery */ } }
     for (const dialog of dialogs) { for (const video of dialog.querySelectorAll('video')) video.pause(); dialog.remove(); }
     dialogs.clear();
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase});
+  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase, extraTools:toolsContent, setHeard:text=>{heard.textContent=`I heard: ${text}`;heard.hidden=!text;}});
   return cleanup;
 }

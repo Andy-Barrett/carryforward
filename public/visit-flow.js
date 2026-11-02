@@ -11,7 +11,7 @@ export function visitStage(value,fallback='brief') {
 export function finalVisitUpdate(order,state) {
   if(state&&state.jobId!==order.id)throw Error('The final update belongs to another job.');
   const turns=Object.values(state?.sources||{}).filter(source=>source.kind==='testimony'&&!source.supersededBy);
-  return {hasReport:turns.length>0,notes:turns.map(turn=>({id:turn.id,text:turn.text})),
+  return {hasReport:turns.length>0,notes:turns.map(turn=>({id:turn.id,text:turn.text,reviewed:turn.transcription?.reviewed!==false})),
     checks:(order.checks||[]).map(check=>{const branch=state?.branches?.[check.id];return {
       id:check.id,label:check.label,reported:branch?.state==='supported',
       status:branch?.state==='supported'?'Reported · needs human review':'Follow-up open',
@@ -19,4 +19,20 @@ export function finalVisitUpdate(order,state) {
     };}),
     confirmation:'Visit summary · check confirmation on the review screen. Operations acceptance is separate.',
   };
+}
+
+export function conversationIntent(text) {
+  const value=String(text).toLowerCase().replace(/[’']/g,'').replace(/[?.!,]/g,'').replace(/\s+/g,' ').trim();
+  if(/^(?:(?:please|okay|ok|can you) )?(?:(?:give|read|show|tell) (?:me )?(?:the |my )?)?(?:final update|visit summary|final summary|closeout|handoff)(?: please)?$/.test(value)||/^(?:im done|i am done|were done|wrap (?:it |this )?up)$/.test(value))return 'final';
+  if(/^(?:(?:i |im |i am |ive |i have )?(?:just )?)?(?:arrived(?: onsite| on site)?|onsite|on site)$/.test(value))return 'onsite';
+  if(/^(?:let me |i (?:want to|will) )?(?:report back|give (?:my|the) report)$/.test(value))return 'report';
+  if(/^(?:correction|no i meant)\b/.test(value))return 'correction';
+  return null;
+}
+export function spokenVisitSummary(order,state) {
+  const update=finalVisitUpdate(order,state);
+  if(!update.hasReport)return 'I don’t have a visit report yet. Tell me what you found, what you did, and what still needs attention.';
+  const latest=update.notes.slice(-3).map(note=>note.text.slice(0,450)).join(' ');
+  const open=update.checks.filter(check=>!check.reported);
+  return `Here’s the draft visit update. You reported: ${latest} ${open.length?`Still open: ${open.map(check=>`${check.label}${check.owner?`, with ${check.owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they are not independently verified.'} This has not been delivered to Operations.`;
 }

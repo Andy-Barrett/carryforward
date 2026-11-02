@@ -1,3 +1,4 @@
+import {AUDIO_LIMITS} from './audio.js';
 // CarryForward evidence helpers (Slice 1).
 //
 // Pure module: no DOM, no IndexedDB, importable from Node tests and the
@@ -289,7 +290,7 @@ export function buildMediaBundle({ order, review, photos, audio = [], exportedAt
     totalBytes += p.size || 0;
     return entry;
   });
-  if (!Array.isArray(audio) || audio.length > 5) throw new Error("At most five voice clips per bundle.");
+  if (!Array.isArray(audio) || audio.length > AUDIO_LIMITS.clipsPerJob) throw new Error("Voice clip count exceeds the bounded bundle limit.");
   const audioData = {};
   const audioManifest = audio.map(clip => {
     if (clip.jobId !== order.id) throw new Error("Voice clip belongs to another job.");

@@ -12,6 +12,13 @@ struct EndpointPolicyChecks {
         for value in ["http://127.0.0.1:4350/", "http://192.168.1.153:4316/", "https://example.com:4316/", "https://192.168.01.153:4316/", "https://192.168.1.153:4316/?key=secret", "https://user:secret@192.168.1.153:4316/", "https://192.168.1.153:4316/other", "https://192.168.1.153:4316/#token", "https://192.168.1.153:80/"] {
             do { _ = try EndpointPolicy(value, allowLoopbackHTTP: false); fatalError("Unexpected origin accepted: \(value)") } catch {}
         }
+        for value in ["tel:+15015550143", "sms:+15015550143", "https://maps.apple.com/?q=7%20Meadow%20Court"] {
+            let url = URL(string: value)!
+            precondition(phone.allowsContactAction(url) && !phone.allows(url))
+        }
+        for value in ["sms:+15015550143?body=automatically-send", "sms://elsewhere/15015550143", "tel:911", "tel:+15015550143,123", "tel:+15015550143?x=1", "tel://elsewhere/15015550143", "https://maps.apple.com.evil.example/?q=7", "http://maps.apple.com/?q=7", "https://user@maps.apple.com/?q=7", "https://maps.apple.com/?q=7&redirect=elsewhere", "https://maps.apple.com/?q=", "https://maps.apple.com/other?q=7"] {
+            precondition(!phone.allowsContactAction(URL(string: value)!))
+        }
         print("Endpoint policy checks passed: exact origin, same-origin blob export, private HTTPS, no public or insecure phone fallback.")
     }
 }

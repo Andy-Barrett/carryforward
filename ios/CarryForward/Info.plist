@@ -17,7 +17,7 @@
 <key>UILaunchScreen</key><dict/>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>NSCameraUsageDescription</key><string>Take a job photo only when you choose the camera. Use fictional test evidence in this development app.</string>
-<key>NSMicrophoneUsageDescription</key><string>Record a short job note only when you tap Record. Review and send your words separately.</string>
+<key>NSMicrophoneUsageDescription</key><string>Record only while you hold to speak. Releasing sends this fictional test speech to Meta for a reply.</string>
 <key>NSPhotoLibraryUsageDescription</key><string>Select specific job photos to attach. This app does not scan your photo library.</string>
 <key>NSLocalNetworkUsageDescription</key><string>Open the explicitly configured CarryForward development server on your trusted local network.</string>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>

@@ -1,4 +1,4 @@
-export const AUDIO_LIMITS={seconds:30,originalBytes:5000000,clipsPerJob:5};
+export const AUDIO_LIMITS={seconds:30,originalBytes:5000000,clipsPerJob:30};
 export function validateAudioOriginal(mime,size){
   if(typeof mime!=="string" || !/^audio\/[a-z0-9.+-]+(?:;[a-z0-9=;_.+ \"-]+)?$/i.test(mime) || !Number.isFinite(size) || size<=0 || size>AUDIO_LIMITS.originalBytes) throw new Error("Use a recognizable audio file under 5 MB, or type your answer.");
 }

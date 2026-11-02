@@ -416,7 +416,7 @@ async function newVoiceDemo() {
   await jobStore.putSession(db,{jobId:next.id,order:next,report:nextReport,createdAt:new Date().toISOString(),confirmation:null});
   order=next;report=nextReport;review=null;sessionConfirmation=null;photoMsg='';
   await refreshJobData();if(!save())throw Error('The new demo is stored, but the active-job pointer could not be saved.');
-  notify('Fresh fictional voice trial. Earlier jobs and recordings stay saved on this device.');render();
+  notify('');render();
 }
 function collect() {
   const form = $("#field-form");

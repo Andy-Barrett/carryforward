@@ -24,6 +24,23 @@ struct EndpointPolicy {
         return matchesOrigin(url)
     }
 
+    // Only explicitly tapped customer links may leave the visit. This does not
+    // admit those destinations as app origins, downloads or credential recipients.
+    func allowsContactAction(_ url: URL) -> Bool {
+        guard url.absoluteString.count <= 2048, url.user == nil, url.password == nil,
+              url.fragment == nil, url.port == nil else { return false }
+        if url.scheme == "tel" || url.scheme == "sms" {
+            guard url.host == nil, url.query == nil else { return false }
+            let number = url.path
+            return number.range(of: "^\\+?[0-9]{7,15}$", options: .regularExpression) != nil
+        }
+        guard url.scheme == "https", url.host == "maps.apple.com", url.path == "/",
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              items.count == 1, items[0].name == "q", let address = items[0].value,
+              !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, address.count <= 300 else { return false }
+        return true
+    }
+
     private func matchesOrigin(_ url: URL) -> Bool {
         return url.scheme == origin.scheme && url.host == origin.host && url.port == origin.port && url.user == nil && url.password == nil
     }

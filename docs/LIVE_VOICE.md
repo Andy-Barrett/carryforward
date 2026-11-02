@@ -1,4 +1,15 @@
-# Live voice development slice — November 1, 2026
+# Hold-to-speak conversation — November 2, 2026
+
+The main interface now uses `public/held-voice.js`: press starts local PCM capture, release stops it, saves the bounded WAV and requests `/api/conversation/transcribe`. Recognized work-order questions use bounded source lookup; ordinary narration records an explicitly unreviewed transcript and runs `/api/conversation/review`. A local system voice reads the reply. There is no main-screen live-demo dialog, spoken preflight, Finish speaking, transcript review or Send action.
+
+These are sequential file-ASR and text-review requests, not streaming/full-duplex speech. First captured PCM is retained. Thirty seconds, 30 saved clips per job, 30 process-local requests of each conversation kind/job, one provider request at a time and the unchanged aggregate $10 guard bound the path. Existing manual endpoints retain their five-attempt limits. A failed/cancelled turn never retries automatically. Interruption can retain a partial clip locally but never submits it as a released turn.
+
+Automatic transcription is `reviewed:false`, `submission:hold_release`, with exact admitted audio identity/hash and model provenance. It is not a human-approved report or independent verification. Final technician confirmation, source receipt and Operations acceptance remain distinct. Existing photos and retained audio are not implicitly uploaded. Native build 9 remembers authentication and reuses already approved microphone permission only for the configured HTTPS main frame. See [the current simple flow](SIMPLE_VISIT.md) and [phone observations](PHONE_VALIDATION.md).
+
+The November 2 actual generated-fictional-speech sample took 2,570 ms for ASR and 13,728 ms for review. The initial physical hold attempt failed before usable words; the owner then confirmed no recurring popup and a spoken gate-code reply after several presses. The physical ASR result took 1,685 ms; the answer used the supplied work-order source, not Spark reasoning. First-hold readiness remains incomplete. The earlier physical pass below applies only to that older reviewed-Send implementation.
+
+## Historical streaming slice — November 1, 2026
+
 
 The implemented loop is push-to-talk: new speech → Meta transcription → human review and Send → saved testimony → guarded text evidence review → one locally spoken follow-up. It is not full-duplex voice, automatic microphone restart, or a finished phone usability pass.
 

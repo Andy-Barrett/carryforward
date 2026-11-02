@@ -1,3 +1,4 @@
+import {startHeldVoice} from './held-voice.js';
 import {startLiveVoice} from './live-voice.js';
 import {requestReview} from './review-request.js';
 import {watchCaptureInterruptions} from './capture-lifecycle.js';
@@ -7,9 +8,9 @@ import {hashBytes,newEvidenceId} from './evidence.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const base64=bytes=>{let text='';for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(text);};
 const recovery=new Map();
-export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceSaved,onCaptureState,onRecordingState,liveEnabled=false,onPreview,onLiveDraft,onVoiceState,onInputLevel,onNewDemo,onClipsChanged}){
+export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceSaved,onCaptureState,onRecordingState,liveEnabled=false,onPreview,onLiveDraft,onVoiceState,onInputLevel,onNewDemo,onClipsChanged,onSpokenTurn}){
   let clips=await listAudioByJob(db,jobId),message='',busy=false,recorder=null,stream=null,timer=null,interrupted=false,releaseInterruptions=()=>{};
-  let live=null,disposed=false,micCheck=null;
+  let live=null,held=null,disposed=false,micCheck=null,lastCapture=null;
   const urls=[];
   const clipBridge=globalThis.webkit?.messageHandlers?.carryForwardClipPlayback;
   let playingID=null,playTimer=null,quietPlayback=false,releaseRecordingAudio=()=>{};
@@ -20,7 +21,7 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     if(event.detail.state!=='playing'){playingID=null;for(const button of root.querySelectorAll('[data-play-clip]'))button.textContent='Play recording';}
   };
   window.addEventListener('carryforward-clip-playback',clipEvent);
-  const stop=()=>{if(live){live.stop();return;}if(recorder&&recorder.state!=='inactive')recorder.stop();else stream?.getTracks().forEach(t=>t.stop());};
+  const stop=()=>{if(held){held.stop();return;}if(live){live.stop();return;}if(recorder&&recorder.state!=='inactive')recorder.stop();else stream?.getTracks().forEach(t=>t.stop());};
   const observer=new MutationObserver(()=>{if(!root.isConnected){interrupted=true;stop();observer.disconnect();for(const url of urls)URL.revokeObjectURL(url);}});
   observer.observe(document.body,{childList:true,subtree:true});
   async function keep(blob,name,wasInterrupted,options={}){
@@ -50,14 +51,14 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     start.onclick=()=>{accepted=true;dialog.close();runLive();};
     const full=clips.length>=AUDIO_LIMITS.clipsPerJob;
     start.disabled=full;
-    const limit=document.createElement('p');limit.textContent=full?'This visit has five saved clips. Start a fresh fictional visit to keep testing; existing recordings stay saved.':'';
+    const limit=document.createElement('p');limit.textContent=full?'This visit has reached its saved-clip limit. Start a fresh fictional visit to keep testing; existing recordings stay saved.':'';
     const fresh=document.createElement('button');fresh.type='button';fresh.textContent='Start fresh fictional visit';fresh.hidden=!onNewDemo;
     fresh.onclick=()=>{accepted=true;dialog.close();run(async()=>{await onNewDemo();});};
     dialog.addEventListener('close',()=>{consentDialog=null;dialog.remove();if(!accepted)onPreview?.('Live mode cancelled. Local recording and text are available.',true);});dialog.append(title,note,limit,start,check,fresh,cancel);document.body.append(dialog);dialog.showModal();
   }
   async function runLive(localCheck=false) {
     if(busy||disposed)return;
-    if(!localCheck&&clips.length>=AUDIO_LIMITS.clipsPerJob){message='This job already has five clips. Use text or another fictional demo job.';draw();onPreview?.(message,true);return;}
+    if(!localCheck&&clips.length>=AUDIO_LIMITS.clipsPerJob){message='This visit has reached its saved-clip limit. Use text or another fictional work order.';draw();onPreview?.(message,true);return;}
     stopClip();busy=true;onCaptureState?.(true);onVoiceState?.('connecting');
     root.querySelector('#voice-record').disabled=true;
     root.querySelector('[role=status]').textContent='Connecting live speech…';
@@ -81,6 +82,32 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
       if(disposed||!root.isConnected)await live?.dispose();
     }catch(error){live=null;busy=false;onCaptureState?.(false);onRecordingState?.(false);onVoiceState?.('ready');message=error.message;if(root.isConnected){draw();onPreview?.(message,true);}}
   }
+
+  function hold() {
+    if(busy||disposed)throw Error('Wait for the reply, then hold to speak.');
+    if(!enabled||!/^DEMO-/.test(jobId))throw Error('Voice is unavailable. Reconnect this fictional work order.');
+    if(clips.length>=AUDIO_LIMITS.clipsPerJob)throw Error('This visit has reached its local voice storage limit. Your recordings are saved.');
+    stopClip();busy=true;onCaptureState?.(true);
+    try {held=startHeldVoice({onState:onVoiceState,onLevel:onInputLevel,onComplete:async result=>{
+      let handedOff=false;lastCapture=result.diagnostic||null;
+      try {
+        if(result.cancelled||disposed||!root.isConnected||document.visibilityState==='hidden'){if(result.wav)await keep(new Blob([result.wav],{type:'audio/wav'}),'Interrupted conversation '+new Date().toLocaleTimeString(),true);message=result.error||'Recording cancelled. Nothing was sent.';if(!disposed&&root.isConnected)onPreview?.(message,true);return;}
+        if(result.error){if(result.wav)await keep(new Blob([result.wav],{type:'audio/wav'}),'Unsent conversation '+new Date().toLocaleTimeString(),false);throw Error(result.error);}
+        const clip=await keep(new Blob([result.wav],{type:'audio/wav'}),'Conversation '+new Date().toLocaleTimeString(),false);
+        onCaptureState?.(false);onVoiceState?.('reviewing');onPreview?.('Listening to what you said…',true);
+        const bytes=new Uint8Array(result.wav);
+        const transcript=await requestReview('/api/conversation/transcribe',{synthetic:true,jobId,audioId:clip.id,audioBase64:base64(bytes),sha256:clip.wavSha256},{timeoutMs:110000});
+        if(transcript.jobId!==jobId||transcript.audioId!==clip.id||!transcript.transcript?.trim())throw Error('I didn’t catch any words. Hold to speak again.');
+        transcript.provenance={...transcript.provenance,complete:true,transport:'push-to-talk'};
+        await updateAudioTranscription(db,clip.id,jobId,transcript);clip.transcription=transcript;clips=await listAudioByJob(db,jobId);
+        if(disposed||!root.isConnected||document.visibilityState==='hidden'){message='Your voice note is saved. The conversation paused while you were away.';if(!disposed&&root.isConnected)onPreview?.(message,true);return;}
+        await onSpokenTurn?.({clip,text:transcript.transcript});handedOff=true;message='Conversation saved.';
+      } catch(error){message=error.message;if(!disposed&&root.isConnected)onPreview?.(message,true);}
+      finally {held=null;busy=false;if(!handedOff){onCaptureState?.(false);onVoiceState?.('ready');}if(!disposed&&root.isConnected)draw();}
+    }});held.ready.catch(error=>{message=error.message;});return held;
+    } catch(error){busy=false;held=null;onCaptureState?.(false);throw error;}
+  }
+
   async function run(action){if(busy)return;busy=true;try{await action();}catch(e){message=e.message;}finally{busy=false;if(root.isConnected)draw();}}
   function draw(){
     onClipsChanged?.(clips.length);
@@ -147,7 +174,8 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
       if(!text)throw new Error('Review or type what you said first.');
       await onTranscript({clip,text});
     });
+    if(lastCapture){const detail=document.createElement('p');detail.className='voice-diagnostic';detail.textContent=`Last input check: ${lastCapture.phase}; ${lastCapture.audioMs} ms audio; ${lastCapture.samples} samples; peak ${lastCapture.peak.toFixed(4)}; RMS ${lastCapture.rms.toFixed(4)}; ${lastCapture.elapsedMs} ms held.`;root.append(detail);}
   }
   draw();
-  return {start:()=>{if(liveEnabled)beginLive();else onPreview?.('Live interview unavailable. Use text, or explicitly choose Record voice note below.',true);},setAvailability:next=>{if(busy)return;const changed=enabled!==next.enabled||liveEnabled!==next.liveEnabled;enabled=next.enabled;liveEnabled=next.liveEnabled;if(changed&&root.isConnected)draw();},stop,dispose:()=>{disposed=true;stopClip();releaseRecordingAudio();window.removeEventListener('carryforward-clip-playback',clipEvent);consentDialog?.close();live?.dispose();interrupted=true;stop();releaseInterruptions();observer.disconnect();onRecordingState?.(false);for(const url of urls)URL.revokeObjectURL(url);}};
+  return {hold,start:()=>{if(liveEnabled)beginLive();else onPreview?.('Live interview unavailable. Use text, or explicitly choose Record voice note below.',true);},setAvailability:next=>{if(busy)return;const changed=enabled!==next.enabled||liveEnabled!==next.liveEnabled;enabled=next.enabled;liveEnabled=next.liveEnabled;if(changed&&root.isConnected)draw();},stop,dispose:()=>{disposed=true;held?.cancel();stopClip();releaseRecordingAudio();window.removeEventListener('carryforward-clip-playback',clipEvent);consentDialog?.close();live?.dispose();interrupted=true;stop();releaseInterruptions();observer.disconnect();onRecordingState?.(false);for(const url of urls)URL.revokeObjectURL(url);}};
 }

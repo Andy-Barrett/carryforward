@@ -10,7 +10,7 @@ Andrew requested a modern field companion that feels like talking to a cloud, br
 - Source recall and focus are job-scoped. “Show the PDF,” “show me that last PDF,” “zoom in on this,” and “show the clip” operate on supplied sources. A missing or ambiguous source stays explicit.
 - PDF page images and text excerpts retain title, page, source ID, revision and an original-source link. Inspection opens a zoomable source view. Images and actual supplied video files have dedicated viewers.
 - Original work-order history and saved photos are available in Sources. The exact fictional sample job also supplies an explicitly labeled two-page reference PDF, rendered page, display illustration and three-second generated video. They are reference fixtures, not measurements or equipment instructions, and are not automatically admitted as field evidence.
-- Voice uses the existing short recording/upload, playback and reviewed-transcript flow. A microphone starts only after a user action. Raw ASR is not executed as a command. Reviewed words enter an editable draft until Send. This is not continuous, full-duplex conversation.
+- Voice uses the existing short recording/upload, playback and reviewed-transcript flow. A microphone starts only after a user action. The hold path routes only bounded source/navigation intents from its transcript; arbitrary instructions are never executable. Ordinary narration is saved with unreviewed ASR provenance on release. The older reviewed-transcript fallback still uses an editable draft. This is not continuous, full-duplex conversation.
 - Read aloud uses a local system voice after an explicit action. The native wrapper has an Apple speech-synthesis bridge; browsers use an available local voice. The optional fictional live turn reads its follow-up after reviewed Send. If speech is unavailable, text remains usable; no new speech provider or subscription is introduced.
 - Cloud drafts have their own per-job storage and do not overwrite an unfinished detailed interview answer. Saves keep source provenance and invalidate the existing report confirmation as appropriate.
 
@@ -26,7 +26,7 @@ The approval flag in this pure navigation module is caller-supplied trusted appl
 
 `cloud-view.js` owns presentation, `cloud-session.js` adapts the existing job/events/voice path, `job-context.js` validates and routes source references, and `cloud-resources.js` builds the current bounded source packet. Server and service-worker allowlists include the new shell modules. Source media are served explicitly and are excluded from the app-shell cache; a cached app shell does not promise offline PDF/video availability.
 
-The default surface has a voice action and an optional type composer. Sources and the job briefing appear on demand. Detailed record editing, synthetic-data confirmation, Meta dispatch, technician confirmation and simulator receipt/acceptance keep their existing explicit controls.
+The default surface has customer contact links, the current reply and one Hold to speak control. Typing and the other tools are under Details. Sources and the job briefing appear on demand. Detailed record editing, synthetic-data confirmation, Meta dispatch, technician confirmation and simulator receipt/acceptance keep their existing explicit controls.
 
 ## Verification and limits
 
@@ -37,3 +37,7 @@ Real microphone permissions and voice capture on iPhone/Android, naturalness and
 The October 31 [cloud visit loop](CLOUD_VISIT_LOOP.md) now keeps explicit Meta review and owned question deferral in the cloud, and prepares report notes before the existing confirmation/simulator flow. Its actual synthetic model/API exercise is separate from the earlier UI-only increments above; physical-device and human usability acceptance remain pending.
 
 November 1: the owner confirmed one complete live iPhone turn with Meta transcription, human-reviewed Send and an audible follow-up. This is push-to-talk, with a local input check and text fallback; see [live voice](LIVE_VOICE.md). Other device/OS behavior and naturalness still require separate checks.
+
+## November 2 hold-to-speak replacement
+
+The owner rejected the multi-step live-demo dialog. The current conversation submits on release and speaks automatically; it keeps no Start/Send/Finish controls on the main surface. The bottom test disclosure moved under Details at the owner’s request. Native build 8 handles the private connection without code entry and reuses granted microphone permission for the fixed origin. The first physical replacement attempt failed before usable words; this flow requires a fresh phone pass. See SIMPLE_VISIT.md.

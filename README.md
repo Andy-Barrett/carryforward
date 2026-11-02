@@ -46,7 +46,7 @@ npm run dev
 
 Open **http://127.0.0.1:4310/**. The server listens only on your computer.
 
-Start with the included fictional work order. Record a repair, leave production or monitoring unverified, and open the closeout review. Confirming the report keeps those open items in the exported handoff.
+Start with the included fictional work order. The main screen has one Hold to speak control. With guarded Meta development enabled, hold to ask about the job or report what happened; release for a spoken reply. Without inference configured, use the text fallback under Details. Open items remain visible in the final update.
 
 To use another port:
 
@@ -62,13 +62,13 @@ npm test
 
 ## What works today
 
-- A four-stage visit screen: work order, on site, report back and final update. Text stays available beside the microphone, photos are optional, and source details stay out of the way until needed. See the [cloud interface](docs/CLOUD_INTERFACE.md) for command examples and current document/voice limits.
+- A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Text, photos, sources, saved recordings and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
 - Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
-- Local voice clips and playback, optional guarded Meta transcription of synthetic clips, and reviewed transcript-to-answer links. The new [live voice slice](docs/LIVE_VOICE.md) adds a local microphone check, streaming ASR and a reviewed-Send/spoken-follow-up path; the owner confirmed the speech → reviewed Send → spoken follow-up loop on iPhone on November 1.
+- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR, Spark evidence review and local system speech; full-duplex conversation remains unbuilt. The older reviewed-Send path has a November 1 iPhone pass; the replacement needs its own phone evidence. See [voice implementation](docs/LIVE_VOICE.md).
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
@@ -76,7 +76,7 @@ npm test
 
 A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
 
-The November 2 owner attempt exposed confusing controls, an unavailable photo and silent playback. A recording was retained locally with no reviewed words; that was not a submitted report. The simplified screen now distinguishes saved notes, sent visit answers and confirmation. Native build 6 adds explicit local WAV playback and a quiet-recording diagnostic; the owner confirmed the retained clip is audible with this player. The revised full workflow still needs an owner check. See [the revised flow](docs/SIMPLE_VISIT.md).
+The November 2 owner attempts exposed confusing controls and repeated connection/microphone prompts. The four-stage replacement still required too many steps, so the main screen now uses hold and release. Native build 9 remembers the private connection in the iPhone Keychain and reuses an already granted microphone permission for the fixed trusted origin. The retained clip is owner-confirmed audible through the build 6 player. The owner confirmed that the repeated microphone popup is gone and one hold/release question returned a spoken gate code. Several presses were needed before capture started, so first-hold readiness remains a usability limitation. See [current observations](docs/PHONE_VALIDATION.md).
 
 ## Where we’re taking it
 

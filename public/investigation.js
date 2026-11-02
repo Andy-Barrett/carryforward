@@ -57,6 +57,7 @@ export function validateInterpretation(state, proposal) {
       if (!change.sourceIds.some(id => !prior.sourceIds.includes(id))) fail('Reopening requires new material evidence');
     }
   }
+  if(proposal.acknowledgement!==undefined&&(!text(proposal.acknowledgement,250)||/[?？]/.test(proposal.acknowledgement)))fail('Invalid conversational acknowledgement');
   const q = proposal.nextQuestion;
   if (q !== null && q !== undefined) {
     if (!Object.hasOwn(state.branches, q.branchId) || !text(q.text, 500)) fail('Invalid next question');
@@ -101,7 +102,11 @@ export function reduceInvestigation(previous, event) {
     if (!text(p.id, 200) || Object.hasOwn(state.sources, p.id) || !text(p.text)) fail('Invalid interview answer');
     if (p.branchId && !Object.hasOwn(state.branches, p.branchId)) fail('Answer belongs to unknown branch');
     if (p.audioId && (!Object.hasOwn(state.sources,p.audioId) || state.sources[p.audioId].kind !== 'audio' || state.sources[p.audioId].excluded)) fail('Unknown or wrong-job voice source');
-    if (p.transcription && (!p.audioId || typeof p.transcription.rawText !== 'string' || p.transcription.rawText.length > 4000 || p.transcription.reviewed !== true)) fail('Transcript must be reviewed before use');
+    if(p.transcription){
+      const t=p.transcription,source=state.sources[p.audioId];
+      const released=t.reviewed===false&&t.submission==='hold_release'&&t.rawText===p.text&&t.provenance?.model==='muse-voice-transcribe-1.0'&&t.provenance.complete===true&&/^[a-f0-9]{64}$/.test(t.provenance.inputSha256||'')&&t.provenance.inputSha256===source?.wavSha256;
+      if(!p.audioId||typeof t.rawText!=='string'||t.rawText.length>4000||!(t.reviewed===true||released))fail('Transcript must be reviewed or explicitly submitted by hold release');
+    }
     if (p.supersedes && (!Object.hasOwn(state.sources, p.supersedes) || state.sources[p.supersedes].kind !== 'testimony' || state.sources[p.supersedes].supersededBy)) fail('Invalid corrected answer');
     if (p.supersedes) {
       state.sources[p.supersedes].supersededBy = p.id;
@@ -203,7 +208,7 @@ export function reduceInvestigation(previous, event) {
       }
     }
     state.reviewRequired = false;
-    state.interpretations.push({ model: proposal.model, inputRevision: proposal.baseRevision, eventId: event.id, communicationStyle: state.communicationStyle || 'direct', provenance: proposal.provenance || null });
+    state.interpretations.push({ model: proposal.model, inputRevision: proposal.baseRevision, eventId: event.id, communicationStyle: state.communicationStyle || 'direct', acknowledgement:proposal.acknowledgement||null, provenance: proposal.provenance || null });
   } else fail('Unknown investigation event');
   state.seq = event.seq;
   state.events.push(clone(event));

@@ -7,6 +7,9 @@ import AVFAudio
 final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     @Published private(set) var status = "Not connected"
     @Published private(set) var configurationError: String?
+    @Published private(set) var connectionError: String?
+    private var opening = false
+    private var hasSavedConnection = false
     let policy: EndpointPolicy?
     let webView: WKWebView
     weak var presenter: UIViewController?
@@ -73,21 +76,49 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func startOnce() {
-        guard !started, let policy else { return }
+        guard !started, policy != nil else { return }
         started = true
-        status = "Opening configured origin…"
-        webView.load(URLRequest(url: policy.origin))
+        openConfiguredOrigin(bypassCache: false)
     }
     func back() { if webView.canGoBack { webView.goBack() } }
     func confirmReload() {
         confirm("Reconnect to this same origin? Capture may stop. Saved job data stays in this app; requests will not be automatically replayed.") { [weak self] accepted in
-            guard accepted, let self, let policy = self.policy else { return }
+            guard accepted, let self, self.policy != nil else { return }
             self.interruptCapture()
-            self.status = "Reopening configured origin…"
-            // A query bypasses the shell cache so the server can renew pairing.
-            // Keep the same origin and use GET, never replay a failed form POST.
-            let reconnectURL = policy.origin.appending(queryItems: [URLQueryItem(name: "reconnect", value: "1")])
-            self.webView.load(URLRequest(url: reconnectURL))
+            self.openConfiguredOrigin(bypassCache: true)
+        }
+    }
+    private func openConfiguredOrigin(bypassCache: Bool) {
+        guard !opening, let policy else { return }
+        opening = true
+        connectionError = nil
+        status = "Connecting…"
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.opening = false }
+            let connection = PhoneConnection(policy: policy)
+            var sessionCookie: HTTPCookie?
+            do {
+                if let code = try connection.credential() {
+                    self.hasSavedConnection = true
+                    let cookie = try await connection.signIn(code: code)
+                    await self.webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie)
+                    sessionCookie = cookie
+                }
+            } catch {
+                self.connectionError = "Cannot connect to your Mac. Check that it is running on the same Wi-Fi, then tap Reconnect. Saved visits remain on this phone."
+                let failure = error as NSError
+                self.status = "Connection unavailable (\(failure.domain), \(failure.code)). No field request was retried."
+                // The cached shell remains useful offline; never weaken TLS or replay work.
+            }
+            let url = bypassCache ? policy.origin.appending(queryItems: [URLQueryItem(name: "reconnect", value: "1")]) : policy.origin
+            var request = URLRequest(url: url)
+            // Bootstrap the first app-initiated navigation explicitly. WebKit may
+            // withhold a Strict cookie until this top-level site is established.
+            if let sessionCookie {
+                request.setValue(HTTPCookie.requestHeaderFields(with: [sessionCookie])["Cookie"], forHTTPHeaderField: "Cookie")
+            }
+            self.webView.load(request)
         }
     }
     func interruptCapture() {
@@ -119,8 +150,18 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = action.request.url, action.navigationType == .linkActivated,
+           action.targetFrame?.isMainFrame != false, policy?.allowsContactAction(url) == true {
+            decisionHandler(.cancel)
+            UIApplication.shared.open(url)
+            return
+        }
         guard let url = action.request.url, policy?.allows(url) == true else {
             status = "Navigation blocked outside the configured origin."
+            decisionHandler(.cancel); return
+        }
+        if hasSavedConnection && url.path == "/pair" {
+            if connectionError == nil { connectionError = "The development connection is unavailable. Tap Reconnect after checking your Mac. Saved visits remain on this phone." }
             decisionHandler(.cancel); return
         }
         if action.shouldPerformDownload { decisionHandler(.download) }
@@ -165,7 +206,11 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         guard let policy, frame.isMainFrame, trusted(frame), origin.protocol == policy.origin.scheme, origin.host == policy.origin.host, origin.port == policy.origin.port else { decisionHandler(.deny); return }
-        decisionHandler(.prompt) // User tap and OS permission remain required. Never auto-grant.
+        // The owner requested that this fixed, already authorized microphone stop
+        // asking on every hold. iOS app permission is still required once. Camera
+        // and combined requests continue to prompt; no foreign frame is admitted.
+        if type == .microphone && AVAudioApplication.shared.recordPermission == .granted { decisionHandler(.grant) }
+        else { decisionHandler(.prompt) }
     }
     // WKWebView supplies its standard file-input picker. No full-library bridge.
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { download.delegate = self }

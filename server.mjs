@@ -22,6 +22,7 @@ const guardToken = enabled ? (await readFile(process.env.CARRYFORWARD_GUARD_TOKE
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/held-voice.js": ["held-voice.js", "text/javascript"],
   "/visit-flow.js": ["visit-flow.js", "text/javascript"],
   "/live-protocol.js": ["live-protocol.js", "text/javascript"],
   "/live-voice.js": ["live-voice.js", "text/javascript"],
@@ -70,7 +71,7 @@ const handler = async (req, res) => {
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
   if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===origin) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
   if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled,liveVoiceEnabled:liveEnabled}); }
-  if (["/api/review", "/api/transcribe"].includes(path) && req.method === "POST") {
+  if (["/api/review", "/api/transcribe", "/api/conversation/transcribe", "/api/conversation/review"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
     if (req.headers.origin !== origin || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});
     if (req.headers["content-type"] !== "application/json") return json(415,{error:"Expected application/json"});
@@ -82,11 +83,14 @@ const handler = async (req, res) => {
       const input=JSON.parse(Buffer.concat(chunks));
       const id=input.order?.id || input.jobId;
       if (typeof id!=="string" || !id || id.length>300) throw new Error("A bounded job identity is required");
-      const kind=path === "/api/transcribe" ? "transcription" : "review";
+      const conversation=path.startsWith("/api/conversation/");
+      if(conversation&&!/^DEMO-/.test(id))throw Error("Conversation is enabled only for the fictional work orders in this development build");
+      const transcribing=path.endsWith("/transcribe");
+      const kind=(conversation?"conversation-":"")+(transcribing?"transcription":"review");
       const countKey=`${kind}:${id}`;
-      if ((reviews.get(countKey)||0)>=5) throw new Error(`Five-${kind} session limit reached for this job; keep unresolved work visible`);
+      if ((reviews.get(countKey)||0)>=(conversation?30:5)) throw new Error(`The bounded ${kind} session limit was reached; saved work is unchanged`);
       reviews.set(countKey,(reviews.get(countKey)||0)+1);
-      if (path === "/api/transcribe") return json(200,await transcribeWithMeta(input,{token:guardToken}));
+      if (transcribing) return json(200,await transcribeWithMeta(input,{token:guardToken}));
       const proposal=await reviewWithMeta(input,{token:guardToken});
       return json(200,{proposal});
     } catch (error) { return json(400,{error:error.message}); }

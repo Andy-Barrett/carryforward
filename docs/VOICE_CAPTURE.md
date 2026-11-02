@@ -1,3 +1,9 @@
+# Voice capture and source delivery
+
+The current main voice path is hold to speak, release to submit. Original WAVs remain local and automatic words remain explicitly unreviewed until later human review. Local recording/playback and earlier reviewed-transcript tools remain under Details. See [current interaction and limits](LIVE_VOICE.md).
+
+The API details below describe the separate local source-system handoff. A conversation reply does not deliver a report.
+
 # Local Operations simulator
 
 This is a fictional source-system simulator, not Perihelion Operations. It stores at most 100 assignments and bounded job evidence in `.local/operations.sqlite` (ignored by Git). Node 24's built-in SQLite API supplies persistence without a new package. The database and its directory are created with restricted local permissions. The app still binds only to loopback.
@@ -27,7 +33,7 @@ Browser controls below the field workflow exercise these endpoints. “Receive c
 
 A server revision is SHA-256 over the complete packet: canonical job/assignment identity, report, event revision, replayed interview and evidence manifest. Changed report/event/evidence content clears prior confirmation, delivery and acceptance. Old acceptance requests are rejected. Accepted-with-follow-ups is an acceptance of a handoff, never a claim that all assigned physical work is complete. Technician names remain attestations, not authenticated identity/electronic signatures.
 
-Limits: 10 original JPEG/PNG/WebP files per job, 5 MB each, 25 MB combined; HTTP JSON cap 35 MB; 500 investigation events; 100 assignments. Evidence IDs cannot be reused across jobs or with different bytes. Hash and MIME/size validation is not malware scanning or proof of what an image depicts. The app's image picker also checks browser decodability. Five original voice clips (5 MB each) plus bounded normalized transcription WAV derivatives may also be admitted; each clip is uploaded separately. Reviewed voice turns preserve raw transcription and model provenance in the ordered history. Database persistence and browser-local capture are distinct states.
+Limits: 10 original JPEG/PNG/WebP files per job, 5 MB each, 25 MB combined; HTTP JSON cap 35 MB; 500 investigation events; 100 assignments. Evidence IDs cannot be reused across jobs or with different bytes. Hash and MIME/size validation is not malware scanning or proof of what an image depicts. The app's image picker also checks browser decodability. Thirty original voice clips (5 MB each) plus bounded normalized transcription WAV derivatives may also be admitted; each clip is uploaded separately. Reviewed voice turns preserve raw transcription and model provenance in the ordered history. Database persistence and browser-local capture are distinct states.
 
 `CARRYFORWARD_OPERATIONS_DB` can point tests at an isolated temporary database. Tests create and remove only their own temporary fixtures. Production source revision updates, broader integrations, access control, durable retry queues and deployed hosting remain unimplemented.
 

@@ -72,3 +72,7 @@ November 1 phone closeout checkpoint: one owner-captured fictional camera photo,
 
 
 November 1 scope update: Andy deferred Android work for the current contest pass. Continue on his iPhone. This changes the immediate test priority; Android remains a planned, unverified target. The server-stopped iPhone cold-start, local recording/playback and retained playback after update/reconnection now have bounded passes in `PHONE_VALIDATION.md`. Next is a fresh fictional owner usability run, followed by fixes driven by observed friction.
+
+## November 2 priority — one hold and a useful reply
+
+The owner replaced the four-stage controls with a single hold/release conversation and requested remembered connection/microphone permission. The implementation preserves original evidence, unreviewed ASR, bounded source lookup, one-question review and separate final confirmation/acceptance. Customer contact links sit beneath the name; other tools stay under Details. Automatic connection is observed on the physical iPhone. The first new hold failed at microphone setup; build 8 and the full fictional work-order → onsite → report → final-update conversation need their own owner evidence. Android remains deferred.

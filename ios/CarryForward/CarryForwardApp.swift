@@ -15,6 +15,9 @@ struct CarryForwardApp: App {
                     Button("Connection details", systemImage: "info.circle") { showConnection = true }.labelStyle(.iconOnly)
                     Button("Reconnect", systemImage: "arrow.clockwise") { browser.confirmReload() }.labelStyle(.iconOnly).accessibilityLabel("Reconnect to the same origin")
                 }.padding(.horizontal, 16).padding(.vertical, 10).background(.thinMaterial)
+                if let issue = browser.connectionError {
+                    Text(issue).font(.callout).padding().frame(maxWidth: .infinity).background(.thinMaterial)
+                }
                 if let error = browser.configurationError {
                     ContentUnavailableView("Development origin required", systemImage: "network.slash", description: Text(error))
                 } else {

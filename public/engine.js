@@ -13,6 +13,10 @@ export const demoOrder = {
   version: "carryforward.work-order.v1",
   id: "DEMO-WO-1043",
   customer: "Elena Brooks",
+  customerContact: {
+    phone: "+1 (501) 555-0143", address: "7 Meadow Court",
+    source: {id:"DEMO-CONTACT-017",title:"Fictional Operations contact record",revision:"DEMO-1"},
+  },
   property: "7 Meadow Court · fictional site",
   systemId: "DEMO-SYS-017",
   reportedIssue:
@@ -156,6 +160,16 @@ export function validateOrder(input) {
   const order = { version: input.version };
   for (const key of ["id", "customer", "property", "systemId", "reportedIssue"])
     order[key] = clean(input[key], key, key === "reportedIssue" ? 4000 : 300);
+  if(input.customerContact !== undefined){
+    const c=input.customerContact;briefingObject(c,'Customer contact',['phone','address','source']);
+    const contact={};
+    if(c.phone!==undefined){const phone=clean(c.phone,'Customer phone',40);const digits=phone.replace(/[^0-9]/g,'');if(!/^\+?[0-9 () .-]+$/.test(phone)||digits.length<7||digits.length>15)throw Error('Customer phone must be a bounded telephone number.');contact.phone=phone;}
+    if(c.address!==undefined)contact.address=clean(c.address,'Customer address',300);
+    if(!contact.phone&&!contact.address)throw Error('Customer contact needs a phone or address.');
+    briefingObject(c.source,'Customer contact source',['id','title','revision']);
+    contact.source={id:clean(c.source.id,'Contact source ID',100),title:clean(c.source.title,'Contact source title',200),revision:clean(c.source.revision,'Contact source revision',100)};
+    order.customerContact=contact;
+  }
   if (
     !Array.isArray(input.requestedWork) ||
     !input.requestedWork.length ||

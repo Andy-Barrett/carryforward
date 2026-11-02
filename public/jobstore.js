@@ -1,3 +1,4 @@
+import {AUDIO_LIMITS} from './audio.js';
 // CarryForward durable job sessions (Slice 1).
 //
 // Browser-only IndexedDB store for job sessions, the ordered event log,
@@ -231,7 +232,7 @@ export async function saveAudio(db,record){
   maybeFault("audio save");
   const tx=db.transaction("audio","readwrite"),store=tx.objectStore("audio");
   const existing=await requestTo(store.index("by-job").getAll(record.jobId));
-  if(existing.length>=5){tx.abort();throw new Error("This job already has five voice clips. Export them before recording another.");}
+  if(existing.length>=AUDIO_LIMITS.clipsPerJob){tx.abort();throw new Error("This visit has reached its local voice storage limit. Existing recordings remain saved.");}
   store.add(record);
   await txDone(tx);
 }

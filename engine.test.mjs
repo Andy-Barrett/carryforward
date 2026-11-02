@@ -86,3 +86,14 @@ test('interview-supported claims appear as reported while deferred and pending o
   assert.equal(result.findings.find(f=>f.id==='warranty').followupOwner,'Operations');
   assert.throws(()=>reviewReport(demoOrder,report,{...interview,jobId:'other'}),/another job/);
 });
+
+
+test('customer contact preserves source identity and refuses executable phone fields', () => {
+ const contact=validateOrder(demoOrder).customerContact;
+ assert.deepEqual(contact,demoOrder.customerContact);
+ for(const phone of ['javascript:alert(1)','+15015550143;123','911','1'.repeat(16)])
+  assert.throws(()=>validateOrder({...demoOrder,customerContact:{...contact,phone}}),/phone/);
+ assert.throws(()=>validateOrder({...demoOrder,customerContact:{phone:contact.phone,address:contact.address}}),/source/);
+ const without=structuredClone(demoOrder);delete without.customerContact;
+ assert.equal(validateOrder(without).customerContact,undefined);
+});

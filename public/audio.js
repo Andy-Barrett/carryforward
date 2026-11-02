@@ -50,3 +50,16 @@ export async function transcriptionWav(blob){
   try{const decoded=await context.decodeAudioData(bytes.buffer);return encodeMonoWav(Array.from({length:decoded.numberOfChannels},(_,i)=>decoded.getChannelData(i)),decoded.sampleRate);}
   finally{await context.close();}
 }
+
+// Signal level is a recording diagnostic, not speech recognition or verification.
+export function wavSignal(input) {
+  const bytes=input instanceof Uint8Array?input:new Uint8Array(input);inspectWav(bytes);
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  for(let at=12;at+8<=bytes.length;){const size=view.getUint32(at+4,true);
+    if(String.fromCharCode(...bytes.subarray(at,at+4))==='data'){
+      let sum=0,peak=0;for(let offset=at+8;offset<at+8+size;offset+=2){const value=view.getInt16(offset,true)/32768;sum+=value*value;peak=Math.max(peak,Math.abs(value));}
+      const rms=Math.sqrt(sum/(size/2));return {rms,peak,veryQuiet:rms<0.0002};
+    }at+=8+size+(size%2);
+  }
+  throw Error('Audio samples unavailable.');
+}

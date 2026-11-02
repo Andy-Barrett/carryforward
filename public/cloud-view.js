@@ -1,5 +1,6 @@
 /* A conversation surface over the existing job record. No provider or storage writes live here. */
 import {buildVisitBrief,BRIEF_KIND_LABELS} from './visit-brief.js';
+import {VISIT_STAGES,visitStage,finalVisitUpdate} from './visit-flow.js';
 const ACTIVITY = new Set(['ready', 'connecting', 'listening', 'reviewing', 'speaking']);
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -68,7 +69,7 @@ function originForQuestion(state) {
 export function mountCloud(root, {
   order, db, onNavigate, onSaveAnswer, onPhotoFiles, onRefresh, onGetState, onCommand,
   onTalk, onStopTalk, onStopSpeaking, onSpeak, onUpload, onDraftChange,
-  startWithBrief = true, onBriefViewed, onQuestionResponse,
+  startWithBrief = true, onBriefViewed, onQuestionResponse, startPhase, onPhaseChanged, onReconnect,
 } = {}) {
   if (!root || !order?.id) throw new Error('A job and a mount point are required.');
   void db; // Persistence remains in the integration adapter.
@@ -76,7 +77,8 @@ export function mountCloud(root, {
   let evidence = null, response = null, draft = '', pendingAudio = null, talkCleanup = null;
   let currentAction = 0, draftSave = Promise.resolve(), activeEvidenceDialog = null;
   const visitBrief = buildVisitBrief(order);
-  let briefOpen = startWithBrief;
+  let phase = visitStage(startPhase,startWithBrief ? 'brief' : 'onsite');
+  let briefOpen = phase.id === 'brief', liveAvailable = false, clipCount = 0;
   const shell = el('section', 'cf-cloud');
   shell.dataset.activity = 'ready';
   shell.setAttribute('aria-label', 'CarryForward field conversation');
@@ -91,9 +93,15 @@ export function mountCloud(root, {
   actions.setAttribute('aria-label', 'Current job');
   const jobButton = button('The brief', 'cf-small-action');
   const sourcesButton = button('Sources', 'cf-small-action', 'source');
-  const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow');
+  const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow'); handoffButton.hidden=true;
   actions.append(jobButton, sourcesButton, handoffButton);
   rail.append(brand, jobIdentity, actions);
+  const journey = el('div','cf-journey');
+  const phaseLabel = el('p','cf-phase-label');
+  const connection = el('div','cf-service'); connection.setAttribute('role','status');
+  const connectionText = el('span','','Checking the interview connection…');
+  const retry = button('Reconnect','cf-text-action'); retry.onclick=()=>run(async()=>{await onReconnect?.();});
+  connection.append(connectionText,retry); journey.append(phaseLabel,connection);
   const main = el('div', 'cf-stage');
   const presence = el('div', 'cf-presence');
   presence.setAttribute('aria-hidden', 'true');
@@ -109,13 +117,14 @@ export function mountCloud(root, {
   const focalEvidence = el('div', 'cf-focal-evidence');
   const briefPane = el('section','cf-visit-brief');
   briefPane.setAttribute('aria-label','Pre-visit briefing');
+  const finalPane = el('section','cf-final-update'); finalPane.hidden=true;
   const responseActions = el('div', 'cf-response-actions');
   const reviewButton = button('Review latest evidence', 'cf-text-action', 'refresh');
   const hearButton = button('Read aloud', 'cf-text-action', 'volume');
   hearButton.hidden = typeof onSpeak !== 'function';
   responseActions.append(reviewButton, hearButton);
   const questionActions=el('div','cf-question-actions');
-  focus.append(eyebrow, responseText, context, provenance, briefPane, focalEvidence, questionActions, responseActions);
+  focus.append(eyebrow, responseText, context, provenance, briefPane, finalPane, focalEvidence, questionActions, responseActions);
   main.append(presence, focus);
   const lower = el('div', 'cf-lower');
   const history = el('details', 'cf-history');
@@ -127,7 +136,7 @@ export function mountCloud(root, {
   notice.setAttribute('role', 'status');
   notice.setAttribute('aria-live', 'polite');
   const composer = el('form', 'cf-composer');
-  composer.hidden = true;
+  composer.hidden = false;
   const composerLabel = el('label', 'cf-sr-only', 'Your message');
   const inputId = `cf-message-${Math.random().toString(36).slice(2)}`;
   composerLabel.htmlFor = inputId;
@@ -142,7 +151,8 @@ export function mountCloud(root, {
   hideComposer.setAttribute('aria-label', 'Close typing');
   const sendButton = button('Send', 'cf-send', 'arrow');
   sendButton.type = 'submit';
-  composerFoot.append(composerHint, hideComposer, sendButton);
+  hideComposer.hidden=true; composerHint.textContent='Review your words, then send.';
+  composerFoot.append(composerHint, sendButton);
   composer.append(composerLabel, input, composerFoot);
   const dock = el('div', 'cf-dock');
   const addButton = button('Add evidence', 'cf-dock-side', 'plus');
@@ -150,18 +160,24 @@ export function mountCloud(root, {
   const typeButton = button('Type instead', 'cf-dock-side', 'type');
   typeButton.setAttribute('aria-expanded', 'false');
   typeButton.setAttribute('aria-controls', inputId);
-  dock.append(addButton, talkButton, typeButton);
+  typeButton.hidden=true; dock.append(talkButton,addButton);
+  const savedState = el('p','cf-saved-state'); savedState.setAttribute('role','status');
   const activityLabel = el('p', 'cf-activity', 'Ready when you are');
   const inputMeter = el('meter', 'cf-input-meter');
   inputMeter.min=0;inputMeter.max=1;inputMeter.value=0;inputMeter.hidden=true;inputMeter.setAttribute('aria-label','Microphone input level');
   const footer = el('p', 'cf-parked-note', 'Pause and park to inspect evidence or confirm the handoff.');
   const fileInput = el('input', 'cf-sr-only');
-  fileInput.type = 'file';
+  fileInput.type = 'file'; fileInput.hidden = true;
   fileInput.accept = 'image/jpeg,image/png,image/webp';
   fileInput.multiple = true;
   fileInput.setAttribute('aria-label', 'Add job photos');
-  lower.append(history, notice, composer, dock, activityLabel, inputMeter, footer, fileInput);
-  shell.append(rail, main, lower);
+  const phaseActions=el('div','cf-phase-actions');
+  const previous=button('Back','cf-text-action'); const next=button(phase.next,'cf-send','arrow');
+  previous.onclick=()=>{if(!busy&&activity==='ready')changePhase(VISIT_STAGES[Math.max(0,VISIT_STAGES.indexOf(phase)-1)].id);};
+  next.onclick=()=>run(async()=>{if(phase.id==='final'){await onNavigate?.('review');return;}changePhase(VISIT_STAGES[VISIT_STAGES.indexOf(phase)+1].id);});
+  phaseActions.append(previous,next);
+  lower.append(notice,composer,dock,activityLabel,inputMeter,savedState,phaseActions,history,footer,fileInput);
+  shell.append(rail,journey,main,lower);
   root.replaceChildren(shell);
 
   function valid() { return alive && shell.isConnected; }
@@ -172,11 +188,11 @@ export function mountCloud(root, {
   }
   function setActivity(next) {
     if (!valid() || !ACTIVITY.has(next)) return;
-    activity = next;
+    activity = next; activityLabel.hidden = next === 'ready';
     if(next==='listening'||next==='connecting')say('');
     shell.dataset.activity = next;
     activityLabel.textContent = {ready: 'Ready when you are', connecting:'Starting live voice', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
-    talkButton.replaceChildren(icon(next === 'listening' || next === 'connecting' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'connecting' ? 'Cancel live setup' : next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : typeof onTalk === 'function' ? 'Talk to CarryForward' : 'Talk with text'));
+    talkButton.replaceChildren(icon(next === 'listening' || next === 'connecting' || next === 'speaking' ? 'stop' : 'mic'), el('span', '', next === 'connecting' ? 'Cancel setup' : next === 'listening' ? 'Finish speaking' : next === 'speaking' ? 'Stop speaking' : liveAvailable ? 'Talk to CarryForward' : 'Live interview unavailable'));
     talkButton.setAttribute('aria-pressed', String(next === 'listening'));
     syncControls();
   }
@@ -191,7 +207,8 @@ export function mountCloud(root, {
     sendButton.disabled = locked || !input.value.trim() || activity === 'listening';
     addButton.disabled = locked || activity === 'listening' || (!onUpload && !onPhotoFiles);
     hearButton.disabled = locked || activity === 'listening';
-    talkButton.disabled = activity==='connecting'?false:locked;
+    talkButton.disabled = activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
+    previous.disabled=locked||activity!=='ready'; next.disabled=locked||activity!=='ready'||(phase.id==='final'&&!finalVisitUpdate(order,state).hasReport);
     jobButton.disabled = locked || activity === 'listening';
     sourcesButton.disabled = !onNavigate || locked || activity === 'listening';
     for (const control of focalEvidence.querySelectorAll('button,a')) {
@@ -240,45 +257,69 @@ export function mountCloud(root, {
     for (const item of visitBrief.scope) list.append(el('li','',item));
     scope.append(list);
     for (const record of visitBrief.history) scope.append(el('p','cf-brief-history',`${record.date} · ${record.text}`),el('p','cf-brief-source',`Original work-order history · ${record.id}`));
+    const full=el('details','cf-full-brief');full.append(el('summary','','Access, customer notes and job details'),grid,scope);
+    const compact=el('div','cf-work-order');compact.append(el('h2','','Work order'),el('p','',order.reportedIssue||''));
+    const assigned=el('ul');for(const text of order.requestedWork||[])assigned.append(el('li','',text));compact.append(assigned);
     const controls = el('div','cf-brief-controls');
-    const begin = button('Continue to the visit','cf-send','arrow');
-    begin.onclick = () => {
-      if (busy || activity === 'listening' || activity === 'reviewing') return;
-      onStopSpeaking?.(); briefOpen = false; onBriefViewed?.(); clearResponse(); renderResponse();
-    };
     const tools = button('Work order and job selection','cf-text-action','source');
     tools.onclick = () => navigate('briefing');
-    controls.append(begin,tools);
-    briefPane.append(grid,scope,controls);
+    controls.append(tools); full.append(controls);
+    briefPane.append(compact,full);
   }
   function openBrief() {
     if (!valid()) return;
-    onStopSpeaking?.(); clearResponse(); evidence = null; briefOpen = true; renderResponse(); syncControls();
+    onStopSpeaking?.(); changePhase('brief');
     main.scrollIntoView({block:'start'});
   }
   function renderResponse() {
     if (!valid()) return;
     const question = state?.activeQuestion;
     shell.classList.toggle('cf-has-brief',briefOpen);
-    eyebrow.textContent = briefOpen ? 'BEFORE THE VISIT' : evidence ? 'IN VIEW' : question ? 'ONE USEFUL NEXT STEP' : 'HERE WITH THE JOB';
-    responseText.textContent = briefOpen ? 'Let’s arrive prepared.' : response?.text || question?.text || 'Let’s bring this visit forward.';
+    eyebrow.textContent = `STEP ${VISIT_STAGES.indexOf(phase)+1} OF 4 · ${phase.label.toUpperCase()}`;
+    phaseLabel.textContent=phase.label;next.replaceChildren(el('span','',phase.next),icon('arrow'));previous.hidden=phase.id==='brief';
+    input.placeholder=phase.id==='brief'?'Ask about this work order…':phase.id==='onsite'?'Add a finding or ask a job question…':'Tell me what happened on this visit…';
+    composer.hidden=phase.id==='final';dock.hidden=phase.id==='final';
+    responseText.textContent = phase.id==='final'?phase.title:response?.text||(phase.id==='report'?question?.text:null)||phase.title;
     responseText.classList.toggle('cf-response-short', !!evidence);
-    context.textContent = briefOpen ? `${order.customer || 'This visit'} · ${order.property || order.id}. Here’s the context supplied for ${order.systemId}.` : response ? (response.detail || '') : (question ? 'Answer in your own words. If you can’t verify it here, keep it open for the handoff.' : `You’re with ${order.customer || 'this job'}. Tell me what you found, what you did, and what still needs a hand.`);
+    context.textContent = response&&phase.id!=='final'?(response.detail||''):phase.hint;
     context.hidden = !context.textContent;
     provenance.replaceChildren();
-    if (briefOpen) provenance.append(el('span','cf-origin-badge',`Work-order briefing · ${order.id}`));
+    if (briefOpen) provenance.append(el('span','cf-origin-badge',`Work-order briefing · ${order.customer}`));
     else if (response?.origin) provenance.append(el('span', 'cf-origin-badge', response.origin));
     else if (question) provenance.append(el('span', 'cf-origin-badge', originForQuestion(state)));
-    else provenance.append(el('span', 'cf-origin-badge', `Work order · ${order.id}`));
+    else provenance.append(el('span', 'cf-origin-badge', `Work order · ${order.customer}`));
     if (!briefOpen && response?.sourceIds?.length) provenance.append(el('span', 'cf-source-ids', response.sourceIds.join(' · ')));
     hearButton.replaceChildren(icon('volume'),el('span','',briefOpen?'Read the brief aloud':'Read aloud'));
+    reviewButton.hidden=phase.id!=='report';
     renderBrief();
+    renderFinal();
     renderEvidence();
     renderQuestionActions();
   }
+  function changePhase(value) {
+    if(!valid())return;onStopSpeaking?.();phase=visitStage(value);briefOpen=phase.id==='brief';evidence=null;clearResponse();
+    onPhaseChanged?.(phase.id);if(phase.id!=='brief')onBriefViewed?.();renderResponse();syncControls();
+    shell.scrollIntoView({block:'start'});
+  }
+  function renderFinal() {
+    finalPane.hidden=phase.id!=='final';if(finalPane.hidden)return;
+    const update=finalVisitUpdate(order,state);finalPane.replaceChildren();
+    if(!update.hasReport){finalPane.append(el('p','','No report has been sent yet. A saved recording needs reviewed words before it becomes a report. Go back to add your update.'));return;}
+    finalPane.append(el('p','cf-final-status',update.confirmation),el('h2','','What you reported'));
+    for(const note of update.notes)finalPane.append(el('p','cf-final-note',note.text));
+    finalPane.append(el('h2','','Outcome and follow-up'));
+    for(const check of update.checks){const row=el('article','cf-outcome');row.append(el('h3','',check.label),el('p','',check.status),el('p','',check.note));if(!check.reported)row.append(el('p','',check.owner?`Follow-up owner: ${check.owner}`:'Follow-up owner still needed'));finalPane.append(row);}
+  }
+  function setConnection({ready=false,liveEnabled=false,needsPairing=false}={}) {
+    if(!valid())return;liveAvailable=ready&&liveEnabled;
+    connection.classList.toggle('is-offline',!ready);
+    connectionText.textContent=needsPairing?'Reconnect this phone to use the live interview. Saved notes are still here.':liveAvailable?'Live interview available. New speech goes to Meta after you choose Start.':ready?'Service connected · live speech is unavailable. You can type your update.':'Live interview offline. Type your update or save a local voice note below. Nothing is being sent.';
+    retry.hidden=ready;setActivity(activity);
+  }
+  function setClips(count) {clipCount=count;renderHistory();}
   function renderQuestionActions() {
     questionActions.replaceChildren();
-    if(briefOpen||evidence||!state?.activeQuestion||!onQuestionResponse)return;
+    if(phase.id!=='report'||briefOpen||evidence||!state?.activeQuestion||!onQuestionResponse)return;
     if(response?.text&&response.text!==state.activeQuestion.text)questionActions.append(el('p','cf-pending-question',state.activeQuestion.text));
     const label=el('label','','Follow-up owner'),owner=el('input');owner.maxLength=200;owner.placeholder='For example, Operations';label.append(owner);questionActions.append(label);
     for(const [action,text] of [['cannot_verify',"Can't verify"],['later','Follow up later'],['already_answered','Already answered']]){
@@ -298,7 +339,8 @@ export function mountCloud(root, {
     if (!valid()) return;
     historyList.replaceChildren();
     const turns = Object.values(state?.sources || {}).filter(s => s.kind === 'testimony');
-    historySummary.textContent = turns.length ? `Conversation · ${turns.length} saved ${turns.length === 1 ? 'answer' : 'answers'}` : 'Conversation & source trail';
+    historySummary.textContent = turns.length ? `Saved conversation · ${turns.length} ${turns.length === 1 ? 'answer' : 'answers'}` : 'Saved conversation';
+    savedState.textContent=turns.length?`${turns.length} ${turns.length===1?'answer saved':'answers saved'} to this visit · Operations acceptance is separate.`:clipCount?`${clipCount} voice ${clipCount===1?'note saved':'notes saved'} on this phone. No report answer has been sent. Review or type your words before Send.`:'No report answers sent yet.';
     if (!turns.length) {
       historyList.append(el('li', 'cf-history-empty', 'Saved answers will appear here. A question about a source is kept separate from your field testimony.'));
       return;
@@ -381,6 +423,7 @@ export function mountCloud(root, {
       if (!valid()) return;
       if (result?.handled === true) {
         if (result.response || result.message) setResponse(result.response || result.message, {origin: result.origin || 'Job source lookup', sourceIds: result.sourceIds, detail: result.detail});
+        if(pendingAudio?.liveReview&&result.response)spokenReply=result.response;
         if (Object.hasOwn(result, 'evidence')) showEvidence(result.evidence);
         if (result.activity && ACTIVITY.has(result.activity)) setActivity(result.activity);
       } else {
@@ -393,7 +436,7 @@ export function mountCloud(root, {
         say('Answer saved to this job.');
       }
       if (!valid()) return;
-      draft = ''; pendingAudio = null; input.value = ''; composer.hidden = true;
+      draft = ''; pendingAudio = null; input.value = ''; input.blur(); composer.hidden = phase.id==='final';
       await notifyDraft();
       if (!valid()) return;
       typeButton.setAttribute('aria-expanded', 'false');
@@ -587,6 +630,6 @@ export function mountCloud(root, {
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief});
+  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase});
   return cleanup;
 }

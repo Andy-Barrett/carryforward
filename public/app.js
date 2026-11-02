@@ -505,6 +505,7 @@ function render() {
   if (cloudSession?.canNavigate && !cloudSession.canNavigate()) { notify("Finish the recording or current save before changing views."); return; }
   cloudSession?.(); cloudSession = null;
   document.body.classList.toggle("cloud-workspace", step === "companion");
+  document.body.classList.toggle("visit-review",step === "review");
   const generation = ++renderGeneration;
   document.querySelectorAll("[data-step]").forEach((b) => {
     b.classList.toggle("active", b.dataset.step === step);
@@ -754,13 +755,21 @@ function render() {
     const confBanner = stale
       ? `<p class="warn">This report changed after ${esc(stale.name || "the technician")} confirmed it — that confirmation no longer applies. Review the changes and confirm the new revision.</p>`
       : "";
-    $("#view").innerHTML =
-      `${heading}${confBanner}<div class="stats"><div><strong>${review.findings.filter((f) => ["documented", "reported"].includes(f.outcome)).length}</strong>Recorded claims and observations</div><div><strong>${review.openCount}</strong>Checks needing follow-up</div><div><strong>${review.findings.filter((f) => f.outcome === "exception").length}</strong>Exceptions for Operations</div></div><div class="workspace"><section class="panel"><h2>Evidence completeness review</h2><p>${esc(review.reviewMode)}</p>${review.findings.map((f) => {
-        const ids = report.entries?.[f.id]?.evidenceIds || [];
-        const branch = interviewPacket?.jobId === order.id ? interviewPacket.branches.find(b => b.id === f.id) : null;
-        const interviewContext = branch ? `<p>Interview: ${esc(branch.state)}${branch.owner ? ` · Owner: ${esc(branch.owner)}` : ""}. ${esc(branch.reason)}</p>` : "";
-        return `<article class="source ${f.outcome === "open" ? "gap" : ""}"><div>${esc(f.outcome.toUpperCase())} / ${esc(f.id)}</div><h3>${esc(f.label)}</h3><p>${esc(f.note || "No observation supplied.")}</p>${f.reference ? `<p>Reference: ${esc(f.reference)}<br>Observed: ${esc(f.observedAt || "Not supplied")}</p>` : ""}${ids.length ? `<p>Local photos: ${ids.map((id) => esc(id)).join(", ")}</p>` : ""}<p>${esc(f.reason || f.question)}</p>${interviewContext}</article>`;
-      }).join("")}<button id="edit">Return to field report</button></section><aside><p class="eyebrow">HANDOFF TO OPERATIONS</p><h2>${review.openCount ? "Keep the gaps visible." : "Ready for human review."}</h2><p><strong>Technician:</strong> ${esc(review.technician)}</p><p>${esc(review.summary)}</p><h4>Customer commitments</h4><p>${esc(review.promises || "No new promises recorded; confirm this with the technician.")}</p><h4>Follow-up owner</h4><p>${esc(review.followupOwner || "Not assigned")}${review.needsOwner ? " — assign an owner for open work or commitments." : ""}</p><p>Technician confirmation preserves open items. It does not mark the Operations work order complete.${conf ? ` Confirmed revision ${esc(conf.reportRevision)}.` : ""}</p><button id="confirm" class="primary" ${conf ? "disabled" : ""}>${conf ? "Technician confirmed" : "Confirm as " + esc(review.technician)}</button><button id="export">Download closeout JSON ↓</button><button id="bundle">Download media bundle ↓</button><p>These downloads send nothing to Operations. Use the local simulator below for API delivery. The media bundle embeds this job's saved photos and voice originals with a manifest and hashes.</p></aside></div>`;
+    $("#view").innerHTML = `<section class="final-report">
+      <p class="eyebrow">FINAL VISIT UPDATE${conf?' · CONFIRMED':' · DRAFT'}</p><h1>${esc(order.customer)}</h1><p>${esc(order.property)}</p>${confBanner}
+      <h2>What you reported</h2><p class="final-notes">${esc(review.summary)}</p>
+      <h2>Outcome and follow-up</h2>${review.findings.map(f=>{
+        const branch=interviewPacket?.jobId===order.id?interviewPacket.branches.find(b=>b.id===f.id):null;
+        const label=f.outcome==='documented'?'Recorded observation':f.outcome==='reported'?'Reported · human review needed':f.outcome==='exception'?'Exception for Operations':'Follow-up open';
+        return `<article class="source"><h3>${esc(f.label)}</h3><p><strong>${esc(label)}</strong></p><p>${esc(f.note||f.reason||f.question)}</p>${f.outcome==='open'?`<p>Owner: ${esc(branch?.owner||review.followupOwner||'Still needed')}</p>`:''}<details><summary>Supporting details</summary><p>${esc(f.reason||f.question)}</p>${f.reference?`<p>${esc(f.reference)} · ${esc(f.observedAt||'Observation time not supplied')}</p>`:''}${branch?`<p>${esc(branch.reason)}</p>`:''}</details></article>`;
+      }).join('')}
+      <h2>Customer follow-up</h2><p>${esc(review.promises||'No additional commitment recorded. Review before confirming.')}</p><p>Follow-up owner: ${esc(review.followupOwner||'Not assigned')}</p>
+      <p>${conf?'Technician confirmation is saved. Check the separate Operations status below.':'Review this update before confirming. Open items stay open; Operations accepts the handoff separately.'}</p>
+      <button id="confirm" class="primary" ${conf?'disabled':''}>${conf?'Report confirmed':'Confirm report as '+esc(review.technician)}</button>
+      <button id="return-conversation">Back to the visit</button><button id="edit">Edit report details</button>
+      <details class="final-export"><summary>Save a copy</summary><button id="export">Download closeout</button><button id="bundle">Download report and media</button><p>These copies are local downloads. They do not deliver the report to Operations.</p></details>
+    </section>`;
+    $("#return-conversation").onclick=()=>navigateStep('companion');
     $("#edit").onclick = () => {
       step = "capture";
       render();

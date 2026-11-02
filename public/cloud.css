@@ -335,3 +335,85 @@ body.cloud-workspace { background: #f5f7f0; }
   .cf-cloud .cf-question-actions .cf-text-action {justify-content:center;min-height:48px;padding:12px;font-size:15px;border:1px solid #b9cbc3;border-radius:12px;background:#f6f9f1;}
   .cf-cloud .cf-question-actions .cf-text-action:last-child {grid-column:1/-1;}
 }
+
+/* One compact visit: work order, onsite updates, report, final update. */
+.cf-cloud { min-height: 0; overflow: visible; background: #f7faf5; }
+.cf-cloud .cf-presence { display: none; }
+.cf-cloud .cf-rail { padding: 16px 20px 8px; }
+.cf-journey { padding: 0 20px; width: min(100%,800px); align-self: center; }
+.cf-phase-label { margin: 0; font-weight: 650; font-size: 14px; }
+.cf-service { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 10px 0; border-radius: 10px; background: #e8f1e8; color: #315447; font-size: 13px; }
+.cf-service.is-offline { background: #fff0d7; color: #714d19; }
+.cf-service .cf-text-action { min-height: 44px; padding: 4px 12px; flex-shrink: 0; }
+.cf-cloud .cf-stage { flex: initial; min-height: 0; padding: 18px 20px 12px; max-width: 800px; justify-content: flex-start; }
+.cf-cloud .cf-focus { text-align: left; }
+.cf-cloud .cf-eyebrow { margin-bottom: 8px; font-size: 11px; }
+.cf-cloud .cf-response { font-family: inherit; font-size: clamp(24px,3.2vw,34px); line-height: 1.25; letter-spacing: -.025em; max-width: none; }
+.cf-cloud .cf-context { max-width: none; font-size: 16px; margin: 12px 0 0; }
+.cf-cloud .cf-provenance { justify-content: flex-start; margin: 10px 0; }
+.cf-cloud .cf-origin-badge { font-size: 12px; }
+.cf-cloud .cf-response-actions { justify-content: flex-start; margin: 8px 0; }
+.cf-cloud .cf-text-action { font-size: 14px; min-height: 44px; }
+.cf-cloud .cf-visit-brief { margin-top: 14px; }
+.cf-work-order { padding: 14px 18px; border: 1px solid #d4dfd3; border-radius: 12px; background: white; }
+.cf-work-order h2 { margin: 0 0 10px; font-size: 18px; }
+.cf-work-order p, .cf-work-order li { font-size: 15px; }
+.cf-work-order ul { margin-bottom: 0; padding-left: 20px; }
+.cf-full-brief { margin: 14px 0; font-size: 14px; }
+.cf-full-brief summary { padding: 10px 0; min-height: 44px; cursor: pointer; }
+.cf-lower { width: min(100%,800px); padding: 0 20px 20px; }
+.cf-cloud .cf-composer { margin: 8px 0 12px; border-radius: 12px; padding: 12px; }
+.cf-cloud .cf-message { min-height: 72px; font-size: 16px; }
+.cf-composer-hint { font-size: 11px; }
+.cf-cloud .cf-send { min-height: 48px; padding: 12px 20px; font-size: 15px; }
+.cf-cloud .cf-dock { justify-content: flex-start; gap: 16px; }
+.cf-cloud .cf-talk { min-height: 52px; font-size: 15px; padding: 14px 20px; }
+.cf-cloud .cf-dock-side { font-size: 14px; min-height: 48px; }
+.cf-cloud .cf-activity { text-align: left; font-size: 12px; }
+.cf-saved-state { margin: 10px 0; font-size: 13px; color: #586c60; }
+.cf-phase-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; }
+.cf-phase-actions > :last-child { margin-left: auto; }
+.cf-history { margin-top: 12px; font-size: 13px; }
+.cf-history summary { margin: 0; padding-left: 0; }
+.cf-cloud .cf-parked-note { text-align: left; font-size: 11px; margin-top: 12px; }
+.cf-final-update { margin-top: 16px; text-align: left; }
+.cf-final-update h2 { font-size: 19px; }
+.cf-final-status { padding: 12px; border-radius: 10px; background: #fff0d7; font-size: 14px; }
+.cf-final-note { white-space: pre-wrap; }
+.cf-outcome { border-top: 1px solid #d4dfd3; padding: 12px 0; }
+.cf-outcome h3 { font-size: 16px; margin: 0 0 6px; }
+.cf-outcome p { margin: 5px 0; font-size: 14px; }
+body.cloud-workspace .cf-voice-panel { width: min(100%,800px); margin: 0 auto; padding: 0 20px 24px; }
+body.cloud-workspace .cf-voice-panel > summary { font-size: 14px; padding: 14px 0; min-height: 48px; }
+@media (max-width:600px) {
+  .cf-cloud .cf-rail { padding: 12px 16px 8px; }
+  .cf-cloud .cf-stage { padding: 16px 16px 8px; }
+  .cf-journey, .cf-lower { padding-left: 16px; padding-right: 16px; }
+  .cf-cloud .cf-job-label { max-width: 150px; }
+  .cf-cloud .cf-small-action { font-size: 12px; padding: 8px; }
+  .cf-cloud .cf-dock { flex-wrap: wrap; }
+  .cf-phase-actions .cf-send { white-space: normal; }
+}
+body.cloud-workspace #connection-status { display: none; }
+.cf-voice-panel fieldset { border: 1px solid #d4dfd3; border-radius: 12px; padding: 16px; }
+.cf-voice-panel button, .cf-voice-panel textarea { font-size: 16px; }
+.cf-voice-panel button { min-height: 48px; }
+.cf-voice-panel audio { width: 100%; max-width: 100%; }
+.cf-voice-panel a { display: inline-block; padding: 12px; min-height: 44px; }
+.cf-cloud .cf-job-id, .cf-cloud .cf-source-ids { display: none; }
+
+/* Keep the next visit action within reach on a phone. */
+.cf-phase-label { display: none; }
+.cf-cloud .cf-response-actions { margin: 0; }
+@media(max-width:600px) {
+  .cf-cloud .cf-rail { min-height: 0; flex-wrap: nowrap; gap: 8px; }
+  .cf-cloud .cf-job-identity { display: none; }
+  .cf-cloud .cf-rail-actions { margin-left: auto; }
+  .cf-cloud .cf-eyebrow { margin-bottom: 5px; }
+  .cf-cloud .cf-context { line-height: 1.5; margin-top: 8px; }
+  .cf-cloud .cf-provenance { margin: 6px 0; }
+  .cf-cloud .cf-message { min-height: 56px; }
+  .cf-cloud .cf-composer { padding: 9px; }
+  .cf-cloud .cf-dock-side { flex-direction: row; }
+  .cf-saved-state { margin: 8px 0; }
+}

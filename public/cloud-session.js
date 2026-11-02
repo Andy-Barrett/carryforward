@@ -22,6 +22,8 @@ export async function mountCloudSession(root, {
   const draftKey = `carryforward.cloud-draft.v1:${jobId}`;
   const focusKey = `carryforward.cloud-focus.v1:${jobId}:${order.systemId}`;
   const briefKey = `carryforward.brief-viewed.v1:${jobId}`;
+  const phaseKey = `carryforward.visit-phase.v1:${jobId}`;
+  let startPhase;try{startPhase=localStorage.getItem(phaseKey)||undefined;}catch{}
   const briefRevision = await hashBytes(new TextEncoder().encode(JSON.stringify(order)));
   let startWithBrief = true;
   try { startWithBrief = localStorage.getItem(briefKey) !== briefRevision; } catch { /* Show the brief if view-state storage is unavailable. */ }
@@ -30,7 +32,7 @@ export async function mountCloudSession(root, {
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
   const speaker=createLocalSpeaker();
   let callbackError = '';
-  let config = {metaEnabled:false,transcriptionEnabled:false};
+  let config = {metaEnabled:false,transcriptionEnabled:false,liveVoiceEnabled:false}, needsPairing=false;
   const photoUrls = new Map();
   const valid = () => alive && root.isConnected;
   const requireCurrent = () => { if (!valid()) throw new Error('This job view has closed. Reopen the job before continuing.'); };
@@ -246,6 +248,11 @@ export async function mountCloudSession(root, {
   async function command(text) {
     requireIdle();
     const normalized = text.toLowerCase().replace(/[?.!]/g, '').trim();
+    if(/\b(?:onsite|on site|arrived)\b/.test(normalized)&&/\b(?:gate|access|entry)\b/.test(normalized))view.changePhase('onsite');
+    if(/^(?:i(?:m| am|’m|'m)? )?(?:have |just )?(?:arrived(?: onsite| on site)?|am onsite|am on site|onsite|on site)$/.test(normalized)){
+      view.changePhase('onsite');return {handled:true,response:'You’re in the onsite step. Add what you find or ask about the job.',origin:'Visit navigation · no outcome verified'};
+    }
+
     if (/^(?:correct|edit) (?:(?:my|the|an|last|earlier|previous) )*(?:answer|statement)$/.test(normalized)) {
       await navigate('interview', {executedCommand:true});
       return { handled: true };
@@ -273,7 +280,8 @@ export async function mountCloudSession(root, {
     return {
       handled: true, response: result.message,
       origin: result.kind === 'briefing' ? 'Original work-order briefing' : 'From this job’s source packet',
-      sourceIds: result.citation ? [result.citation.resourceId] : [],
+      sourceIds: result.sourceIds || (result.citation ? [result.citation.resourceId] : []),
+      detail: result.citations?.map(source=>`${source.title} · ${source.revision}${source.page?` · page ${source.page}`:''}`).join(' · '),
       ...(result.kind === 'present' ? { evidence: evidence(result.resource) } : {}),
       ...(result.kind === 'unavailable' ? { evidence: null } : {}),
     };
@@ -319,7 +327,9 @@ export async function mountCloudSession(root, {
 
   requireCurrent();
   view = mountCloud(root, {
-    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief,
+    order, db, onNavigate: navigate, onSaveAnswer: saveAnswer, onCommand: command, startWithBrief, startPhase,
+    onPhaseChanged:value=>{try{localStorage.setItem(phaseKey,value);}catch{}},
+    onReconnect:async()=>{requireIdle();if(needsPairing){window.location.assign('/pair');return;}await refreshConnection();},
     onBriefViewed: () => { try { localStorage.setItem(briefKey,briefRevision); } catch { /* Viewing is not confirmation or work authorization. */ } },
     onGetState: async () => { const next = await loadInterview(db, order); requireCurrent(); state = next; return next; },
     onDraftChange: saveDraft, onQuestionResponse:respondQuestion,
@@ -335,7 +345,8 @@ export async function mountCloudSession(root, {
       return reviewLatest();
     },
     onTalk: async () => {
-      requireIdle(); stopSpeaking(); voicePanel.open = true;
+      requireIdle(); stopSpeaking();
+      if(!await refreshConnection()||!config.liveVoiceEnabled){view.setResponse('The live interview is unavailable. You can type an update, or open Saved voice notes to record locally. A local recording is not a sent report.',{origin:'Connection status'});return;}
       if (voice?.start) await voice.start();
       else { voiceRoot.querySelector('#voice-record')?.focus(); view.setResponse('Use Record below, then review your words before sending.', { origin: 'Voice capture controls' }); }
     },
@@ -344,16 +355,23 @@ export async function mountCloudSession(root, {
   });
   const voicePanel = document.createElement('details');
   voicePanel.className = 'cf-voice-panel';
-  const summary = document.createElement('summary'); summary.textContent = 'Voice clips and reviewed transcripts';
+  const summary = document.createElement('summary'); summary.textContent = 'Saved voice notes';
   const voiceRoot = document.createElement('div');
   voicePanel.append(summary, voiceRoot); root.append(voicePanel);
   if (restored) view.setDraft?.(draft, { audio: draftAudio, focus: false });
 
-  try { config = await fetch('/api/config', { signal: AbortSignal.timeout(5000) }).then(response => response.json()); } catch { /* Capture stays local when offline. */ }
+  async function refreshConnection() {
+    let ready=false;needsPairing=false;
+    try{const response=await fetch('/api/config',{signal:AbortSignal.timeout(5000)});needsPairing=response.status===401;if(!response.ok)throw Error('Service unavailable');config=await response.json();ready=true;}
+    catch{config={metaEnabled:false,transcriptionEnabled:false,liveVoiceEnabled:false};}
+    if(valid()){view.setConnection({ready,liveEnabled:config.liveVoiceEnabled===true,needsPairing});voice?.setAvailability?.({enabled:config.transcriptionEnabled===true,liveEnabled:config.liveVoiceEnabled===true});}
+    return ready;
+  }
+  await refreshConnection();
   if (valid()) {
     try {
       voice = await mountVoice(voiceRoot, {
-        db, jobId, onNewDemo:async()=>{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}, enabled: config.transcriptionEnabled === true,liveEnabled:config.liveVoiceEnabled===true,
+        db, jobId, onClipsChanged:count=>{if(valid()){summary.textContent=`Saved voice notes${count?` · ${count}`:''}`;view.setClips(count);}}, onNewDemo:async()=>{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}, enabled: config.transcriptionEnabled === true,liveEnabled:config.liveVoiceEnabled===true,
         onInputLevel:level=>{if(valid())view.setInputLevel(level);},
         onVoiceState:next=>{if(valid())view.setActivity(next);},
         onPreview:(text,setup)=>{if(valid())view.setResponse(text||'Listening…',{origin:setup?'Live voice setup':'Live transcript · provisional'});},

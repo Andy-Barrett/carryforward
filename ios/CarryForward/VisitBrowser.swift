@@ -12,6 +12,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     weak var presenter: UIViewController?
     private var started = false
     private let playbackSession = LocalPlaybackSession()
+    private let clipPlayback = NativeClipPlayback()
     private let speechSession = LocalSpeechSession()
     private var downloads: [ObjectIdentifier: URL] = [:]
     var route: String { policy?.origin.absoluteString ?? "No valid origin configured" }
@@ -40,12 +41,16 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.uiDelegate = self
         speechSession.webView = webView
         speechSession.policy = policy
-        playbackSession.onPlay = { [weak self] in self?.speechSession.stop() }
+        playbackSession.onPlay = { [weak self] in self?.speechSession.stop(); self?.clipPlayback.stop() }
+        clipPlayback.webView = webView; clipPlayback.policy = policy
+        clipPlayback.onPlay = { [weak self] in self?.speechSession.stop(); self?.playbackSession.deactivate() }
+        speechSession.onSpeak = { [weak self] in self?.clipPlayback.stop(); self?.playbackSession.deactivate() }
         playbackSession.webView = webView
         playbackSession.policy = policy
         playbackSession.onFailure = { [weak self] in self?.status = $0 }
         let controller = webView.configuration.userContentController
         controller.add(playbackSession, name: "carryForwardPlayback")
+        controller.add(clipPlayback, name: "carryForwardClipPlayback")
         controller.add(speechSession, name: "carryForwardSpeech")
         controller.addUserScript(WKUserScript(source: """
             (() => {
@@ -92,6 +97,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.pauseAllMediaPlayback()
         speechSession.stop()
         playbackSession.deactivate()
+        clipPlayback.stop()
         if wasCapturing { status = "Capture interrupted. Review local save status before recording again." }
     }
     private func show(_ message: String) {
@@ -261,6 +267,7 @@ private final class LocalPlaybackSession: NSObject, WKScriptMessageHandler {
 // action; speech events carry IDs/state, never evidence or provider credentials.
 @MainActor
 private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpeechSynthesizerDelegate {
+    var onSpeak: (() -> Void)?
     weak var webView: WKWebView?
     var policy: EndpointPolicy?
     private let synth = AVSpeechSynthesizer()
@@ -283,7 +290,7 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
         if action == "stop" { if currentID == id { stop() }; return }
         guard action == "speak", let text = body["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               text.count <= 8000, webView?.microphoneCaptureState == WKMediaCaptureState.none else { emit(id, "error"); return }
-        stop()
+        stop(); onSpeak?()
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
@@ -335,4 +342,75 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
         }
     }
 
+}
+
+// Plays only an explicitly selected, bounded local WAV. No network or file URL.
+@MainActor
+private final class NativeClipPlayback: NSObject, WKScriptMessageHandler, AVAudioPlayerDelegate {
+    weak var webView: WKWebView?
+    var policy: EndpointPolicy?
+    var onPlay: (() -> Void)?
+    private var player: AVAudioPlayer?
+    private var currentID: String?
+
+    override init() {
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(interrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(routeChanged(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
+    }
+    deinit { NotificationCenter.default.removeObserver(self) }
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "carryForwardClipPlayback", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, policy?.allows(url) == true,
+              let body = message.body as? [String: Any], let action = body["action"] as? String,
+              let id = body["id"] as? String, id.count <= 80,
+              id.range(of: "^[A-Za-z0-9-]+$", options: .regularExpression) != nil else { return }
+        if action == "stop" { if currentID == id { stop() }; return }
+        guard action == "play", let encoded = body["wavBase64"] as? String,
+              encoded.count <= 2_000_000, let bytes = Data(base64Encoded: encoded),
+              bytes.count >= 44, bytes.count <= 1_500_000,
+              bytes.prefix(4) == Data("RIFF".utf8), bytes[8..<12] == Data("WAVE".utf8) else { emit(id, "error", "This local audio copy could not be opened. The original stays saved."); return }
+        guard webView?.microphoneCaptureState == WKMediaCaptureState.none else { emit(id,"error","Stop recording before playing a clip."); return }
+        stop(); onPlay?()
+        do {
+            let output = AVAudioSession.sharedInstance()
+            try output.setCategory(.playback, mode: .spokenAudio)
+            try output.setActive(true)
+            let audio = try AVAudioPlayer(data: bytes, fileTypeHint: "wav")
+            guard audio.duration > 0, audio.duration <= 30.1 else { throw PlaybackError.invalidDuration }
+            currentID = id; player = audio; audio.delegate = self; audio.volume = 1
+            guard audio.prepareToPlay(), audio.play() else { throw PlaybackError.couldNotStart }
+            let route = output.currentRoute.outputs.first?.portType
+            let name = route == .builtInSpeaker ? "iPhone speaker" : route == .builtInReceiver ? "iPhone receiver" : "selected audio output"
+            emit(id,"playing",output.outputVolume == 0 ? "Playing, but media volume is zero." : "Playing through the \(name).")
+        } catch { stop(); try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation); emit(id,"error","Audio output did not start. The original recording is still saved.") }
+    }
+    func stop() {
+        guard let id = currentID else { return }
+        player?.stop(); player = nil; currentID = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        emit(id,"ready",nil)
+    }
+    private func emit(_ id: String, _ state: String, _ message: String?) {
+        var body=["id":id,"state":state];if let message { body["message"]=message }
+        guard let data=try? JSONSerialization.data(withJSONObject:body),let json=String(data:data,encoding:.utf8) else { return }
+        webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('carryforward-clip-playback',{detail: \(json)}));",completionHandler:nil)
+    }
+    private func finished(_ identity: ObjectIdentifier, success: Bool) {
+        guard let audio=player,ObjectIdentifier(audio)==identity,let id=currentID else { return }
+        stop();if !success { emit(id,"error","Playback stopped before the end. The original is still saved.") }
+    }
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        let identity=ObjectIdentifier(player);Task { @MainActor [weak self] in self?.finished(identity,success:flag) }
+    }
+    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        let identity=ObjectIdentifier(player);Task { @MainActor [weak self] in self?.finished(identity,success:false) }
+    }
+    @objc private nonisolated func interrupted(_ notification: Notification) {
+        if notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt == AVAudioSession.InterruptionType.began.rawValue { Task { @MainActor [weak self] in self?.stop() } }
+    }
+    @objc private nonisolated func routeChanged(_ notification: Notification) {
+        if notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { Task { @MainActor [weak self] in self?.stop() } }
+    }
+    enum PlaybackError: Error { case invalidDuration, couldNotStart }
 }

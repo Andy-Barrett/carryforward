@@ -45,8 +45,8 @@ export async function chooseCloudReview(root,{photos,enabled,unsent,prepareCopy}
   try{return await ui.result;}finally{for(const url of urls)URL.revokeObjectURL(url);}
 }
 export async function prepareCloudHandoff(root,{report,packet,unsent}){
-  const ui=sheet(root,'Prepare the handoff');
-  ui.form.append(node('p','Review these draft notes from your saved answers. This step prepares the report; technician confirmation and Operations acceptance come afterward.'));
+  const ui=sheet(root,'Review your visit update');
+  ui.form.append(node('p','Check your notes, name and follow-up owner. You’ll confirm the final update next.'));
   if(unsent)ui.form.append(node('p','An unsent message is still in the conversation and will not be included.'));
   const suggested=packet.turns.filter(t=>!t.supersededBy).map(t=>t.text).join('\n\n');
   const summary=field(ui.form,'Findings and work performed',report.summary||suggested.slice(0,4000),{area:true,max:4000});summary.required=true;
@@ -62,10 +62,10 @@ export async function prepareCloudHandoff(root,{report,packet,unsent}){
     const list=node('ul');
     for(const branch of unresolved)list.append(node('li',`${branch.question} — Owner: ${branch.owner||'Not assigned'}`));
     const label=node('label');label.append(assignOwners,document.createTextNode(' Assign every open check to the follow-up owner above'));
-    ui.form.append(list,label,node('p','Leave this unchecked to keep the individual owners. Assigning an owner preserves open outcomes and earlier history.'));
+    const details=node('details');details.append(node('summary','Current follow-up owners'),list);ui.form.append(details,label,node('p','Leave unchecked to keep the individual owners.'));
   }
   const status=node('p');status.setAttribute('role','status');ui.form.append(status);
-  const submit=node('button','Review this handoff');submit.type='submit';ui.form.append(submit,ui.cancel);
+  const submit=node('button','Continue to final update');submit.type='submit';ui.form.append(submit,ui.cancel);
   ui.form.onsubmit=event=>{event.preventDefault();if(!summary.value.trim()||!technician.value.trim())return;
     if(assignOwners.checked&&!owner.value.trim()){status.textContent='Name the person or team who will own these checks.';owner.focus();return;}
     ui.finish({summary:summary.value.trim(),technician:technician.value.trim(),followupOwner:owner.value.trim(),promises:promises.value.trim(),assignOpenOwners:assignOwners.checked,interviewRevision:packet.revision,recordedAt:new Date().toISOString()});};

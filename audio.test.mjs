@@ -55,3 +55,11 @@ test('original audio may retain unsupported codecs but cannot become an HTML/hea
  assert.throws(()=>validateAudioOriginal('audio/wav\r\nInjected: bad',1000),/audio file/);
  assert.throws(()=>validateAudioOriginal('audio/wav',5000001),/audio file/);
 });
+
+test('local signal diagnostics distinguish silence from audible PCM without discarding originals',async()=>{
+ const {wavSignal}=await import('./public/audio.js');
+ assert.equal(wavSignal(wav()).veryQuiet,true);
+ const samples=Float32Array.from({length:16000},(_,i)=>0.2*Math.sin(i*2*Math.PI*440/16000));
+ const signal=wavSignal(encodeMonoWav([samples],16000));assert.equal(signal.veryQuiet,false);assert.ok(signal.rms>0.1);assert.ok(signal.peak>0.19);
+ assert.throws(()=>wavSignal(new Uint8Array(20)),/RIFF/);
+});

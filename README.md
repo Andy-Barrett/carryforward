@@ -62,7 +62,7 @@ npm test
 
 ## What works today
 
-- A cloud conversation as the main workspace, with on-demand job sources, PDF-page inspection and a hidden type fallback. See the [cloud interface](docs/CLOUD_INTERFACE.md) for command examples and current document/voice limits.
+- A four-stage visit screen: work order, on site, report back and final update. Text stays available beside the microphone, photos are optional, and source details stay out of the way until needed. See the [cloud interface](docs/CLOUD_INTERFACE.md) for command examples and current document/voice limits.
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
@@ -75,6 +75,8 @@ npm test
 - Responsive layouts checked at desktop and phone widths.
 
 A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
+
+The November 2 owner attempt exposed confusing controls, an unavailable photo and silent playback. A recording was retained locally with no reviewed words; that was not a submitted report. The simplified screen now distinguishes saved notes, sent visit answers and confirmation. Native build 6 adds explicit local WAV playback and a quiet-recording diagnostic; physical sound and the revised full workflow still need an owner check. See [the revised flow](docs/SIMPLE_VISIT.md).
 
 ## Where we’re taking it
 

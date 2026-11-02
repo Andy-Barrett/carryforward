@@ -183,6 +183,20 @@ export function routeJobCommand(input, currentContext) {
     return present(resource, context, `Attached approved warning — ${resource.title}, revision ${resource.revision}:\n“${resource.warning.text}”`);
   }
 
+  const accessQuestion=/\b(?:gate|entry|access)\b/u.test(command)&&/\b(?:what|whats|where|wheres|need|tell|give|remind)\b/u.test(command);
+  const question = accessQuestion || /^(?:what|whats|where|wheres|when|why|how|hows|is|are|can|could|do|does|did|who|whos|any|tell me about)\b/u.test(command) || /^(?:customer )?(?:gate|entry|access)(?: code)?$/u.test(command);
+  if(question) {
+    const sections = context.briefing.briefing || {};
+    let notes=null;
+    if(/\b(?:gate|entry|access)\b/u.test(command)) notes=sections.access||[];
+    else if(/\b(?:customer|contact|call|text|preferences)\b/u.test(command)) notes=sections.customer||[];
+    else if(/\b(?:safety|safe|warning|procedure|disconnect|shut|isolate|ladder)\b/u.test(command)) return result('unavailable','An applicable approved safety or equipment procedure is not supplied here. Ask Operations for the correct source before using a procedure.',context);
+    else if(/\b(?:previous|history|last time|earlier)\b/u.test(command)) return result('answer',(context.briefing.history||[]).map(item=>`${item.date}: ${item.text}`).join('\n')||'No previous visit notes are supplied.',context,{sourceIds:(context.briefing.history||[]).map(item=>item.id)});
+    else if(/\b(?:work|scope|assigned|visit|job|problem|here for|check|going|looking|reason)\b/u.test(command)) return result('answer',[context.briefing.reportedIssue,...(context.briefing.requestedWork||[])].filter(Boolean).join('\n'),context,{sourceIds:[context.jobId]});
+    if(notes) return notes.length?result('answer',notes.map(note=>note.text).join('\n'),context,{sourceIds:notes.map(note=>note.source.id),citations:notes.map(note=>note.source)}):result('unavailable','Operations has not supplied that access or customer detail for this job. Keep it unconfirmed and ask the office.',context);
+    return result('unavailable','That answer is not supplied in this work order. I won’t treat your question as a field report. Ask Operations for the missing detail, or add what you observed onsite.',context);
+  }
+
   const zoom = command.match(/^zoom(?: (?:it|that|this))? (in|out)(?: on (?:(?:this|that|the) )?(?:image|photo|picture|document|page)| on (?:this|that))?$/u);
   if (zoom) {
     const resource = context.resources.find(item => item.id === context.lastResourceId);

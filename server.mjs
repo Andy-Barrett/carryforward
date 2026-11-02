@@ -22,6 +22,7 @@ const guardToken = enabled ? (await readFile(process.env.CARRYFORWARD_GUARD_TOKE
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/visit-flow.js": ["visit-flow.js", "text/javascript"],
   "/live-protocol.js": ["live-protocol.js", "text/javascript"],
   "/live-voice.js": ["live-voice.js", "text/javascript"],
   "/pcm-worklet.js": ["pcm-worklet.js", "text/javascript"],

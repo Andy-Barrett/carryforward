@@ -58,8 +58,8 @@ export const demoOrder = {
     }],
     access: [{
       id: 'demo-gate', kind: 'reported',
-      text: 'Closed driveway gate reported. Entry arrangements and permission are unconfirmed; confirm them with the office.',
-      source: demoBriefingSource(2),
+      text: 'Fictional driveway gate code: 2468#. Operations supplied this code for the demo visit. Check the gate and site conditions on arrival.',
+      source: {id:'DEMO-ACCESS-017',title:'Fictional Operations access note',revision:'DEMO-2',page:1},
     }],
     safety: [{
       id: 'demo-safety-source-needed', kind: 'reference',

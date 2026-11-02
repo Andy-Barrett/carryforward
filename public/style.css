@@ -559,3 +559,15 @@ input[type="file"] {
 
 .photo-card img.review-image { object-fit: contain; aspect-ratio: auto; max-height: 360px; height: auto; }
 .photo-card strong, .photo-card p { overflow-wrap: anywhere; }
+body.visit-review .companion-header { display: none; }
+.final-report { max-width: 760px; margin: 12px auto 30px; padding: 18px; }
+.final-report h1 { font-size: 28px; margin: 10px 0; }
+.final-report h2 { font-size: 20px; margin-top: 24px; }
+.final-report h3 { font-size: 17px; }
+.final-report p { font-size: 16px; line-height: 1.55; }
+.final-report .final-notes { white-space: pre-wrap; }
+.final-report button { min-height: 48px; font-size: 16px; margin: 6px 8px 6px 0; }
+.final-report details { font-size: 14px; margin: 12px 0; }
+.final-report summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.final-report .source { border-radius: 10px; background: #fff; padding: 14px; }
+.final-export { margin-top: 24px; }

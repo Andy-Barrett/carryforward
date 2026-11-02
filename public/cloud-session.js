@@ -10,12 +10,12 @@ import { createJobContext, routeJobCommand } from './job-context.js';
 import { resourcesForJob } from './cloud-resources.js';
 import { loadInterview } from './interview.js';
 import { reduceInvestigation, interviewHandoff } from './investigation.js';
-import { appendEvent, listPhotosByJob, listAudioByJob, savePhotoWithEvent } from './jobstore.js';
+import { appendEvent, listPhotosByJob, listAudioByJob, savePhotoWithEvent, listConversation, saveConversation, listEvents } from './jobstore.js';
 import { newEventId, hashBytes } from './evidence.js';
 import { mountVoice } from './voice.js';
 
 // This surface navigates admitted sources and saves ordinary interview events.
-// Source lookup is deterministic; it is never represented as model reasoning.
+// Spoken questions use guarded Meta reasoning; explicit source controls remain deterministic.
 export async function mountCloudSession(root, {
   db, order: suppliedOrder, onNavigate, onSaved, onEvidenceSaved,
   onPhotoFiles, onPrepareHandoff, onGetReport, onGetPhotos, onNewVoiceDemo,
@@ -272,6 +272,14 @@ export async function mountCloudSession(root, {
     }
     // The assignment brief is available without loading any saved media.
     if (routeJobCommand(text,context).kind === 'briefing') { view.openBrief(); return {handled:true}; }
+    if(config.metaEnabled && !/^(?:show|open|zoom|next|previous|back|replay)\b/i.test(text.trim())){
+      const history=(await listConversation(db,jobId)).slice(-12);
+      const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
+      const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony},{timeoutMs:130000});requireCurrent();
+      if(answer.intent==='report')return false;
+      await saveConversation(db,{id:newEventId(),jobId,at:new Date().toISOString(),question:text,reply:answer.reply,intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
+      await drawConversation();return {handled:true,response:answer.reply,origin:'Meta · work order and field context',sourceIds:answer.sourceIds,speak:true};
+    }
     const result = routeJobCommand(text, await refreshContext());
     requireCurrent();
     context = result.context;
@@ -336,20 +344,19 @@ export async function mountCloudSession(root, {
       else if(intent==='onsite'){view.changePhase('onsite');reply='You’re onsite. What are you finding?';}
       else if(intent==='report'){view.changePhase('report');reply='Go ahead. What did you do, and what still needs attention?';}
       else {
-        const lookup=routeJobCommand(text,await refreshContext());requireCurrent();
-        if(lookup.kind==='briefing'){view.openBrief();reply=buildVisitBrief(order).spoken;}
-        else if(lookup.kind!=='not_command'&&intent!=='correction'){
-          context=lookup.context;rememberFocus();reply=lookup.message;
-          if(lookup.kind==='present')view.showEvidence(evidence(lookup.resource));
-          if(lookup.kind==='navigate'&&!/^zoom_/.test(lookup.action||''))reply='I can brief you, answer from this work order, record findings, or give you the final update.';
-        }else{
+        const history=(await listConversation(db,jobId)).slice(-12);
+        const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
+        const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony},{timeoutMs:130000});
+        requireCurrent();reply=answer.reply;origin='Meta · work order and field context';
+        if(answer.intent==='report'){
           const prior=intent==='correction'?Object.values(state.sources).filter(s=>s.kind==='testimony'&&!s.supersededBy).at(-1):null;
           const result=await saveAnswer(text,{fromHold:true,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
             audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
-          requireCurrent();reply=result.response;origin=result.origin;
+          requireCurrent();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;origin=result.origin;
         }
+        await saveConversation(db,{id:'conversation-'+clip.id,jobId,at:new Date().toISOString(),question:text,reply:reply.slice(0,2000),intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
       }
-      view.setResponse(reply,{origin});await view.refresh();requireCurrent();
+      view.setResponse(reply,{origin});await drawConversation();await view.refresh();requireCurrent();
       conversationBusy=false;if(document.visibilityState==='hidden'){view.setActivity('ready');return;}view.setActivity('speaking');
       speak(reply,{onState:next=>{if(valid())view.setActivity(next);},onError:error=>{if(valid()){view.setActivity('ready');view.setResponse(reply+' '+error.message,{origin});}}});
     }finally{conversationBusy=false;}
@@ -392,6 +399,24 @@ export async function mountCloudSession(root, {
   const summary = document.createElement('summary'); summary.textContent = 'Saved voice notes';
   const voiceRoot = document.createElement('div');
   voicePanel.append(summary, voiceRoot); view.extraTools.append(voicePanel);
+  const conversationLog=document.createElement('details');
+  conversationLog.append(document.createElement('summary'),document.createElement('div'));
+  conversationLog.firstChild.textContent='Questions and replies';view.extraTools.append(conversationLog);
+  async function drawConversation({restore=false}={}){
+    const rows=await listConversation(db,jobId);if(!valid())return;
+    if(restore&&rows.length)view.setResponse(rows.at(-1).reply,{origin:'Saved CarryForward reply',sourceIds:rows.at(-1).sourceIds});
+    const content=conversationLog.lastChild;content.replaceChildren();
+    for(const row of rows){const card=document.createElement('article');card.className='source';
+      const question=document.createElement('p');question.textContent='You: '+row.question;
+      const reply=document.createElement('p');reply.textContent='CarryForward: '+row.reply;
+      const source=document.createElement('small');source.textContent=(row.sourceIds||[]).join(' · ');card.append(question,reply,source);content.append(card);}
+  }
+  await drawConversation({restore:true});
+  const exportConversation=document.createElement('button');exportConversation.type='button';exportConversation.textContent='Save conversation review';
+  exportConversation.onclick=async()=>{try{requireIdle();const clips=await listAudioByJob(db,jobId);
+    const packet={version:'carryforward.conversation-review.v1',exportedAt:new Date().toISOString(),order,conversation:await listConversation(db,jobId),events:await listEvents(db,jobId),voiceTranscripts:clips.map(c=>({id:c.id,name:c.name,transcription:c.transcription})),note:'Text only. Earlier source-lookup replies were not saved. Raw transcripts are machine text; questions are not reports.'};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(packet,null,2)],{type:'application/json'})),anchor=document.createElement('a');anchor.href=url;anchor.download=jobId+'-conversation-review.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(error){view.setResponse(error.message);}};view.extraTools.append(exportConversation);
   const newVisit=document.createElement('button');newVisit.type='button';newVisit.textContent='New fictional work order';newVisit.onclick=async()=>{try{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}catch(error){view.setResponse(error.message);}};view.extraTools.append(newVisit);
   if (restored) view.setDraft?.(draft, { audio: draftAudio, focus: false });
 

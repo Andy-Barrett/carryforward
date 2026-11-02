@@ -116,3 +116,14 @@ The subsequent web change removes an await on the stale initial AudioContext res
 Native build 9 compiles for signed physical iOS and unsigned Simulator, retaining automatic authentication and the same data store. The contact header lists the number as plain text beside Call and Text, with a separate Maps address. Link policy checks reject foreign destinations, invalid numbers and SMS bodies/queries. No call or text was sent during verification. Mobile/desktop browser views have no horizontal overflow; the bottom test note is absent and supporting information stays under Details. All 125 Node checks pass, alongside Mac native policy checks; the current source's physical first-hold behavior remains pending.
 
 There have now been three actual provider calls in this increment: the generated-fictional ASR/Spark pair and the owner’s fictional gate-question ASR. The unchanged aggregate ledger is 93 conservative reservations / $5.739667 of $10. No new report was confirmed, delivered or accepted in this replacement.
+
+
+## November 2 answer quality and speech interruption follow-up
+
+The owner reported poor answers, intermittent spoken replies and nonworking contact links after several holds. Inspection observed a generic unavailable reply to the inverter-manufacturer question and a customer-summary question stored as unreviewed field testimony. Exact older source-lookup answers were not durably logged, so the full prior spoken exchange cannot be reconstructed from transcripts alone.
+
+The revised answer route and richer fictional work order are documented in [conversation context](CONVERSATION_CONTEXT.md). Eight live guarded answer cases, one shortened-report retest, one in-app manufacturer answer and one actual evidence review exercised the change. The evidence review kept missing output and pending warranty work open with Operations as warranty owner. The in-app question left zero report testimony turns, and its question/reply survived closing and reopening the browser.
+
+Build 10 passed signed-device and unsigned-Simulator builds, installed on the same bundle and reopened through the saved connection without a code. The physical phone's left swipe opened the saved work-order list. The phone view then became black; control was released and the owner was asked to unlock CarryForward. Right-swipe details, the revised contact bridge, and repeated complete audible replies at the faster rate remain pending physical checks. The latest richer fixture is used for new visits; old visits and clips are retained. No microphone was started remotely, and no call, text, new Operations delivery or production change occurred. The final web shell is served by the private server; normal close/reopen activation is required if an older shell is still active.
+
+Local automated checks: 131 passed; native authentication/contact boundary checks passed. These do not establish physical audio acceptance.

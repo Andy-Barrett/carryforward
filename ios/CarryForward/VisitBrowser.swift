@@ -4,7 +4,7 @@ import UIKit
 import AVFAudio
 
 @MainActor
-final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
     @Published private(set) var status = "Not connected"
     @Published private(set) var configurationError: String?
     @Published private(set) var connectionError: String?
@@ -55,8 +55,15 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         controller.add(playbackSession, name: "carryForwardPlayback")
         controller.add(clipPlayback, name: "carryForwardClipPlayback")
         controller.add(speechSession, name: "carryForwardSpeech")
+        controller.add(self, name: "carryForwardContact")
         controller.addUserScript(WKUserScript(source: """
             (() => {
+              document.addEventListener('click', event => {
+                const link=event.target.closest?.('a[href]');
+                if(!event.isTrusted || !link || !/^(tel:|sms:|https:\\/\\/maps\\.apple\\.com\\/)/.test(link.href))return;
+                event.preventDefault();
+                window.webkit.messageHandlers.carryForwardContact.postMessage(link.href);
+              });
               const send = value => window.webkit.messageHandlers.carryForwardPlayback.postMessage(value);
               document.addEventListener('play', event => {
                 if (event.target instanceof HTMLMediaElement) send('play');
@@ -72,7 +79,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         #if DEBUG
         webView.isInspectable = true
         #endif
-        webView.allowsBackForwardNavigationGestures = true
+        webView.allowsBackForwardNavigationGestures = false
     }
 
     func startOnce() {
@@ -147,6 +154,20 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     private func trusted(_ frame: WKFrameInfo) -> Bool {
         guard let url = frame.request.url, let policy else { return false }
         return policy.allows(url)
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "carryForwardContact", message.frameInfo.isMainFrame,
+              trusted(message.frameInfo), let value = message.body as? String,
+              let url = URL(string: value), policy?.allowsContactAction(url) == true else { return }
+        guard webView.microphoneCaptureState == .none, webView.cameraCaptureState == .none else {
+            show("Finish recording before opening a contact action."); return
+        }
+        speechSession.stop()
+        UIApplication.shared.open(url, options: [:]) { [weak self] opened in
+            guard !opened else { return }
+            Task { @MainActor [weak self] in self?.show("This device could not open that contact action.") }
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -322,7 +343,9 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
     override init() {
         super.init()
         synth.delegate = self
-        NotificationCenter.default.addObserver(self, selector: #selector(audioInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+        // WebKit owns capture. Let iOS own a separate speech session, so delayed
+        // recording-session notifications cannot cancel the reply.
+        synth.usesApplicationAudioSession = false
         NotificationCenter.default.addObserver(self, selector: #selector(routeChanged(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
     }
     deinit { NotificationCenter.default.removeObserver(self) }
@@ -337,22 +360,18 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
               text.count <= 8000, webView?.microphoneCaptureState == WKMediaCaptureState.none else { emit(id, "error"); return }
         stop(); onSpeak?()
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true)
             let utterance = AVSpeechUtterance(string: text)
             utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-            utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+            utterance.rate = 0.60
             utterance.volume = 1
             current = utterance; currentID = id
             synth.speak(utterance)
-        } catch { emit(id, "error") }
+        }
     }
     func stop() {
         guard let id = currentID else { return }
         current = nil; currentID = nil
         synth.stopSpeaking(at: .immediate)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         emit(id, "ready")
     }
     private func emit(_ id: String, _ state: String) {
@@ -362,7 +381,10 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
     }
     private func speechChanged(_ identity: ObjectIdentifier, state: String) {
         guard let utterance = current, ObjectIdentifier(utterance) == identity, let id = currentID else { return }
-        if state == "speaking" { emit(id, state) } else { stop() }
+        if state == "speaking" { emit(id, state) } else {
+            current = nil; currentID = nil
+            emit(id, state)
+        }
     }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
         let identity = ObjectIdentifier(utterance)
@@ -374,12 +396,7 @@ private final class LocalSpeechSession: NSObject, WKScriptMessageHandler, AVSpee
     }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         let identity = ObjectIdentifier(utterance)
-        Task { @MainActor [weak self] in self?.speechChanged(identity, state: "ready") }
-    }
-    @objc private nonisolated func audioInterrupted(_ notification: Notification) {
-        if notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt == AVAudioSession.InterruptionType.began.rawValue {
-            Task { @MainActor [weak self] in self?.stop() }
-        }
+        Task { @MainActor [weak self] in self?.speechChanged(identity, state: "error") }
     }
     @objc private nonisolated func routeChanged(_ notification: Notification) {
         if notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue {

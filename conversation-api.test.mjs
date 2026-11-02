@@ -31,3 +31,17 @@ test('more than five preserved recordings and unreviewed release provenance surv
   assert.throws(()=>store.admitAudio(jobId,Array.from({length:AUDIO_LIMITS.clipsPerJob+1},(_,i)=>({...clips[0],id:'too-many-'+i}))),/limit/);
  }finally{store.close();}
 });
+
+test('answer route refuses foreign origins and non-demo jobs before inference',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'carryforward-answer-'));await writeFile(join(dir,'token'),'unit-fixture-not-a-provider-token');
+ const child=spawn(process.execPath,['server.mjs'],{cwd:new URL('.',import.meta.url),env:{...process.env,PORT:'0',CARRYFORWARD_PHONE_HTTPS:'0',CARRYFORWARD_META_ENABLED:'1',CARRYFORWARD_GUARD_TOKEN_FILE:join(dir,'token'),CARRYFORWARD_OPERATIONS_DB:join(dir,'store.sqlite')},stdio:['ignore','pipe','pipe']});
+ try{
+  const base=await new Promise((resolve,reject)=>{let text='';const timer=setTimeout(()=>reject(Error('Server timeout')),5000);child.once('exit',()=>reject(Error('Server exited')));child.stdout.on('data',data=>{text+=data;const match=text.match(/http:\/\/127\.0\.0\.1:\d+/);if(match){clearTimeout(timer);resolve(match[0]);}});});
+  const response=await fetch(base),cookie=response.headers.get('set-cookie').split(';')[0],headers={Origin:base,Cookie:cookie,'X-CarryForward-Intent':'review','Content-Type':'application/json'};
+  const post=(body,extra={})=>fetch(base+'/api/conversation/answer',{method:'POST',headers:{...headers,...extra},body:JSON.stringify(body)});
+  assert.equal((await post({order:demoOrder,text:'Gate code?'},{Origin:'https://foreign.example'})).status,403);
+  assert.equal((await post({order:demoOrder,text:'Gate code?'},{Cookie:''})).status,403);
+  assert.match((await (await post({order:{...demoOrder,id:'CUSTOMER-REAL'},text:'Gate code?'})).json()).error,/fictional/);
+  assert.match((await (await post({order:demoOrder,text:'What is the model?',history:[{jobId:'OTHER',question:'Test',reply:'Other customer data'}]})).json()).error,/wrong-job/);
+ }finally{child.kill('SIGTERM');await once(child,'exit');await rm(dir,{recursive:true,force:true});}
+});

@@ -63,6 +63,7 @@ npm test
 ## What works today
 
 - A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Text, photos, sources, saved recordings and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
+- Guarded Meta answers with the full work order, recent job conversation, public Perihelion background and general safety references. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.

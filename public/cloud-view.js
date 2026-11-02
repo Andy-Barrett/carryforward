@@ -187,7 +187,7 @@ export function mountCloud(root, {
     const address=contact?.address||order.property;
     if(address){const location=el('a','cf-contact-link',address);location.href='https://maps.apple.com/?q='+encodeURIComponent(address);location.setAttribute('aria-label',`Open address in Maps: ${address}`);customer.append(location);}
     rail.replaceChildren(customer);
-    toolsContent.append(jobButton,sourcesButton,handoffButton,typeButton,composer,addButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
+    toolsContent.append(jobButton,sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
     handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
     composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
     responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
@@ -357,8 +357,8 @@ export function mountCloud(root, {
     if (!valid()) return;
     historyList.replaceChildren();
     const turns = Object.values(state?.sources || {}).filter(s => s.kind === 'testimony');
-    historySummary.textContent = turns.length ? `Saved conversation · ${turns.length} ${turns.length === 1 ? 'answer' : 'answers'}` : 'Saved conversation';
-    savedState.textContent=turns.length?`${turns.length} ${turns.length===1?'answer saved':'answers saved'} to this visit · Operations acceptance is separate.`:clipCount?`${clipCount} voice ${clipCount===1?'note saved':'notes saved'} on this phone. No report answer has been sent. Review or type your words before Send.`:'No report answers sent yet.';
+    historySummary.textContent = voiceOnly ? `Reported work${turns.length?' · '+turns.length:''}` : turns.length ? `Saved conversation · ${turns.length} ${turns.length === 1 ? 'answer' : 'answers'}` : 'Saved conversation';
+    savedState.textContent=voiceOnly?(turns.length?`${turns.length} reported ${turns.length===1?'update':'updates'} saved.`:clipCount?`${clipCount} voice ${clipCount===1?'note':'notes'} saved. Questions and replies are listed separately.`:'No field report yet.') : turns.length?`${turns.length} ${turns.length===1?'answer saved':'answers saved'} to this visit · Operations acceptance is separate.`:clipCount?`${clipCount} voice ${clipCount===1?'note saved':'notes saved'} on this phone. No report answer has been sent. Review or type your words before Send.`:'No report answers sent yet.';
     if (!turns.length) {
       historyList.append(el('li', 'cf-history-empty', 'Saved answers will appear here. A question about a source is kept separate from your field testimony.'));
       return;

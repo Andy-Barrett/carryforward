@@ -1,6 +1,7 @@
+import {detailedDemoOrder} from "./demo-work-orders.js";
+import {bindVisitSwipes} from "./visit-navigation.js";
 import {observationInputParts,deviceOffsetAt,collectObservationTime} from './observation-time.js';
 import {
-  demoOrder,
   validateOrder,
   reviewReport,
   confirmReport,
@@ -37,7 +38,7 @@ const esc = (s) =>
         c
       ],
   );
-let order = validateOrder(demoOrder),
+let order = validateOrder(detailedDemoOrder),
   report = {
     technician: "",
     summary: "",
@@ -382,7 +383,7 @@ async function exportBundle() {
 }
 async function switchJob(jobId) {
   if (photoOperation) { notify("Wait for the current photo save before switching jobs."); return; }
-  if (jobId === order.id) return;
+  if (jobId === order.id) {navigateStep("companion");return;}
   collect();
   save();
   await persistSession();
@@ -401,7 +402,7 @@ async function switchJob(jobId) {
     photoMsg = "";
     await refreshJobData();
     save();
-    notify(`Switched to ${order.id}. Each job keeps its own photos.`);
+    step="companion"; notify("");
   } catch (err) {
     notify(err?.message || String(err));
   }
@@ -411,12 +412,12 @@ async function newVoiceDemo() {
   if(!db||photoOperation)throw Error('Wait for local storage and any photo save before starting another demo.');
   if(cloudSession?.canNavigate&&!cloudSession.canNavigate())throw Error('Finish capture or saving before starting another demo.');
   collect();if(!save()||!await persistSession())throw Error('The current visit could not be safely saved.');
-  const next=validateOrder({...structuredClone(demoOrder),id:`DEMO-VOICE-${crypto.randomUUID()}`});
+  const next=validateOrder({...structuredClone(detailedDemoOrder),id:`DEMO-VOICE-${crypto.randomUUID()}`});
   const nextReport={technician:'',summary:'',promises:'',followupOwner:'',entries:{}};
   await jobStore.putSession(db,{jobId:next.id,order:next,report:nextReport,createdAt:new Date().toISOString(),confirmation:null});
   order=next;report=nextReport;review=null;sessionConfirmation=null;photoMsg='';
   await refreshJobData();if(!save())throw Error('The new demo is stored, but the active-job pointer could not be saved.');
-  notify('');render();
+  step='companion';notify('');render();
 }
 function collect() {
   const form = $("#field-form");
@@ -490,22 +491,16 @@ function jobListHtml() {
   if (!storeReady && !storeError) return "<p>Loading saved jobs…</p>";
   if (storeError) return `<p class="warn">${esc(storeError)}</p>`;
   if (!jobSessions.length) return "<p>No other saved jobs on this device.</p>";
-  return `<ul class="jobs">${jobSessions
-    .map(
-      (s) =>
-        `<li><strong>${esc(s.jobId)}</strong> · ${esc(s.order?.customer || "Unsaved draft")}${
-          s.jobId === order.id
-            ? " (current)"
-            : ` <button type="button" data-switch="${esc(s.jobId)}">Switch</button>`
-        }</li>`,
-    )
-    .join("")}</ul>`;
+  return `<ul class="jobs">${[...jobSessions].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(s=>
+    `<li><div><strong>${esc(s.order?.customer||'Saved work order')}</strong><p>${esc(s.order?.customerContact?.address||s.order?.property||'')}</p><small>${s.jobId===order.id?'Current visit':esc(s.order?.reportedIssue||'Saved visit')}</small></div><button type="button" data-switch="${esc(s.jobId)}">Open</button></li>`
+  ).join('')}</ul>`;
 }
 function render() {
   if (cloudSession?.canNavigate && !cloudSession.canNavigate()) { notify("Finish the recording or current save before changing views."); return; }
   cloudSession?.(); cloudSession = null;
   document.body.classList.toggle("cloud-workspace", step === "companion");
   document.body.classList.toggle("visit-review",step === "review");
+  document.body.classList.toggle("visit-pages",["jobs","briefing"].includes(step));
   const generation = ++renderGeneration;
   document.querySelectorAll("[data-step]").forEach((b) => {
     b.classList.toggle("active", b.dataset.step === step);
@@ -539,9 +534,15 @@ function render() {
       },
     }).then(cleanup => { if(current()) cloudSession = cleanup; else cleanup?.(); })
       .catch(err => { if(current()) root.textContent = `Conversation could not open: ${err.message}`; });
+  } else if (step === "jobs") {
+    $("#view").innerHTML=`<section class="panel"><h2>Work orders</h2><div class="interview-actions"><button id="back-conversation">Back to conversation</button><button id="fresh-work-order">New test work order</button></div>${jobListHtml()}</section>`;
+    $("#back-conversation").onclick=()=>navigateStep('companion');
+    $("#fresh-work-order").onclick=()=>newVoiceDemo().catch(error=>notify(error.message));
+    document.querySelectorAll('[data-switch]').forEach(b=>b.onclick=()=>switchJob(b.dataset.switch));
   } else if (step === "briefing") {
     $("#view").innerHTML =
-      `${heading}<div class="workspace"><section class="panel"><h2>The reported problem</h2><p>${esc(order.reportedIssue)}</p><h4>Assigned scope</h4><ul>${order.requestedWork.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><h4>Source history</h4>${order.history.map((h) => `<article class="source"><div>${esc(h.id)} / ${esc(h.date)}</div><blockquote>${esc(h.text)}</blockquote></article>`).join("")}<button id="begin" class="primary">Start visit interview →</button></section><aside><p class="eyebrow">COLLECT BEFORE YOU LEAVE</p><h2>Make the next step clear.</h2>${order.checks.map((c) => `<article class="source"><h4>${esc(c.label)}</h4><p>${esc(c.question)}</p></article>`).join("")}<h4>Jobs on this device</h4>${jobListHtml()}<label class="import">Import an exported work order (JSON)<input id="import" type="file" accept="application/json,.json"></label><p>Use the sample format. No live Operations access. Use synthetic records in this prototype. Importing keeps your other saved jobs.</p></aside></div>`;
+      `${heading}<div class="workspace"><section class="panel"><h2>The reported problem</h2><p>${esc(order.reportedIssue)}</p><h4>Assigned scope</h4><ul>${order.requestedWork.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>${Object.entries(order.briefing||{}).map(([section,notes])=>`<h4>${esc(section)}</h4>${notes.map(note=>`<article class="source"><p>${esc(note.text)}</p><small>${esc(note.source.title)} · ${esc(note.source.revision)}</small></article>`).join('')}`).join('')}<h4>Source history</h4>${order.history.map((h) => `<article class="source"><div>${esc(h.id)} / ${esc(h.date)}</div><blockquote>${esc(h.text)}</blockquote></article>`).join("")}<button id="begin" class="primary">Start visit interview →</button></section><aside><p class="eyebrow">COLLECT BEFORE YOU LEAVE</p><h2>Make the next step clear.</h2>${order.checks.map((c) => `<article class="source"><h4>${esc(c.label)}</h4><p>${esc(c.question)}</p></article>`).join("")}<button id="open-jobs">Work order list</button><label class="import">Import an exported work order (JSON)<input id="import" type="file" accept="application/json,.json"></label><p>Use the sample format. No live Operations access. Use synthetic records in this prototype. Importing keeps your other saved jobs.</p></aside></div>`;
+    $("#open-jobs").onclick=()=>navigateStep("jobs");
     $("#begin").onclick = () => {
       navigateStep("companion");
     };
@@ -811,7 +812,7 @@ document.querySelectorAll("[data-step]").forEach(
 $("#sample").onclick = () =>
   download(
     "carryforward-work-order.sample.json",
-    JSON.stringify(demoOrder, null, 2),
+    JSON.stringify(detailedDemoOrder, null, 2),
   );
 async function initStore() {
   try {
@@ -858,3 +859,5 @@ mountOperations($("#operations-root"), {
     notify(`Assignment ${assigned.externalId} admitted by the local Operations API.`);
   },
 });
+
+bindVisitSwipes(document.querySelector('#view'),{getStep:()=>step,canNavigate:()=>!photoOperation&&(!cloudSession?.canNavigate||cloudSession.canNavigate()),navigate:navigateStep});

@@ -14,6 +14,8 @@ These do not establish conversational reasoning, physical-device support, live i
 
 ## Current checkpoint
 
+November 2 follow-up: [conversation context](CONVERSATION_CONTEXT.md) replaces narrow spoken question lookup with guarded Meta answers using the full job, recent exchanges, public company context and general safety references. Build 10 separates speech synthesis from the recording session and increases speaking rate. Physical repeated audible replies remain an acceptance item.
+
 The local end-to-end path is implemented and exercised. Andrew’s October 30 cloud-interface direction is now the default local workspace, with a source-tagged pre-visit brief, job-scoped source recall, PDF inspection, supplied clips and the existing reviewed-voice/text path. General document ingestion/retrieval and continuous voice remain unbuilt; see [cloud interface](CLOUD_INTERFACE.md). See [readiness evidence](READINESS_REVIEW.md) for what is verified and what remains. The slices below retain their original acceptance intent; a local prototype is not a completed field deployment.
 
 ## Slice 1 — durable job evidence

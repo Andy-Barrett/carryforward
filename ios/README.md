@@ -119,3 +119,8 @@ Build 8 reuses the phone’s existing granted microphone permission for only tha
 ## Build 9 — customer contact actions
 
 The number is plain text with separate Call and Text links; the address opens Maps. Only an explicit main-frame link activation may open a validated tel/SMS number or bounded Apple Maps query. SMS links cannot include a message body or query, and the app does not send or dial automatically. Exact-origin navigation and credential restrictions are unchanged. Signed-device/unsigned-Simulator builds and Mac policy checks pass. The owner confirmed no recurring microphone popup and one spoken gate-code reply in build 8; reliable first-hold setup and a complete new report remain separate acceptance items.
+
+
+## Build 10 — speech session and contact opening
+
+Spoken replies use an iOS-managed synthesis session, separate from WebKit recording and local clip playback, with native rate 0.60. Unexpected cancellation is surfaced to the page instead of silently looking like completion. Actual trusted contact taps cross a fixed-origin bridge to validated Phone, Messages or Maps destinations; no text body, send action or credential transfer is permitted. WebKit history gestures are disabled in favor of the app's work-order swipes. Both build targets compile and the signed app is installed. Physical repeated audible replies and external contact-action acceptance must be recorded separately. See [conversation context](../docs/CONVERSATION_CONTEXT.md).

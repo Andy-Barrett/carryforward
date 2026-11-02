@@ -20,7 +20,7 @@ import {AUDIO_LIMITS} from './audio.js';
 // so the failure UI can be exercised without real quota pressure.
 
 export const DB_NAME = "carryforward.jobs.v1";
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 export const __faults = { nextWriteFails: false };
 
@@ -63,6 +63,10 @@ export function openDb() {
     }
     req.onupgradeneeded = () => {
       const db = req.result;
+      if (!db.objectStoreNames.contains("conversation")) {
+        const store=db.createObjectStore("conversation",{keyPath:"id"});
+        store.createIndex("by-job","jobId",{unique:false});
+      }
       if (!db.objectStoreNames.contains("interviewDrafts")) db.createObjectStore("interviewDrafts", {keyPath:"jobId"});
       if (!db.objectStoreNames.contains("sessions")) {
         db.createObjectStore("sessions", { keyPath: "jobId" });
@@ -267,4 +271,24 @@ export async function getInterviewDraft(db,jobId){
 export async function saveInterviewDraft(db,record){
  validateInterviewDraft(record,record.jobId);maybeFault('unsent draft save');
  const tx=db.transaction('interviewDrafts','readwrite');tx.objectStore('interviewDrafts').put({...record,updatedAt:new Date().toISOString()});await txDone(tx);
+}
+
+// Conversation is not evidence: these writes never alter report revision or confirmation.
+export async function listConversation(db,jobId){
+  const tx=db.transaction('conversation','readonly');
+  const rows=await requestTo(tx.objectStore('conversation').index('by-job').getAll(jobId));
+  return rows.sort((a,b)=>a.at.localeCompare(b.at)||a.id.localeCompare(b.id));
+}
+export async function saveConversation(db,record){
+  if(typeof record.id!=='string'||!record.id||typeof record.jobId!=='string'||!record.jobId||typeof record.question!=='string'||record.question.length>4000||typeof record.reply!=='string'||record.reply.length>2000||!['question','report','clarify','control'].includes(record.intent)||!Number.isFinite(Date.parse(record.at)))throw Error('Invalid conversation record');
+  maybeFault('conversation save');
+  const tx=db.transaction(['conversation','sessions'],'readwrite'),done=txDone(tx);
+  try{
+    const session=await requestTo(tx.objectStore('sessions').get(record.jobId));
+    if(!session)throw Error('Conversation job is not saved');
+    const store=tx.objectStore('conversation'),prior=await requestTo(store.get(record.id));
+    if(prior){if(JSON.stringify(prior)!==JSON.stringify(record))throw Error('Conversation ID already belongs to another turn');}
+    else {const count=await requestTo(store.index('by-job').count(record.jobId));if(count>=200)throw Error('Conversation storage limit reached');store.add(structuredClone(record));}
+  }catch(error){tx.abort();await done.catch(()=>{});throw error;}
+  await done;return record;
 }

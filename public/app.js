@@ -1,4 +1,4 @@
-import {detailedDemoOrder} from "./demo-work-orders.js";
+import {detailedDemoOrder,demoWorkOrders} from "./demo-work-orders.js";
 import {bindVisitSwipes} from "./visit-navigation.js";
 import {observationInputParts,deviceOffsetAt,collectObservationTime} from './observation-time.js';
 import {
@@ -491,9 +491,14 @@ function jobListHtml() {
   if (!storeReady && !storeError) return "<p>Loading saved jobs…</p>";
   if (storeError) return `<p class="warn">${esc(storeError)}</p>`;
   if (!jobSessions.length) return "<p>No other saved jobs on this device.</p>";
-  return `<ul class="jobs">${[...jobSessions].sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(s=>
-    `<li><div><strong>${esc(s.order?.customer||'Saved work order')}</strong><p>${esc(s.order?.customerContact?.address||s.order?.property||'')}</p><small>${s.jobId===order.id?'Current visit':esc(s.order?.reportedIssue||'Saved visit')}</small></div><button type="button" data-switch="${esc(s.jobId)}">Open</button></li>`
+  const demoIds=new Set(demoWorkOrders.map(item=>item.id));
+  const assigned=jobSessions.filter(s=>s.jobId===order.id||demoIds.has(s.jobId));
+  assigned.sort((a,b)=>Number(b.jobId===order.id)-Number(a.jobId===order.id)||a.jobId.localeCompare(b.jobId));
+  const retained=jobSessions.filter(s=>!assigned.includes(s)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const rows=sessions=>`<ul class="jobs">${sessions.map(s=>
+    `<li><div><strong>${esc(s.order?.customer||'Saved work order')}</strong><p>${esc(s.order?.customerContact?.address||s.order?.property||'')}</p><small>${s.jobId===order.id?'Current visit · ':''}${esc(s.order?.reportedIssue||'Saved visit')}</small></div><button type="button" data-switch="${esc(s.jobId)}" aria-label="Open work order for ${esc(s.order?.customer||s.jobId)}">Open</button></li>`
   ).join('')}</ul>`;
+  return rows(assigned)+(retained.length?`<details><summary>Earlier saved visits · ${retained.length}</summary>${rows(retained)}</details>`:'');
 }
 function render() {
   if (cloudSession?.canNavigate && !cloudSession.canNavigate()) { notify("Finish the recording or current save before changing views."); return; }
@@ -818,16 +823,12 @@ async function initStore() {
   try {
     db = await jobStore.openDb();
     storeReady = true;
-    const prev = await jobStore.getSession(db, order.id);
-    if (!prev) {
-      await jobStore.putSession(db, {
-        jobId: order.id,
-        order,
-        report,
-        createdAt: new Date().toISOString(),
-        confirmation: null,
-      });
-    }
+    const createdAt=new Date().toISOString();
+    await jobStore.addMissingSessions(db,[
+      {jobId:order.id,order,report,createdAt,confirmation:null},
+      ...demoWorkOrders.map(assignment=>({jobId:assignment.id,order:structuredClone(assignment),
+        report:{technician:'',summary:'',promises:'',followupOwner:'',entries:{}},createdAt,confirmation:null})),
+    ]);
     await refreshJobData();
   } catch (err) {
     storeError = err?.message || String(err);

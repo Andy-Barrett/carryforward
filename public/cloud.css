@@ -470,7 +470,7 @@ body.visit-pages h2 { font-family: inherit; font-size: 26px; }
 body.visit-pages .jobs li { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
 body.visit-pages .jobs li > div { min-width: 0; }
 body.visit-pages .jobs p { margin: 6px 0; }
-body.visit-pages .jobs small { display: block; color: #607468; font-size: 13px; line-height: 1.5; }
+body.visit-pages .jobs small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: #607468; font-size: 13px; line-height: 1.5; }
 body.visit-pages .jobs button { flex-shrink: 0; min-height: 44px; }
 
 .cf-voice-first .cf-contact-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

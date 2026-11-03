@@ -149,6 +149,19 @@ export async function putSession(db, session) {
   await txDone(tx);
 }
 
+// Seed only missing assignments in one transaction; a saved visit always wins.
+export async function addMissingSessions(db, sessions) {
+  maybeFault('assignment seed');
+  return atomic(db,['sessions'],async tx=>{
+    const store=tx.objectStore('sessions');let added=0;
+    for(const session of sessions){
+      if(await requestTo(store.get(session.jobId)))continue;
+      store.add({...session,updatedAt:new Date().toISOString()});added++;
+    }
+    return added;
+  });
+}
+
 // Append one ordered event. The sequence number is assigned inside the
 // same transaction so reloads and concurrent tabs keep a total order.
 export async function appendEvent(db, { id, jobId, type, at, payload, clearDraftId }) {

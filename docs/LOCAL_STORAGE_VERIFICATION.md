@@ -31,3 +31,7 @@ Private receipts live under `.local/overnight-20261102/`: `storage-baseline.priv
 The observed rehearsal retained both media hashes and the exact status/closeout. New evidence invalidated acceptance only in the restored copy; the source remained unchanged. An automated test repeats the same recovery boundary on fresh temporary fixtures. The retained private receipt is in `.local/overnight-20261102/backup-d765f140-8460-4698-a016-9632b33c4be9/receipt.json`.
 
 This proves recovery of the isolated simulator database, not recovery of arbitrary browser storage. The portable media export exists, but browser media-bundle import/restore and conversation-history import are not implemented. Clearing browser/app storage or changing origin can strand local evidence. Preserve the existing origin and export originals before planning an origin migration. Browser eviction, actual storage quota exhaustion, phone OS kill and full physical migration remain unverified.
+
+## November 3 assignment-list extension
+
+The isolated browser additionally passed six checks for atomic, non-overwriting assignment seeding: concurrent callers add each of three missing jobs once; an existing report/confirmation and unsent draft remain unchanged; repeat seeding adds nothing; a malformed batch rolls back its earlier addition; and all four jobs plus the existing report survive reopen. The receipt is retained privately as `work-order-seeding-browser.private.json`. These checks use a separate test database and make no provider calls.

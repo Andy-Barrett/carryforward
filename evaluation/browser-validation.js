@@ -1,4 +1,4 @@
-import * as store from '/jobstore.js';import {detailedDemoOrder} from '/demo-work-orders.js';
+import * as store from '/jobstore.js';import {detailedDemoOrder,demoWorkOrders} from '/demo-work-orders.js';
 import {hashBytes,reportRevision,evidenceRevision,confirmationToPersist} from '/evidence.js';
 import {reviewReport,confirmReport} from '/engine.js';import {loadInterview} from '/interview.js';
 import {encodeMonoWav} from '/audio.js';import {createReplySpeaker,browserPcmSink} from '/reply-speech.js';
@@ -41,5 +41,22 @@ async function faults(){const baseline=run.checks.length;const probe=(name,value
 async function speech(){let context,played=0;class QuietAudio{constructor(){context=new OfflineAudioContext(1,8192,24000);return{get currentTime(){return context.currentTime;},destination:context.destination,createBuffer:(...v)=>context.createBuffer(...v),createBufferSource:()=>context.createBufferSource(),resume:async()=>{},close:async()=>{}};}}
  const pcm=new Uint8Array(4096),view=new DataView(pcm.buffer);for(let i=0;i<pcm.length/2;i++)view.setInt16(i*2,Math.sin(i/9)*10000,true);
  const text='Generated fictional reply.',grant={jobId:'DEMO-QUIET',turnId:'quiet-turn',token:'fixture',text},speaker=createReplySpeaker({jobId:grant.jobId,getConfig:()=>({speech:{enabled:true}}),local:{speak:()=>{throw Error('Unexpected audible fallback');},stop:()=>{}},fetchImpl:async(_,options)=>new Response(pcm,{headers:{'Content-Type':'audio/pcm','X-CarryForward-Speech-Id':JSON.parse(options.body).requestId,'X-CarryForward-Sample-Rate':'24000'}}),makeSink:options=>{const sink=browserPcmSink({...options,Audio:QuietAudio});return{...sink,finish:async()=>{const ended=sink.finish();const audio=await context.startRendering();played=audio.getChannelData(0).filter(v=>Math.abs(v)>0.01).length;await ended;}};}});let completed=false;await speaker.speak(text,{speech:grant,onState:value=>{if(value==='ready')completed=true;},onError:error=>{throw error;}});speaker.dispose();check('Actual browser PCM renders in software only',played>1000);check('Stream completion reaches the caller',completed);}
-for(const [id,action] of Object.entries({storage,reopen,blocked,faults,speech}))document.querySelector('#'+id).onclick=async()=>{if(busy)return;busy=true;status.textContent='Running '+id+'…';try{await action();status.textContent='Passed '+id;}catch(error){status.textContent='Failed '+id+': '+error.message;run.error=error.message;results.textContent=JSON.stringify(run,null,2);}finally{busy=false;}};
+async function assignments(){
+ const name='carryforward.test.'+crypto.randomUUID(),db=await store.openDb({name});
+ const sessions=demoWorkOrders.map(order=>({jobId:order.id,order:structuredClone(order),report:{summary:'',entries:{}},confirmation:null,createdAt:'2026-11-03T12:00:00Z'}));
+ const saved={...structuredClone(sessions[0]),report:{summary:'Keep my confirmed visit',entries:{},technician:'Fictional technician'},confirmation:{revision:'retained-confirmation'}};
+ await store.putSession(db,saved);await store.saveInterviewDraft(db,{jobId:saved.jobId,id:'retained-draft',text:'Unsent local note',correction:'',audio:null});
+ const original=JSON.stringify(await store.getSession(db,saved.jobId));
+ const added=await Promise.all([store.addMissingSessions(db,sessions),store.addMissingSessions(db,sessions)]);
+ check('Concurrent assignment seeding adds each missing job once',added.reduce((a,b)=>a+b,0)===3&&(await store.listSessions(db)).length===4);
+ check('Existing report and confirmation survive seeding',JSON.stringify(await store.getSession(db,saved.jobId))===original);
+ check('Unsent draft survives seeding',(await store.getInterviewDraft(db,saved.jobId)).text==='Unsent local note');
+ check('Seeding again is a no-op',await store.addMissingSessions(db,sessions)===0);
+ const newId='DEMO-SEED-ROLLBACK';let failed=false;
+ try{await store.addMissingSessions(db,[{...sessions[1],jobId:newId},{...sessions[2],jobId:undefined}]);}catch{failed=true;}
+ check('Failed assignment batch rolls back all additions',failed&&!await store.getSession(db,newId)&&(await store.listSessions(db)).length===4);
+ db.close();const reopened=await store.openDb({name});
+ check('All work orders and prior report survive reopen',(await store.listSessions(reopened)).length===4&&JSON.stringify(await store.getSession(reopened,saved.jobId))===original);reopened.close();
+}
+for(const [id,action] of Object.entries({storage,reopen,blocked,faults,speech,assignments}))document.querySelector('#'+id).onclick=async()=>{if(busy)return;busy=true;status.textContent='Running '+id+'…';try{await action();status.textContent='Passed '+id;}catch(error){status.textContent='Failed '+id+': '+error.message;run.error=error.message;results.textContent=JSON.stringify(run,null,2);}finally{busy=false;}};
 document.querySelector('#download').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(run,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='carryforward-quiet-validation.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};

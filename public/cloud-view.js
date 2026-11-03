@@ -96,6 +96,7 @@ export function mountCloud(root, {
   const actions = el('nav', 'cf-rail-actions');
   actions.setAttribute('aria-label', 'Current job');
   const jobButton = button('Briefing', 'cf-small-action cf-briefing-action', 'volume');
+  const ordersButton = button('Work orders', 'cf-small-action', 'arrow');
   const sourcesButton = button('Sources', 'cf-small-action', 'source');
   const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow'); handoffButton.hidden=true;
   actions.append(jobButton, sourcesButton, handoffButton);
@@ -194,7 +195,7 @@ export function mountCloud(root, {
     const address=contact?.address||order.property;
     if(address){const location=el('a','cf-contact-link',address);location.href='https://maps.apple.com/?q='+encodeURIComponent(address);location.setAttribute('aria-label',`Open address in Maps: ${address}`);customer.append(location);}
     rail.replaceChildren(customer);
-    toolsContent.append(sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
+    toolsContent.append(ordersButton,sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
     handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
     composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
     responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
@@ -239,6 +240,7 @@ export function mountCloud(root, {
     talkButton.disabled = voiceOnly?(busy||cameraBusy||activity==='reviewing'||(!liveAvailable&&activity==='ready')):activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
     previous.disabled=locked||activity!=='ready'; next.disabled=locked||activity!=='ready'||(phase.id==='final'&&!finalVisitUpdate(order,state).hasReport);
     jobButton.disabled = locked || activity === 'listening';
+    ordersButton.disabled = !onNavigate || locked || activity === 'listening';
     sourcesButton.disabled = !onNavigate || locked || activity === 'listening';
     for (const control of focalEvidence.querySelectorAll('button,a')) {
       if (control.tagName === 'BUTTON') control.disabled = locked || activity === 'listening';
@@ -619,6 +621,7 @@ export function mountCloud(root, {
     try { Promise.resolve(onNavigate?.(destination)).catch(error => say(error.message || 'That view could not be opened.', true)); }
     catch (error) { say(error.message || 'That view could not be opened.', true); }
   }
+  ordersButton.onclick = () => navigate('jobs');
   sourcesButton.onclick = () => navigate('sources');
   handoffButton.onclick = () => navigate('review');
   typeButton.onclick = () => { if (composer.hidden) openComposer(); else { composer.hidden = true; typeButton.setAttribute('aria-expanded', 'false'); } };

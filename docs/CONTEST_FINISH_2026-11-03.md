@@ -27,3 +27,13 @@ Use a clear phone screen and prevent personal notification banners from entering
 - Prepare final video/captions and accessible links. Review the complete final form and promotional permission with the owner before submission. Do not report a receipt until the platform supplies one.
 
 No company-library expansion, Android development, live Perihelion integration or production deployment is part of this finishing pass.
+
+## Practical capture plan
+
+The owner requested additional work orders on November 3. Four fictional assignments now populate the list without replacing saved visits. Keep Elena as the main recording; the other jobs demonstrate a useful dispatch list and provide context-isolation tests. Activate the latest cached shell on the iPhone before recording; browser layout and preservation checks are not a physical-device pass.
+
+1. Use a fresh Elena visit and admit it through the simulator API before the briefing. Preserve the previously confirmed visit.
+2. Run a ten-second capture check: confirm both Andy’s speech and Sarah’s reply are audible. Prefer recording on the iPhone while operating it directly; keep remote phone control released. Verify the capture route before a full take and transfer the original to the Mac for editing.
+3. Record the complete visit naturally: list → briefing → onsite access question → original photo → report → reading correction → explicit Operations deferral → final review/confirmation → API receipt and separate source acceptance. New Sarah output must be generated under the active paid plan. Do not reuse Free audio in the final soundtrack.
+4. Keep that unedited master. A proposed three-minute allocation is 15 seconds for Andy’s problem statement, 25 for list/briefing, 25 for onsite/photo, 60 for report/correction/deferral, 40 for final/API result and 15 for the outcome. Actual processing waits may require visible edits; do not represent an edited cut as an uninterrupted three-minute interaction.
+5. The Contest Prep & Video work retains ownership of the final script, edit and captions. Check the final video’s voice, readable text, actual Meta provenance, public links and unresolved obligations before reviewing the submission form with Andy. This plan does not start recording or submit an entry.

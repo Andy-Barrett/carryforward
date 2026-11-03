@@ -46,7 +46,7 @@ npm run dev
 
 Open **http://127.0.0.1:4310/**. The server listens only on your computer.
 
-Start with the included fictional work order. The main screen has one Hold to speak control. With guarded Meta development enabled, hold to ask about the job or report what happened; release for a spoken reply. Without inference configured, use the text fallback under Details. Open items remain visible in the final update.
+The list includes four fictional assignments: Elena’s inverter fault, Marcus’s monitoring outage, Priya’s production comparison and Owen’s storm inspection. Each has separate equipment, customer history, access and closeout checks. Start with Elena’s work order. The main screen has one Hold to speak control. With guarded Meta development enabled, hold to ask about the job or report what happened; release for a spoken reply. Without inference configured, use the text fallback under Details. Open items remain visible in the final update.
 
 To use another port:
 
@@ -79,7 +79,7 @@ A typed evidence reference is a technician’s reference to a record; the comple
 
 The current iPhone development build is 18. Sarah’s brisker playback and shorter gate-code wait have owner passes. Right swipes now use the native rear camera after reproducing WebKit picker rejection; camera opening, Cancel and reopening were observed on the phone. The owner confirmed capture, Use Photo and a new thumbnail. The continuous fictional conversation now passes through the corrected final draft and full Sarah readout, owner confirmation, API delivery, source receipt and separate simulator acceptance with two Operations follow-ups. Photo tap retains the ordinary picker. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
 
-The November 3 local pass has 187 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. The final draft reads current source-linked findings, with original reports and corrections kept in expandable history. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+The November 3 local pass has 189 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. The final draft reads current source-linked findings, with original reports and corrections kept in expandable history. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 

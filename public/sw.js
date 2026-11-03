@@ -1,5 +1,5 @@
 // App shell only. Never cache API responses, evidence or arbitrary requests.
-const CACHE='carryforward-shell-2aa9c0f41900c789';
+const CACHE='carryforward-shell-b6c0af76a32a7a9b';
 const SHELL=["/job-camera.js", "/visit-trial.js", "/speech-text.js", "/turn-timing.js", "/reply-speech.js", "/demo-work-orders.js", "/visit-navigation.js", "/held-voice.js", "/visit-flow.js", "/live-protocol.js", "/live-voice.js", "/pcm-worklet.js", "/local-speech.js", "/cloud-dialogs.js", "/evidence-review.js", "/visit-brief.js", "/cloud-view.js", "/cloud-session.js", "/cloud-resources.js", "/job-context.js", "/cloud.css", "/", "/app-icon-192.png", "/app-icon-512.png", "/apple-touch-icon.png", "/favicon-32.png", "/app.js", "/audio.js", "/capture-lifecycle.js", "/engine.js", "/evidence.js", "/interview.js", "/investigation.js", "/jobstore.js", "/manifest.webmanifest", "/observation-time.js", "/offline.js", "/operations-client.js", "/review-copy.js", "/review-request.js", "/style.css", "/voice.js"];
 const allowed=new Set(SHELL);
 self.addEventListener('install',event=>event.waitUntil((async()=>{

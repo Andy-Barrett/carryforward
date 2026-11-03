@@ -168,3 +168,15 @@ test('owner assignment refuses unsupported scope and empty or unbounded payloads
    assert.throws(()=>apply(s,'branches.owner-assigned',{branchIds:['monitoring'],owner}),/assignment/);
  assert.equal(s.branches.repair.owner,null);assert.equal(s.branches.monitoring.owner,null);
 });
+
+
+test('a partial correction keeps unrelated testimony and branch support while linking the amendment',()=>{
+ let state=createInvestigation(order);
+ const append=(type,payload)=>state=reduceInvestigation(state,{id:'a'+(state.seq+1),jobId:order.id,seq:state.seq+1,type,payload});
+ append('turn.recorded',{id:'combined',text:'Pre-work output 4.2 kW; monitoring is live; no replacement.'});
+ append('interpretation.received',{version:'carryforward.interpretation.v1',jobId:order.id,baseRevision:state.inputRevision,model:'fixture',observations:[],changes:[{branchId:'monitoring',state:'supported',sourceIds:['combined'],reason:'Technician reported live.'}],nextQuestion:null});
+ append('turn.recorded',{id:'reading-correction',text:'Correction: pre-work reading was 2.4, not 4.2.',amends:'combined'});
+ assert.equal(state.sources.combined.supersededBy,undefined);assert.equal(state.sources['reading-correction'].amends,'combined');assert.deepEqual(state.sources.combined.amendedBy,['reading-correction']);assert.equal(state.branches.monitoring.state,'supported');assert.deepEqual(state.branches.monitoring.sourceIds,['combined']);assert.equal(state.reviewRequired,true);
+ assert.throws(()=>append('turn.recorded',{id:'bad',text:'Ambiguous correction',amends:'combined',supersedes:'combined'}),/not both/);
+ assert.throws(()=>append('turn.recorded',{id:'bad',text:'Wrong source',amends:'foreign'}),/corrected answer/);
+});

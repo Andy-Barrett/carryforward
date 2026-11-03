@@ -223,7 +223,7 @@ export async function mountCloudSession(root, {
       const alreadySaved = state.sources[answerId];
       if (alreadySaved?.kind === 'testimony') {
         if (alreadySaved.text === text && (alreadySaved.audioId || null) === (audio?.audioId || null) &&
-            (alreadySaved.supersedes || null) === (metadata.supersedes || null)) {
+            (alreadySaved.supersedes || null) === (metadata.supersedes || null) && (alreadySaved.amends||null)===(metadata.amends||null)) {
           return { response: 'This answer is already saved to the job.', origin: 'Technician testimony · saved locally' };
         }
         answerId=newEventId();if(!metadata.fromHold){draftId=answerId;saveDraft(text,{audio});}
@@ -238,10 +238,10 @@ export async function mountCloudSession(root, {
           wavSha256: clip.wavSha256, name: clip.name,
         });
       }
-      const prior = metadata.supersedes && state.sources[metadata.supersedes];
+      const prior = state.sources[metadata.supersedes||metadata.amends];
       await dispatch('turn.recorded', {
         id: answerId, text, branchId: prior?.branchId || metadata.branchId || null,
-        supersedes: metadata.supersedes || null, ...(audio || {}),
+        supersedes: metadata.supersedes || null, ...(metadata.amends?{amends:metadata.amends}:{}), ...(audio || {}),
       });
       if((audio?.liveReview===true||metadata.fromHold===true) && config.metaEnabled===true && !callbackError){
         view.setActivity('reviewing');
@@ -250,6 +250,7 @@ export async function mountCloudSession(root, {
             if(metadata.reviewError||!metadata.proposal)throw Error(metadata.reviewError||'No valid interpretation was returned');
             metadata.ensureTurn?.();
             await dispatch('interpretation.received',metadata.proposal);
+            for(const decision of metadata.decisions||[])await dispatch('branch.response',decision);
             return {speech:metadata.speech,response:spokenReportReply(order,state),origin:'Model interpretation · muse-spark-1.3',speak:true};
           }
           const reviewed=await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:metadata.ensureTurn||requireCurrent,...(metadata.fromHold?{request:async(_url,payload)=>{metadata.timing?.mark('reviewStarted');const result=await requestReview('/api/conversation/review',{...payload,turnId:metadata.turnId},{signal:metadata.signal});metadata.timing?.mark('reviewReady');return result;}}:{})});
@@ -288,7 +289,7 @@ export async function mountCloudSession(root, {
     if (routeJobCommand(text,context).kind === 'briefing') { view.openBrief(); return {handled:true}; }
     if(config.metaEnabled && !/^(?:show|open|zoom|next|previous|back|replay)\b/i.test(text.trim())){
       const history=(await listConversation(db,jobId)).slice(-12);
-      const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
+      const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text,...(item.amends?{amends:item.amends}:{}),...(item.amendedBy?{amendedBy:item.amendedBy}:{})}));
       const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct'},{timeoutMs:130000});requireCurrent();
       if(answer.intent==='report')return false;
       await saveConversation(db,{id:newEventId(),jobId,at:new Date().toISOString(),question:text,reply:answer.reply,intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
@@ -361,7 +362,7 @@ export async function mountCloudSession(root, {
       else if(intent==='report'){view.changePhase('report');reply='Go ahead. What did you do, and what still needs attention?';}
       else {
         const history=(await listConversation(db,jobId)).slice(-12);
-        const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
+        const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text,...(item.amends?{amends:item.amends}:{}),...(item.amendedBy?{amendedBy:item.amendedBy}:{})}));
         timing.mark('classificationStarted');
         const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct',turnId:'turn-'+clip.id,events:state.events,
           pendingReport:{id:'turn-'+clip.id,text,audio:{id:clip.id,kind:'audio',sha256:clip.originalSha256,wavSha256:clip.wavSha256,name:clip.name},transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}},{timeoutMs:130000,signal:abort.signal});timing.mark('classificationReady');
@@ -369,7 +370,7 @@ export async function mountCloudSession(root, {
         ensureTurn();reply=answer.reply;speechTicket=answer.speech;origin=answer.provenance?.provider==='CarryForward'?'Work order · exact source excerpt':'Meta · work order and field context';
         if(answer.intent==='report'){
           const prior=answer.correctsSourceId?state.sources[answer.correctsSourceId]:null;
-          const result=await saveAnswer(text,{fromHold:true,singleReview:true,proposal:answer.proposal,reviewError:answer.reviewError,speech:answer.speech,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
+          const result=await saveAnswer(text,{fromHold:true,singleReview:true,proposal:answer.proposal,decisions:answer.decisions,reviewError:answer.reviewError,speech:answer.speech,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,amends:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
             audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
           ensureTurn();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;speechTicket=result.speech;
           if(!answer.reportReply&&answer.reply!=='Got it.'&&answer.speech&&result.speech){try{speechTicket=await voiceGrant({kind:'compose',jobId,parts:[answer.speech,result.speech]});}catch{speechTicket=null;}}

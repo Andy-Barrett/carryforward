@@ -107,7 +107,15 @@ export function reduceInvestigation(previous, event) {
       const released=t.reviewed===false&&t.submission==='hold_release'&&t.rawText===p.text&&t.provenance?.model==='muse-voice-transcribe-1.0'&&t.provenance.complete===true&&/^[a-f0-9]{64}$/.test(t.provenance.inputSha256||'')&&t.provenance.inputSha256===source?.wavSha256;
       if(!p.audioId||typeof t.rawText!=='string'||t.rawText.length>4000||!(t.reviewed===true||released))fail('Transcript must be reviewed or explicitly submitted by hold release');
     }
-    if (p.supersedes && (!Object.hasOwn(state.sources, p.supersedes) || state.sources[p.supersedes].kind !== 'testimony' || state.sources[p.supersedes].supersededBy)) fail('Invalid corrected answer');
+    const correctionTarget=p.supersedes||p.amends;
+    if(p.supersedes&&p.amends)fail('Choose full replacement or amendment, not both');
+    if(correctionTarget&&(!Object.hasOwn(state.sources,correctionTarget)||state.sources[correctionTarget].kind!=='testimony'||state.sources[correctionTarget].excluded||state.sources[correctionTarget].supersededBy))fail('Invalid corrected answer');
+    if(p.amends){
+      const original=state.sources[p.amends];
+      original.amendedBy=[...(original.amendedBy||[]),p.id];
+      // A narrow correction does not retract unrelated facts in the same utterance.
+      // The next validated interpretation replaces the affected observation only.
+    }
     if (p.supersedes) {
       state.sources[p.supersedes].supersededBy = p.id;
       for (const branch of Object.values(state.branches)) {
@@ -121,6 +129,7 @@ export function reduceInvestigation(previous, event) {
     Object.defineProperty(state.sources, p.id, { enumerable: true, writable: true, configurable: true, value: {
       id: p.id, jobId: state.jobId, kind: 'testimony', text: p.text, at: event.at || null,
       branchId: p.branchId || null, supersedes: p.supersedes || null, excluded: false,
+      ...(p.amends?{amends:p.amends}:{}),
       ...(p.audioId ? {audioId:p.audioId,transcription:clone(p.transcription || null)} : {}),
     }});
     if (p.branchId) {
@@ -155,6 +164,14 @@ export function reduceInvestigation(previous, event) {
     const b = state.branches[p.branchId];
     if (!Object.hasOwn(state.branches, p.branchId) || !['cannot_verify', 'later', 'already_answered', 'reopen'].includes(p.action)) fail('Invalid branch response');
     if (!text(p.reason)) fail('Response reason required');
+    if(p.sourceId!==undefined){
+      const source=state.sources[p.sourceId];
+      if(!source||source.kind!=='testimony'||source.excluded||source.supersededBy||!['cannot_verify','later'].includes(p.action)||!text(p.quote,1000)||!source.text.includes(p.quote))fail('Follow-up decision requires exact current testimony');
+      if(!text(p.owner,200)||!p.quote.toLowerCase().includes(p.owner.toLowerCase()))fail('Follow-up owner must appear in the quoted instruction');
+      const explicit=p.action==='later'?/\b(?:leave|defer|later|follow[ -]?up|assign|hand(?:off| over)?)\b/i.test(p.quote):/\b(?:cannot|can['’]t|unable to|could not|couldn['’]t)\b.*\b(?:verify|confirm|check|obtain|measure)\b/i.test(p.quote);
+      if(!explicit)fail('Follow-up decision requires an explicit instruction or inability to verify');
+    }
+
     if (p.action === 'already_answered') requireSources(state, p.sourceIds);
     b.state = p.action === 'reopen' ? 'open' : p.action === 'already_answered' ? 'needs_verification' : 'deferred';
     b.reason = p.reason;

@@ -172,7 +172,7 @@ An optional handoff checkbox assigns every unresolved check to the named report 
 
 The main Cloud session now selects the hold-to-speak surface. `held-voice.js` acquires/resumes audio inside the press gesture, retains the first available PCM, releases microphone/context on stop and cancels on background/disposal. `voice.js` saves the WAV before provider dispatch, calls the authenticated fictional-only conversation ASR endpoint and stores raw machine provenance. The reducer admits `reviewed:false` only for explicit hold release, the fixed ASR model, completed transcription and exact same-job admitted WAV hash. Ordinary reviewed-text validation is unchanged.
 
-`cloud-session.js` separates bounded work-order questions/navigation from report testimony. Narration runs the existing source-linked evidence review with no selected images, then speaks one acknowledgement/follow-up locally. An explicit voice correction supersedes the prior answer without erasing it; a final update remains a draft with open checks. New turns do not implicitly confirm or deliver packets.
+`cloud-session.js` separates bounded work-order questions/navigation from report testimony. Narration runs the existing source-linked evidence review with no selected images, then speaks one acknowledgement/follow-up locally. An explicit voice correction now amends the affected part of a prior report, retaining its unrelated facts; a final update remains a draft with open checks. New turns do not implicitly confirm or deliver packets.
 
 Saved voice capacity is 30 per job throughout IndexedDB, portable bundle validation and simulator admission. Existing per-clip/aggregate byte limits remain, so an oversized bundle is refused rather than silently truncated. Conversation endpoints allow 30 attempts of each kind/job/server session and retain Host, Origin, session, busy and aggregate-budget guards.
 
@@ -195,3 +195,12 @@ See [conversation context](CONVERSATION_CONTEXT.md). A guarded coordinator class
 ## November 3 company-context direction
 
 The next product milestone is a company workspace with company-specific memberships, a versioned source library, and work orders referencing permitted exact document versions. [The proposed company/work-order context contract](COMPANY_CONTEXT_CONTRACT.md) records the input, context manifest, staged briefing and two-company local acceptance plan. Current authentication is still one development principal, company context is process-wide, external IDs are globally unique and browser stores are origin/job-scoped. This increment does not implement tenant isolation or production onboarding.
+
+
+## November 3 spoken ownership and partial corrections
+
+The hold-release path requests classification and a bounded interpretation in one Meta response. Only a clear report is saved as testimony. The server previews the candidate turn without committing it; the client saves the actual turn and validates the returned interpretation again against that revision. The earlier separate review endpoint remains available for explicit evidence review and old clients.
+
+An owner trial exposed a distinction between saying “leave production with Operations” and storing that owner. Spoken follow-up decisions now produce existing `branch.response` events after the interpretation, each with the current testimony source ID and an exact quoted instruction naming the owner. They accept only explicit deferral/inability actions, cannot automatically reopen work, and are independently checked by the reducer. The spoken acknowledgement uses saved branch state and identifies an unassigned owner rather than repeating a model promise.
+
+A narrow spoken correction records `turn.recorded.amends`; the original source retains `amendedBy` links and remains available for its unrelated facts. The model replaces the affected observation with an explicit `supersedes` reference. The detailed text editor retains its existing whole-answer replacement behavior. Original and correction are labeled in the final update and retained in simulator handoff. These are amendments to technician testimony, not new independent measurements. Physical correction/owner persistence acceptance remains pending.

@@ -63,7 +63,7 @@ npm test
 ## What works today
 
 - A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Swipe right to take a photo; saved thumbnails stay on the conversation screen. Sources, saved recordings, trial feedback and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
-- Guarded Meta answers with the full work order, recent job conversation, dated demo history, public Perihelion background, general safety references and candidate SolarEdge family-manual summaries. An explicitly approved private company-safety context can supply bounded cited sections. Spoken reports use one Meta response for classification and a validated evidence interpretation; replies name open checks and owners. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
+- Guarded Meta answers with the full work order, recent job conversation, dated demo history, public Perihelion background, general safety references and candidate SolarEdge family-manual summaries. An explicitly approved private company-safety context can supply bounded cited sections. Spoken reports use one Meta response for classification and a validated evidence interpretation; replies name saved open checks and owners. Explicit follow-up instructions retain quoted testimony, and a partial correction keeps unrelated facts from the original report. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
@@ -79,7 +79,7 @@ A typed evidence reference is a technician’s reference to a record; the comple
 
 The current iPhone development build is 18. Sarah’s brisker playback and shorter gate-code wait have owner passes. Right swipes now use the native rear camera after reproducing WebKit picker rejection; camera opening, Cancel and reopening were observed on the phone. The owner confirmed capture, Use Photo and a new thumbnail. The continuous visit remains pending. Photo tap retains the ordinary picker. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
 
-The November 3 local pass has 179 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+The November 3 local pass has 184 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 

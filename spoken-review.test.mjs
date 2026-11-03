@@ -59,11 +59,41 @@ test('the one-pass route respects human deferral and validates corrections again
  const next={...input,events:follow.events};
  assert.throws(()=>acceptSpokenReview(order,next,{...proposal,baseRevision:4},null),/Deferred branch/);
  assert.throws(()=>prepareSpokenReview(order,next,'unknown'),/correction target/);
- const corrected=prepareSpokenReview(order,next,'old-reading');assert.equal(corrected.sources['old-reading'].supersededBy,'turn-clip');assert.equal(corrected.branches.production.state,'deferred');
+ const corrected=prepareSpokenReview(order,next,'old-reading');assert.equal(corrected.sources['old-reading'].supersededBy,undefined);assert.deepEqual(corrected.sources['old-reading'].amendedBy,['turn-clip']);assert.equal(corrected.sources['turn-clip'].amends,'old-reading');assert.equal(corrected.branches.production.state,'deferred');
 });
 
 import {timingSummary} from './public/turn-timing.js';
 test('timing labels distinguish the combined evidence review from a question-only answer',()=>{
  assert.match(timingSummary({points:{classificationStarted:100,classificationReady:1000,combinedReviewReady:1001}}),/review included in answer/);
  assert.match(timingSummary({points:{classificationStarted:100,classificationReady:1000}}),/review not needed/);
+});
+
+test('quoted technician deferrals persist both owners and suppress follow-up questions',()=>{
+ const instruction='Leave production and the warranty update with Operations.';
+ const local={...input,text:instruction,pendingReport:{...pendingReport,text:instruction,transcription:{...pendingReport.transcription,rawText:instruction}}};
+ const decisions=['production','warranty'].map(branchId=>({branchId,action:'later',owner:'Operations',reason:'Technician requested Operations follow-up.',quote:instruction}));
+ const result=acceptSpokenReview(order,local,proposal,null,decisions);
+ assert.equal(result.decisions.length,2);assert.ok(result.decisions.every(d=>d.sourceId===pendingReport.id));
+ assert.match(result.reply,/Post-work production, with Operations/);assert.match(result.reply,/Warranty handoff, with Operations/);assert.doesNotMatch(result.reply,/current reading/);
+ let state=prepareSpokenReview(order,local);state=reduceInvestigation(state,{id:'review',jobId:order.id,seq:3,type:'interpretation.received',payload:result.proposal});
+ for(const decision of result.decisions)state=reduceInvestigation(state,{id:'response-'+decision.branchId,jobId:order.id,seq:state.seq+1,type:'branch.response',payload:decision});
+ assert.equal(state.activeQuestion,null);for(const id of ['production','warranty']){assert.equal(state.branches[id].state,'deferred');assert.equal(state.branches[id].owner,'Operations');}
+});
+
+test('follow-up decisions reject fabricated owners, quotes, actions and duplicate branch writes',()=>{
+ const instruction='Leave production with Operations.';
+ const local={...input,text:instruction,pendingReport:{...pendingReport,text:instruction,transcription:{...pendingReport.transcription,rawText:instruction}}};
+ const decision={branchId:'production',action:'later',owner:'Operations',reason:'Explicit technician follow-up.',quote:instruction};
+ for(const bad of [{...decision,quote:'Operations still owes paperwork.'},{...decision,owner:'Someone else'},{...decision,quote:'Fabricated instruction with Operations'},{...decision,action:'reopen'},{...decision,branchId:'OTHER'}])assert.throws(()=>acceptSpokenReview(order,local,proposal,null,[bad]));
+ assert.throws(()=>acceptSpokenReview(order,local,proposal,null,[decision,decision]),/Duplicate/);
+});
+
+test('final summary marks original compound testimony as amended instead of retracting unrelated facts',async()=>{
+ const {finalVisitUpdate,spokenVisitSummary}=await import('./public/visit-flow.js');
+ let state=createInvestigation(order);
+ const append=(type,payload)=>state=reduceInvestigation(state,{id:'final-'+(state.seq+1),jobId:order.id,seq:state.seq+1,type,payload});
+ append('turn.recorded',{id:'old',text:'Pre-work 4.2 kW. Monitoring live.'});
+ append('turn.recorded',{id:'correction',text:'The pre-work reading was 2.4, not 4.2.',amends:'old'});
+ const update=finalVisitUpdate(order,state);assert.equal(update.notes.length,2);assert.deepEqual(update.notes[0].amendedBy,['correction']);assert.equal(update.notes[1].amends,'old');assert.match(update.notes[0].text,/Monitoring live/);
+ assert.match(spokenVisitSummary(order,state),/Earlier report, amended below/);assert.match(spokenVisitSummary(order,state),/Correction: The pre-work reading was 2.4/);
 });

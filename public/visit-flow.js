@@ -11,7 +11,7 @@ export function visitStage(value,fallback='brief') {
 export function finalVisitUpdate(order,state) {
   if(state&&state.jobId!==order.id)throw Error('The final update belongs to another job.');
   const turns=Object.values(state?.sources||{}).filter(source=>source.kind==='testimony'&&!source.supersededBy);
-  return {hasReport:turns.length>0,notes:turns.map(turn=>({id:turn.id,text:turn.text,reviewed:turn.transcription?.reviewed!==false})),
+  return {hasReport:turns.length>0,notes:turns.map(turn=>({id:turn.id,text:turn.text,...(turn.amends?{amends:turn.amends}:{}),...(turn.amendedBy?{amendedBy:turn.amendedBy}:{}),reviewed:turn.transcription?.reviewed!==false})),
     checks:(order.checks||[]).map(check=>{const branch=state?.branches?.[check.id];return {
       id:check.id,label:check.label,reported:branch?.state==='supported',
       status:branch?.state==='supported'?'Reported · needs human review':'Follow-up open',
@@ -32,7 +32,7 @@ export function conversationIntent(text) {
 export function spokenVisitSummary(order,state) {
   const update=finalVisitUpdate(order,state);
   if(!update.hasReport)return 'I don’t have a visit report yet. Tell me what you found, what you did, and what still needs attention.';
-  const latest=update.notes.slice(-3).map(note=>note.text.slice(0,450)).join(' ');
+  const latest=update.notes.slice(-3).map(note=>`${note.amendedBy?.length?'Earlier report, amended below: ':note.amends?'Correction: ':''}${note.text.slice(0,450)}`).join(' ');
   const open=update.checks.filter(check=>!check.reported);
   return `Here’s the draft visit update. You reported: ${latest} ${open.length?`Still open: ${open.map(check=>`${check.label}${check.owner?`, with ${check.owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they are not independently verified.'} This has not been delivered to Operations.`;
 }
@@ -41,7 +41,7 @@ export function spokenVisitSummary(order,state) {
 // trusting a conversational promise that an obligation was kept open.
 export function spokenReportReply(order,state){
   const open=(order.checks||[]).filter(check=>state.branches[check.id]?.state!=='supported');
-  const acknowledgement=state.interpretations.at(-1)?.acknowledgement||'Your update is saved.';
-  const followup=open.length?`Still open: ${open.map(check=>`${check.label}${state.branches[check.id]?.owner?`, with ${state.branches[check.id].owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they still need human review.';
+  const acknowledgement='Your update is saved.';
+  const followup=open.length?`Still open: ${open.map(check=>`${check.label}${state.branches[check.id]?.owner?`, with ${state.branches[check.id].owner}`:', owner not assigned'}`).join('; ')}.`:'The recorded checks have supporting reports; they still need human review.';
   return `${acknowledgement} ${followup}${state.activeQuestion?' '+state.activeQuestion.text:''}`;
 }

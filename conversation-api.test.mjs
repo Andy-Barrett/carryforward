@@ -45,3 +45,24 @@ test('answer route refuses foreign origins and non-demo jobs before inference',a
   assert.match((await (await post({order:demoOrder,text:'What is the model?',history:[{jobId:'OTHER',question:'Test',reply:'Other customer data'}]})).json()).error,/wrong-job/);
  }finally{child.kill('SIGTERM');await once(child,'exit');await rm(dir,{recursive:true,force:true});}
 });
+
+
+test('simulator handoff preserves a partial correction and quoted Operations deferrals',async()=>{
+ const {createInvestigation,reduceInvestigation}=await import('./public/investigation.js');
+ const store=new OperationsStore();try{
+  const {jobId}=store.assign(demoOrder);let state=createInvestigation(demoOrder);
+  const append=(type,payload)=>state=reduceInvestigation(state,{id:'handoff-'+(state.seq+1),jobId:demoOrder.id,seq:state.seq+1,type,payload});
+  append('turn.recorded',{id:'combined',text:'Pre-work 4.2 kW; monitoring live. No replacement.'});
+  append('interpretation.received',{version:'carryforward.interpretation.v1',jobId:demoOrder.id,model:'synthetic-fixture-not-live',baseRevision:state.inputRevision,observations:[{id:'reading-1',claim:'Technician-reported pre-work 4.2 kW.',sourceIds:['combined']}],changes:[{branchId:'monitoring',state:'supported',sourceIds:['combined'],reason:'Reported live.'}],nextQuestion:null});
+  const quote='Leave unverified production and the warranty update with Operations.';
+  append('turn.recorded',{id:'correction',text:'Correction: pre-work output was 2.4, not 4.2. '+quote,amends:'combined'});
+  append('interpretation.received',{version:'carryforward.interpretation.v1',jobId:demoOrder.id,model:'synthetic-fixture-not-live',baseRevision:state.inputRevision,observations:[{id:'reading-2',claim:'Technician-corrected pre-work output 2.4 kW.',sourceIds:['correction'],supersedes:'reading-1'}],changes:[],nextQuestion:null});
+  for(const branchId of ['production','warranty'])append('branch.response',{branchId,action:'later',owner:'Operations',reason:'Explicit technician instruction.',sourceId:'correction',quote});
+  store.syncEvents(jobId,state.events);
+  const packet=store.candidate(jobId,{technician:'Fictional technician',summary:'Corrected pre-work reading; office follow-up remains.',recordedAt:'2026-11-03T11:00:00-06:00',followupOwner:'Operations',entries:{},interviewRevision:state.seq,evidenceRevision:evidenceRevision([],[])},state.seq);
+  const interview=packet.closeout.interview;
+  assert.equal(interview.turns.find(t=>t.id==='correction').amends,'combined');assert.equal(interview.turns.find(t=>t.id==='combined').supersededBy,undefined);assert.equal(interview.observations.find(o=>o.id==='reading-1').supersededBy,'reading-2');
+  for(const id of ['production','warranty']){const branch=interview.branches.find(b=>b.id===id);assert.equal(branch.state,'deferred');assert.equal(branch.owner,'Operations');}
+  assert.equal(interview.branches.find(b=>b.id==='monitoring').state,'supported');assert.equal(store.inbox().length,0);
+ }finally{store.close();}
+});

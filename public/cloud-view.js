@@ -335,7 +335,7 @@ export function mountCloud(root, {
     const update=finalVisitUpdate(order,state);finalPane.replaceChildren();
     if(!update.hasReport){finalPane.append(el('p','','No report has been sent yet. A saved recording needs reviewed words before it becomes a report. Go back to add your update.'));return;}
     finalPane.append(el('p','cf-final-status',update.confirmation),el('h2','','What you reported'));
-    for(const note of update.notes){if(!note.reviewed)finalPane.append(el('small','','Machine transcript · awaiting confirmation'));finalPane.append(el('p','cf-final-note',note.text));}
+    for(const note of update.notes){if(note.amendedBy?.length)finalPane.append(el('small','','Earlier report · has a correction below'));if(note.amends)finalPane.append(el('small','','Correction to an earlier report'));if(!note.reviewed)finalPane.append(el('small','','Machine transcript · awaiting confirmation'));finalPane.append(el('p','cf-final-note',note.text));}
     finalPane.append(el('h2','','Outcome and follow-up'));
     for(const check of update.checks){const row=el('article','cf-outcome');row.append(el('h3','',check.label),el('p','',check.status),el('p','',check.note));if(!check.reported)row.append(el('p','',check.owner?`Follow-up owner: ${check.owner}`:'Follow-up owner still needed'));finalPane.append(row);}
   }
@@ -379,7 +379,7 @@ export function mountCloud(root, {
       const head = el('div', 'cf-turn-head');
       head.append(el('span', 'cf-origin-badge', turn.audioId ? (turn.transcription?.reviewed===false?'Speech transcript · not yet reviewed':'Technician · reviewed voice transcript') : 'Technician · typed testimony'));
       if (timeLabel(turn.at)) head.append(el('time', '', timeLabel(turn.at)));
-      li.append(head, el('p', '', turn.text), el('small', 'cf-turn-source', `${turn.id}${turn.supersedes ? ` · corrects ${turn.supersedes}` : ''}${turn.supersededBy ? ` · corrected by ${turn.supersededBy}` : ''}`));
+      li.append(head, el('p', '', turn.text), el('small', 'cf-turn-source', `${turn.id}${turn.amends?` · amends ${turn.amends}`:''}${turn.amendedBy?.length?' · correction follows':''}${turn.supersedes ? ` · corrects ${turn.supersedes}` : ''}${turn.supersededBy ? ` · corrected by ${turn.supersededBy}` : ''}`));
       if (turn.audioId) li.append(el('small', 'cf-turn-source', `Audio source · ${turn.audioId}`));
       historyList.append(li);
     }

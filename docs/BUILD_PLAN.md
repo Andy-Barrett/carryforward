@@ -91,3 +91,6 @@ After the current phone audio/context acceptance, use the [company-context contr
 
 
 November 3 report follow-up: the continuous trial has owner passes for briefing and onsite answers. The first report preserved production/warranty follow-ups but took 31.16 s to first playable output. Classification and interpretation now share one guarded response, and replies name actual open items/owners. A generated text check validated in 7.31 s; physical latency, correction, explicit deferral and final review remain acceptance work.
+
+
+November 3 persistence follow-up: the owner accepted quicker speech and clear open-work wording, but saved-state audit found production ownership was not written. Quoted follow-up events and partial report amendments now pass 184 checks and one guarded text check. Activate the web-shell update, test one correction/explicit-Operations instruction, inspect persisted owners and monitoring, then finish the same visit's final draft review. Do not count the earlier spoken acknowledgement as a persisted-owner pass.

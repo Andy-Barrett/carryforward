@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A10000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Assets.xcassets */; };
         A10000000000000000000008 /* SpeechPCMCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* SpeechPCMCollector.swift */; };
         A10000000000000000000007 /* PCMReplyQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* PCMReplyQueue.swift */; };
 		A10000000000000000000000 /* CarryForwardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000000 /* CarryForwardApp.swift */; };
@@ -16,6 +17,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        A20000000000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
         A20000000000000000000008 /* SpeechPCMCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPCMCollector.swift; sourceTree = "<group>"; };
         A20000000000000000000007 /* PCMReplyQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PCMReplyQueue.swift; sourceTree = "<group>"; };
 		A20000000000000000000000 /* CarryForwardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarryForwardApp.swift; sourceTree = "<group>"; };
@@ -55,7 +57,8 @@
 				A20000000000000000000006 /* PhoneConnection.swift */,
                 A20000000000000000000007 /* PCMReplyQueue.swift */,
                 A20000000000000000000008 /* SpeechPCMCollector.swift */,
-				A20000000000000000000003 /* Info.plist */,
+				A20000000000000000000009 /* Assets.xcassets */,
+                A20000000000000000000003 /* Info.plist */,
 				A20000000000000000000005 /* Development.xcconfig */,
 			);
 			path = CarryForward;
@@ -122,6 +125,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                A10000000000000000000009 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,7 +181,8 @@
 			buildSettings = {
 				CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CarryForward/Info.plist;
@@ -198,7 +203,8 @@
 			buildSettings = {
 				CF_WEB_SOURCE_REVISION = 209b4307ed59b7e817d3f0351c43200aa3420dcd;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CarryForward/Info.plist;

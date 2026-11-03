@@ -11,7 +11,8 @@ struct EndpointPolicy {
         let octets = host.split(separator: ".").compactMap { UInt8($0) }
         let canonical = octets.count == 4 && octets.map(String.init).joined(separator: ".") == host
         let privateIP = canonical && (octets[0] == 10 || (octets[0] == 192 && octets[1] == 168) || (octets[0] == 172 && (16...31).contains(octets[1])))
-        guard (parts.scheme == "http" && host == "127.0.0.1" && allowLoopbackHTTP) || (parts.scheme == "https" && privateIP) else { throw ConfigurationError.invalidOrigin }
+        let privateName = host.range(of: "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.local$", options: .regularExpression) != nil
+        guard (parts.scheme == "http" && host == "127.0.0.1" && allowLoopbackHTTP) || (parts.scheme == "https" && (privateIP || privateName)) else { throw ConfigurationError.invalidOrigin }
         origin = url
     }
 
@@ -47,6 +48,6 @@ struct EndpointPolicy {
 
     enum ConfigurationError: LocalizedError {
         case invalidOrigin
-        var errorDescription: String? { "Configure one private HTTPS origin. Simulator builds may use http://127.0.0.1 with an explicit port. No public host or fallback route is enabled." }
+        var errorDescription: String? { "Configure one private HTTPS origin or explicit local Mac hostname. Simulator builds may use http://127.0.0.1 with an explicit port. No public host or fallback route is enabled." }
     }
 }

@@ -62,14 +62,14 @@ npm test
 
 ## What works today
 
-- A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Text, photos, sources, saved recordings and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
+- A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Swipe right to take a photo; saved thumbnails stay on the conversation screen. Sources, saved recordings, trial feedback and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
 - Guarded Meta answers with the full work order, recent job conversation, dated demo history, public Perihelion background, general safety references and candidate SolarEdge family-manual summaries. An explicitly approved private company-safety context can supply bounded cited sections. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
 - Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
-- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR and Spark evidence review, with local system speech active. Optional ElevenLabs output is implemented but awaits account setup and physical validation; full-duplex conversation remains unbuilt. The older reviewed-Send path has a November 1 iPhone pass; repeated complete replies on the replacement remain a phone acceptance item. See [voice implementation](docs/LIVE_VOICE.md).
+- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR and Spark evidence review, with ElevenLabs v4 Turbo/Sarah selected on a verified free account. The owner heard two complete physical replies; the revised brisk pace and continuous visit remain acceptance checks. Exact gate-code/model excerpts can be read directly from the assignment, with separate source provenance. Apple speech remains the fallback; full-duplex conversation remains unbuilt. See [voice implementation](docs/LIVE_VOICE.md).
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.

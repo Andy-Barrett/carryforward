@@ -9,7 +9,7 @@ function harness({fail=false}={}){const handlers={},deleted=[],stored=[];let fet
 async function lifecycle(fn){let pending;fn({waitUntil:p=>pending=p});await pending;}
 test('offline cache is content-versioned and contains only existing explicit shell assets',async()=>{
  const assets=JSON.parse(source.match(/const SHELL=(\[[^;]+\]);/)[1]);const hash=createHash('sha256');
- for(const path of assets){assert.ok(path==='/'||/^\/[a-z.-]+\.(js|css|svg|webmanifest)$/.test(path));assert.ok(!path.startsWith('/api/'));hash.update(await readFile(new URL('./public/'+(path==='/'?'index.html':path.slice(1)),import.meta.url)));}
+ for(const path of assets){assert.ok(path==='/'||/^\/[a-z.-]+\.(js|css|svg|webmanifest)$/.test(path)||['/app-icon-192.png','/app-icon-512.png','/apple-touch-icon.png','/favicon-32.png'].includes(path));assert.ok(!path.startsWith('/api/'));hash.update(await readFile(new URL('./public/'+(path==='/'?'index.html':path.slice(1)),import.meta.url)));}
  assert.ok(source.includes('carryforward-shell-'+hash.digest('hex').slice(0,16)),'Run node scripts/refresh-shell-version.mjs after shell changes');
 });
 test('offline worker serves shell only and never intercepts APIs, evidence or external URLs',async()=>{

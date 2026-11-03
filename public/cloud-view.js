@@ -1,3 +1,4 @@
+import {bindJobCamera} from './job-camera.js';
 import {bindHoldToSpeak} from './held-voice.js';
 /* A conversation surface over the existing job record. No provider or storage writes live here. */
 import {buildVisitBrief,BRIEF_KIND_LABELS} from './visit-brief.js';
@@ -11,6 +12,7 @@ const el = (tag, className, text) => {
 };
 const icon = name => {
   const paths = {
+    camera: '<path d="M3 7h4l2-3h6l2 3h4v14H3z"/><circle cx="12" cy="13" r="4"/>',
     mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -76,6 +78,7 @@ export function mountCloud(root, {
   void db; // Persistence remains in the integration adapter.
   let alive = true, state = null, activity = 'ready', busy = false, refreshId = 0;
   let evidence = null, response = null, draft = '', pendingAudio = null, talkCleanup = null;
+  let cameraBusy = false;
   let currentAction = 0, draftSave = Promise.resolve(), activeEvidenceDialog = null;
   const visitBrief = buildVisitBrief(order);
   let phase = visitStage(startPhase,startWithBrief ? 'brief' : 'onsite');
@@ -158,6 +161,8 @@ export function mountCloud(root, {
   hideComposer.hidden=true; composerHint.textContent='Review your words, then send.';
   composerFoot.append(composerHint, sendButton);
   composer.append(composerLabel, input, composerFoot);
+  const photos = el('section','cf-photo-strip');photos.hidden=true;photos.setAttribute('aria-label','Saved job photos');
+  const cameraButton = button('Photo','cf-camera-action','camera');cameraButton.setAttribute('aria-label','Take a job photo');cameraButton.title='Swipe right to open the camera';
   const dock = el('div', 'cf-dock');
   const addButton = button('Add evidence', 'cf-dock-side', 'plus');
   const talkButton = button(typeof onTalk === 'function' ? 'Talk to CarryForward' : 'Talk with text', 'cf-talk', 'mic');
@@ -175,6 +180,7 @@ export function mountCloud(root, {
   fileInput.accept = 'image/jpeg,image/png,image/webp';
   fileInput.multiple = true;
   fileInput.setAttribute('aria-label', 'Add job photos');
+  const cameraInput=el('input');cameraInput.type='file';cameraInput.hidden=true;cameraInput.accept=fileInput.accept;cameraInput.setAttribute('capture','environment');cameraInput.setAttribute('aria-label','Take a job photo');
   const phaseActions=el('div','cf-phase-actions');
   const previous=button('Back','cf-text-action'); const next=button(phase.next,'cf-send','arrow');
   previous.onclick=()=>{if(!busy&&activity==='ready')changePhase(VISIT_STAGES[Math.max(0,VISIT_STAGES.indexOf(phase)-1)].id);};
@@ -192,8 +198,8 @@ export function mountCloud(root, {
     handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
     composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
     responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
-    talkButton.classList.add('cf-hold');dock.replaceChildren(talkButton);
-    lower.append(heard,notice,activityLabel,inputMeter,dock,footer,tools,fileInput);
+    talkButton.classList.add('cf-hold');dock.replaceChildren(talkButton,cameraButton);
+    lower.append(heard,notice,activityLabel,inputMeter,photos,dock,footer,tools,fileInput,cameraInput);
   }else lower.append(notice,composer,dock,activityLabel,inputMeter,savedState,phaseActions,history,footer,fileInput);
   shell.append(rail,journey,main,lower);
   root.replaceChildren(shell);
@@ -223,12 +229,14 @@ export function mountCloud(root, {
   }
   function syncControls() {
     if (!valid()) return;
-    const locked = busy || activity === 'reviewing' || activity === 'connecting';
+    const locked = busy || cameraBusy || activity === 'reviewing' || activity === 'connecting';
     reviewButton.disabled = locked || typeof onRefresh !== 'function' || activity === 'listening';
     sendButton.disabled = locked || !input.value.trim() || activity === 'listening';
     addButton.disabled = locked || activity === 'listening' || (!onUpload && !onPhotoFiles);
     hearButton.disabled = locked || activity === 'listening';
-    talkButton.disabled = voiceOnly?(busy||activity==='reviewing'||(!liveAvailable&&activity==='ready')):activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
+    cameraButton.disabled=locked||activity==='listening'||!onPhotoFiles;
+    for(const control of photos.querySelectorAll('button'))control.disabled=locked||activity==='listening';
+    talkButton.disabled = voiceOnly?(busy||cameraBusy||activity==='reviewing'||(!liveAvailable&&activity==='ready')):activity==='connecting'?false:locked||(!liveAvailable&&activity==='ready');
     previous.disabled=locked||activity!=='ready'; next.disabled=locked||activity!=='ready'||(phase.id==='final'&&!finalVisitUpdate(order,state).hasReport);
     jobButton.disabled = locked || activity === 'listening';
     sourcesButton.disabled = !onNavigate || locked || activity === 'listening';
@@ -616,6 +624,25 @@ export function mountCloud(root, {
     else clearResponse();
     await refresh();
   }, {review: true});
+  const camera=bindJobCamera(cameraInput,{
+    canOpen:()=>valid()&&!busy&&!cameraBusy&&!['connecting','listening','reviewing'].includes(activity)&&!!onPhotoFiles,
+    onOpening:()=>onStopSpeaking?.(),onState:value=>{cameraBusy=value;syncControls();},
+    onFiles:async files=>{say('Saving photo…');const result=await onPhotoFiles(files);if(!valid())return;say(result?.message||'Photo saved locally.');await refresh();},
+    onError:error=>say(error.message||'The photo could not be saved.',true),
+  });
+  cameraButton.onclick=()=>camera.open();
+  function setPhotos(items){
+    if(!valid())return;
+    photos.replaceChildren();
+    for(const item of items||[]){
+      if(item.jobId!==order.id)throw Error('Photo belongs to another job.');
+      const src=safeUrl(item.imageUrl||item.url,{media:true});if(!src)continue;
+      const thumb=el('button','cf-photo-thumb');thumb.type='button';thumb.setAttribute('aria-label',`Inspect ${item.title||'saved photo'}`);
+      const image=el('img');image.src=src;image.alt=item.title||'Saved job photo';image.decoding='async';
+      thumb.append(image,el('span','','Saved locally'));thumb.onclick=()=>{onStopSpeaking?.();openEvidenceDialog(item);};photos.append(thumb);
+    }
+    photos.hidden=!photos.childElementCount;syncControls();
+  }
   addButton.onclick = () => { if (onUpload) run(() => onUpload()); else fileInput.click(); };
   fileInput.onchange = () => { const files = Array.from(fileInput.files || []); if (files.length) run(async () => { const result = await onPhotoFiles?.(files); if (!valid()) return; fileInput.value = ''; say(result?.message || 'Evidence saved to this job.', !!result?.failed && !result.saved); await refresh(); }); };
   talkButton.onclick = async () => {
@@ -656,13 +683,13 @@ export function mountCloud(root, {
   refresh();
   const cleanup = () => {
     if (!alive) return;
-    releaseHold();document.body.classList.remove('voice-first');alive = false; refreshId++; currentAction++;
+    camera.dispose();releaseHold();document.body.classList.remove('voice-first');alive = false; refreshId++; currentAction++;
     if (typeof talkCleanup === 'function') { try { talkCleanup(); } catch { /* adapter owns capture recovery */ } }
     for (const dialog of dialogs) { for (const video of dialog.querySelectorAll('video')) video.pause(); dialog.remove(); }
     dialogs.clear();
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase, extraTools:toolsContent, setHeard:text=>{heard.textContent=`I heard: ${text}`;heard.hidden=!text;}});
+  Object.assign(cleanup, {openCamera:()=>camera.open(),canNavigate:()=>!camera.busy(),setPhotos,refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase, extraTools:toolsContent, setHeard:text=>{heard.textContent=`I heard: ${text}`;heard.hidden=!text;}});
   return cleanup;
 }

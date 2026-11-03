@@ -2,7 +2,7 @@ import {speechText} from './speech-text.js';
 import {createLocalSpeaker} from './local-speech.js';
 const MAX_BYTES=4_320_000;
 const encode=bytes=>{let value='';for(let i=0;i<bytes.length;i+=8192)value+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(value);};
-export function nativePcmSink({id,jobId,turnId,onStart,onError,bridge=globalThis.webkit?.messageHandlers?.carryForwardSpeechAudio,events=window,timeoutMs=95000}){
+export function nativePcmSink({id,jobId,turnId,onStart,onError,playbackRate=1,bridge=globalThis.webkit?.messageHandlers?.carryForwardSpeechAudio,events=window,timeoutMs=95000}){
   let ended=false,sequence=0,resolve,reject,failure=null;const completion=new Promise((a,b)=>{resolve=a;reject=b;});completion.catch(()=>{});
   const listen=event=>{if(event.detail?.id!==id||event.detail.jobId!==jobId||event.detail.turnId!==turnId)return;
     if(event.detail.state==='playing')onStart();
@@ -13,16 +13,16 @@ export function nativePcmSink({id,jobId,turnId,onStart,onError,bridge=globalThis
   function cleanup(){clearTimeout(timer);events.removeEventListener('carryforward-speech-audio',listen);}
   function fail(message){failure=Error(message);ended=true;cleanup();bridge.postMessage({action:'stop',id,jobId,turnId});onError?.(failure);reject(failure);}
   function stop(){if(ended)return;ended=true;cleanup();bridge.postMessage({action:'stop',id,jobId,turnId});resolve();}
-  events.addEventListener('carryforward-speech-audio',listen);bridge.postMessage({action:'begin',id,jobId,turnId,sampleRate:24000});
+  events.addEventListener('carryforward-speech-audio',listen);bridge.postMessage({action:'begin',id,jobId,turnId,sampleRate:24000,playbackRate});
   return {push:async bytes=>{if(failure)throw failure;if(ended)throw Error('Speech cancelled');bridge.postMessage({action:'chunk',id,jobId,turnId,sequence:sequence++,pcmBase64:encode(bytes)});},finish:()=>{if(!ended)bridge.postMessage({action:'end',id,jobId,turnId});return completion;},stop};
 }
-export function browserPcmSink({onStart,Audio=globalThis.AudioContext||globalThis.webkitAudioContext}){
+export function browserPcmSink({onStart,playbackRate=1,Audio=globalThis.AudioContext||globalThis.webkitAudioContext}){
   if(!Audio)throw Error('Streaming playback is unavailable');const context=new Audio(),sources=new Set();let next=0,started=false,ended=false,cancelled=false,resolve,reject;
   const completion=new Promise((a,b)=>{resolve=a;reject=b;});completion.catch(()=>{});
   const finish=()=>{if(ended&&!sources.size){context.close().catch(()=>{});resolve();}};
   return {async push(bytes){if(cancelled)throw Error('Speech cancelled');let timer;try{await Promise.race([context.resume(),new Promise((_,fail)=>{timer=setTimeout(()=>fail(Error('Audio output is unavailable')),3000);})]);}finally{clearTimeout(timer);}
     if(cancelled)throw Error('Speech cancelled');const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),buffer=context.createBuffer(1,bytes.length/2,24000),samples=buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(i*2,true)/32768;
-    const source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);sources.add(source);source.onended=()=>{sources.delete(source);source.disconnect();finish();};next=Math.max(context.currentTime+0.03,next);source.start(next);next+=buffer.duration;if(!started){started=true;onStart();}
+    const source=context.createBufferSource();source.buffer=buffer;source.playbackRate.value=playbackRate;source.connect(context.destination);sources.add(source);source.onended=()=>{sources.delete(source);source.disconnect();finish();};next=Math.max(context.currentTime+0.03,next);source.start(next);next+=buffer.duration/playbackRate;if(!started){started=true;onStart();}
   },finish(){ended=true;finish();return completion;},stop(){cancelled=true;for(const source of sources){source.onended=null;source.stop();source.disconnect();}sources.clear();context.close().catch(()=>{});resolve();}};
 }
 // Only server-authorized generated replies can use the network voice. Old/local
@@ -44,8 +44,9 @@ export function createReplySpeaker({jobId,getConfig=()=>({}),local=createLocalSp
       if(!response.ok)throw Error('Expressive voice is unavailable');
       if(response.headers.get('x-carryforward-speech-id')!==id||response.headers.get('x-carryforward-sample-rate')!=='24000'||!/^audio\/pcm/.test(response.headers.get('content-type')||'')||!response.body)throw Error('Unexpected spoken audio response');
       if(!valid())return;
+      const suppliedRate=Number(response.headers.get('x-carryforward-playback-rate'));const playbackRate=[1,1.15,1.4].includes(suppliedRate)?suppliedRate:1;
       const onStart=()=>{if(valid()&&!started){started=true;mark('firstPlayableAt');onState?.('speaking');}};
-      sink=(makeSink||((options)=>globalThis.webkit?.messageHandlers?.carryForwardSpeechAudio?nativePcmSink(options):browserPcmSink(options)))({id,jobId,turnId:speech.turnId,onStart});current.sink=sink;
+      sink=(makeSink||((options)=>globalThis.webkit?.messageHandlers?.carryForwardSpeechAudio?nativePcmSink(options):browserPcmSink(options)))({id,jobId,turnId:speech.turnId,onStart,playbackRate});current.sink=sink;
       const reader=response.body.getReader();let bytes=0,first=true,remainder=null;
       try{while(true){const part=await reader.read();if(!valid()||abort.signal.aborted)break;if(part.done)break;if(!part.value?.length)continue;
         if(first){first=false;mark('firstByteAt');onOutput?.({provider:'ElevenLabs',model:response.headers.get('x-carryforward-speech-model')||'unknown',voice:response.headers.get('x-carryforward-speech-voice')||'unknown'});}bytes+=part.value.length;if(bytes>MAX_BYTES)throw Error('Spoken audio exceeded its limit');

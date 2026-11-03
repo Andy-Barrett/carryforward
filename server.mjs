@@ -6,8 +6,9 @@ import { readFile, mkdir, chmod } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { transcribeWithMeta } from "./lib/meta-transcribe.mjs";
 import {loadCompanyContext} from "./lib/company-context.mjs";
-import {converseWithMeta} from "./lib/meta-conversation.mjs";
+import {answerConversation} from "./lib/meta-conversation.mjs";
 import { reviewWithMeta } from "./lib/meta-review.mjs";
+import {visitSpeechGrant} from './lib/visit-speech.mjs';
 import {handleSpeech} from "./lib/speech-api.mjs";
 import {SpeechTickets,configuredSpeech,SPEECH_VOICES} from "./lib/speech.mjs";
 import { OperationsStore } from "./lib/operations.mjs";
@@ -30,6 +31,12 @@ let speechService=null;try{speechService=await configuredSpeech();}catch{console
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/app-icon-192.png": ["app-icon-192.png", "image/png"],
+  "/app-icon-512.png": ["app-icon-512.png", "image/png"],
+  "/apple-touch-icon.png": ["apple-touch-icon.png", "image/png"],
+  "/favicon-32.png": ["favicon-32.png", "image/png"],
+  "/job-camera.js": ["job-camera.js", "text/javascript"],
+  "/visit-trial.js": ["visit-trial.js", "text/javascript"],
   "/speech-text.js": ["speech-text.js", "text/javascript"],
   "/turn-timing.js": ["turn-timing.js", "text/javascript"],
   "/reply-speech.js": ["reply-speech.js", "text/javascript"],
@@ -77,13 +84,21 @@ const files = {
 };
 const handler = async (req, res) => {
   const host = req.headers.host || "";
-  if (!(phone ? host === `${phone.host}:${server.address().port}` : /^127\.0\.0\.1:\d+$/.test(host))) { res.writeHead(421); res.end("Use the configured application address"); return; }
+  if (!(phone ? host === `${phone.originHost}:${server.address().port}` : /^127\.0\.0\.1:\d+$/.test(host))) { res.writeHead(421); res.end("Use the configured application address"); return; }
   const path = new URL(req.url, "http://localhost").pathname;
   const origin = `${phone ? "https" : "http"}://${host}`;
   if (gate && await gate(req,res,path,origin)) return;
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
   if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===origin) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
   if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled,liveVoiceEnabled:liveEnabled,companyContext:companyContext?{title:companyContext.title,revision:companyContext.revision,approvalStatus:companyContext.approvalStatus,sectionCount:companyContext.sections.length,enabledForMeta:!!companyContextForMeta}:null,speech:{enabled:!!speechService,provider:speechService?'ElevenLabs':'local',voices:Object.entries(SPEECH_VOICES).map(([key,v])=>({key,name:v.name})),defaultVoice:speechService?.voice||'sarah'}}); }
+  if(path==='/api/speech/visit'&&req.method==='POST'){
+    if(!speechService)return json(503,{error:'Expressive voice unavailable'});
+    if(req.headers.origin!==origin||req.headers['x-carryforward-intent']!=='speech'||!(req.headers.cookie||'').split('; ').includes(`carryforward_session=${localSession}`))return json(403,{error:'Speech requires this authenticated app'});
+    if(req.headers['content-type']!=='application/json')return json(415,{error:'Expected application/json'});
+    try{let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>190000)throw Error('Visit speech request exceeds limit');}
+      const speech=visitSpeechGrant(JSON.parse(body),speechTickets);if(!speech)return json(422,{error:'This readout exceeds the expressive voice limit; local speech is available'});return json(200,{speech});
+    }catch(error){return json(400,{error:error.message});}
+  }
   if(path==='/api/speech'&&req.method==='POST')return handleSpeech(req,res,{service:speechService,tickets:speechTickets,authorize:()=>req.headers.origin===origin&&req.headers['x-carryforward-intent']==='speech'&&(req.headers.cookie||'').split('; ').includes(`carryforward_session=${localSession}`)});
   if (["/api/review", "/api/transcribe", "/api/conversation/transcribe", "/api/conversation/review", "/api/conversation/answer"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
@@ -105,7 +120,7 @@ const handler = async (req, res) => {
       if ((reviews.get(countKey)||0)>=(conversation?30:5)) throw new Error(`The bounded ${kind} session limit was reached; saved work is unchanged`);
       reviews.set(countKey,(reviews.get(countKey)||0)+1);
       if (transcribing) return json(200,await transcribeWithMeta(input,{token:guardToken}));
-      if(path.endsWith("/answer")){const answer=await converseWithMeta(input,{token:guardToken,reasoningEffort:'minimal',companyContext:companyContextForMeta});answer.speech=speechTickets.issue({jobId:id,turnId:input.turnId,text:answer.reply});return json(200,answer);}
+      if(path.endsWith("/answer")){const answer=await answerConversation(input,{token:guardToken,reasoningEffort:'minimal',companyContext:companyContextForMeta});answer.speech=speechTickets.issue({jobId:id,turnId:input.turnId,text:answer.reply});return json(200,answer);}
       const proposal=await reviewWithMeta(input,{token:guardToken,reasoningEffort:conversation?'minimal':'low'});
       const spoken=(proposal.acknowledgement?proposal.acknowledgement+' ':'')+(proposal.nextQuestion?.text||'Your update is saved. Anything still unverified stays open for follow-up.');
       return json(200,{proposal,speech:speechTickets.issue({jobId:id,turnId:input.turnId,text:spoken})});
@@ -138,7 +153,7 @@ const server = phone ? https.createServer({key:phone.key,cert:phone.cert,minVers
 attachLiveRelay(server,{
   path:'/api/voice/live',
   authorize:req=>{
-    const host=`${phone?.host||'127.0.0.1'}:${server.address().port}`;
+    const host=`${phone?.originHost||'127.0.0.1'}:${server.address().port}`;
     return liveEnabled && req.headers.host===host && req.headers.origin===`${phone?'https':'http'}://${host}` && (req.headers.cookie||'').split('; ').includes(`carryforward_session=${localSession}`);
   },
   claim:()=>{if(reviewBusy)return false;reviewBusy=true;return true;},
@@ -148,5 +163,5 @@ attachLiveRelay(server,{
   acknowledgement:raw=>raw.type==='ready'?sessionAcknowledgement(raw):null,
 });
 server.listen(Number(process.env.PORT || 4310), phone?.host || "127.0.0.1", () =>
-  console.log(`CarryForward: ${phone ? "https" : "http"}://${phone?.host || "127.0.0.1"}:${server.address().port}`),
+  console.log(`CarryForward: ${phone ? "https" : "http"}://${phone?.originHost || "127.0.0.1"}:${server.address().port}`),
 );

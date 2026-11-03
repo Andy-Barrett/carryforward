@@ -10,6 +10,7 @@ final class PCMReplyQueue {
     var mayDeactivate: (() -> Bool)?
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
+    private let tempo = AVAudioUnitTimePitch()
     private let format = AVAudioFormat(standardFormatWithSampleRate: 24000, channels: 1)!
     private var identity: Identity?
     private var generation = 0
@@ -23,8 +24,9 @@ final class PCMReplyQueue {
 
     init(manualRendering: Bool = false) throws {
         self.manualRendering = manualRendering
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.attach(player); engine.attach(tempo)
+        engine.connect(player, to: tempo, format: format)
+        engine.connect(tempo, to: engine.mainMixerNode, format: format)
         if manualRendering { try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 4096) }
         #if os(iOS)
         NotificationCenter.default.addObserver(self, selector: #selector(interrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
@@ -33,8 +35,9 @@ final class PCMReplyQueue {
     }
     deinit { NotificationCenter.default.removeObserver(self) }
 
-    func begin(_ value: Identity) throws {
-        stop()
+    func begin(_ value: Identity, playbackRate: Float = 1) throws {
+        guard playbackRate == 1 || playbackRate == 1.15 || playbackRate == 1.4 else { throw QueueError.invalidChunk }
+        stop(); tempo.rate = playbackRate
         identity = value; sequence = 0; pending = 0; totalBytes = 0; ended = false; started = false
         do {
             #if os(iOS)

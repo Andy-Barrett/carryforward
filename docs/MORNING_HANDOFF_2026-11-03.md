@@ -1,5 +1,9 @@
 # CarryForward — November 3 current handoff
 
+**Later update:** build 17 is installed with the selected icon, right-swipe camera, saved-photo thumbnails, review-driven test checklist and ElevenLabs Free/Sarah. The owner heard two complete Sarah replies on build 15, then requested faster speech and less delay. Build 17 adds 1.4× native playback and exact-source gate/model lookup. The Mac changed DHCP address; a stable local hostname and leaf signed by the existing trusted CA now serve the new origin. Earlier origins remain retained. Automatic phone connection was observed; faster-voice and camera acceptance remain pending. See [the current field trial](FIELD_TRIAL_2026-11-03.md) and private runtime receipts. **166 Node checks and both build-17 targets pass.** No ElevenLabs subscription was purchased.
+
+The remainder records the earlier build-14 checkpoint; do not use its old address, voice status or spending snapshot as current runtime state.
+
 The plugged-in iPhone now runs **build 14** on a working private HTTPS connection. The owner confirmed two complete consecutive replies after microphone use. The visible Briefing/Stop briefing control recalls the assignment with local Apple speech; it starts neither a microphone nor a Meta call.
 
 ## Observed outcome

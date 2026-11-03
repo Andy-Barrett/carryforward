@@ -860,4 +860,4 @@ mountOperations($("#operations-root"), {
   },
 });
 
-bindVisitSwipes(document.querySelector('#view'),{getStep:()=>step,canNavigate:()=>!photoOperation&&(!cloudSession?.canNavigate||cloudSession.canNavigate()),navigate:navigateStep});
+bindVisitSwipes(document.querySelector('#view'),{getStep:()=>step,canNavigate:()=>!photoOperation&&(!cloudSession?.canNavigate||cloudSession.canNavigate()),navigate:navigateStep,openCamera:()=>cloudSession?.openCamera?.()});

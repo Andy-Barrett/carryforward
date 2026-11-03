@@ -577,7 +577,8 @@ private final class NativeReplyAudio: NSObject, WKScriptMessageHandler {
             guard let queue else { emit(identity, "error"); return }
             if action == "begin" {
                 guard body["sampleRate"] as? Int == 24000, webView?.microphoneCaptureState == WKMediaCaptureState.none else { emit(identity, "error"); return }
-                onPlay?(); try queue.begin(identity)
+                let playbackRate = (body["playbackRate"] as? NSNumber)?.floatValue ?? 1
+                onPlay?(); try queue.begin(identity, playbackRate: playbackRate)
             } else if action == "chunk" {
                 guard let sequence = body["sequence"] as? Int, sequence >= 0, let encoded = body["pcmBase64"] as? String, encoded.count <= 21848, let data = Data(base64Encoded: encoded) else { emit(identity, "error"); return }
                 try queue.append(identity, sequence: sequence, bytes: data)

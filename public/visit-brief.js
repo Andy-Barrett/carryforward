@@ -36,3 +36,9 @@ export function buildVisitBrief(order) {
   if (history.length) spoken.push(`Previous notes: ${history.map(item => `${item.date}: ${item.text}`).join(' ')}`);
   return {jobId:order.id,systemId:order.systemId,customer:order.customer,property:order.property,sections,scope,history,spoken:spoken.join('\n')};
 }
+
+// Short readout over the recorded assignment; the full sourced brief stays on screen.
+export function spokenDepartureBrief(order){
+ const brief=buildVisitBrief(order),notes=['problem','system','access','customer'].map(key=>brief.sections.find(s=>s.key===key)).map(section=>section.notes[0]?.text||section.missing);
+ return `Recorded work order for ${brief.customer||brief.jobId}. ${notes.join(' ')} Assigned work: ${brief.scope.join(' ')} Safety context: ${brief.sections.find(s=>s.key==='safety').missing}`;
+}

@@ -1,3 +1,4 @@
+import {visitTrialCases,readTrialFeedback,saveTrialFeedback} from './visit-trial.js';
 import {createTurnTiming,timingSummary} from './turn-timing.js';
 import {conversationIntent,spokenVisitSummary} from './visit-flow.js';
 import {buildVisitBrief} from './visit-brief.js';
@@ -38,8 +39,8 @@ export async function mountCloudSession(root, {
   let callbackError = '';
   let config = {metaEnabled:false,transcriptionEnabled:false,liveVoiceEnabled:false}, needsPairing=false;
   const photoUrls = new Map();
-  let replyEpoch=0,conversationAbort=null;
-  const interruptReply=()=>{if(document.visibilityState==='hidden'){replyEpoch++;conversationAbort?.abort();speaker.stop();}};
+  let briefSpeechEpoch=0,replyEpoch=0,conversationAbort=null;
+  const interruptReply=()=>{if(document.visibilityState==='hidden'){briefSpeechEpoch++;replyEpoch++;conversationAbort?.abort();speaker.stop();}};
   document.addEventListener('visibilitychange',interruptReply);
   const valid = () => alive && root.isConnected;
   const requireCurrent = () => { if (!valid()) throw new Error('This job view has closed. Reopen the job before continuing.'); };
@@ -116,6 +117,9 @@ export async function mountCloudSession(root, {
       }
     } catch { /* A missing focus record does not affect saved evidence or testimony. */ }
     context = next;
+    const retained=new Set(available.map(photo=>photo.id));
+    for(const [id,entry] of photoUrls)if(!retained.has(id)){URL.revokeObjectURL(entry.url);photoUrls.delete(id);}
+    view?.setPhotos(available.map(photo=>({id:photo.id,jobId,kind:'image',title:photo.name,imageUrl:photo.url,origin:'Saved locally · not yet verified',availability:'Original retained on this phone. Capture timing and equipment association need confirmation.'})));
     return context;
   }
   function rememberFocus() {
@@ -282,7 +286,7 @@ export async function mountCloudSession(root, {
       const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct'},{timeoutMs:130000});requireCurrent();
       if(answer.intent==='report')return false;
       await saveConversation(db,{id:newEventId(),jobId,at:new Date().toISOString(),question:text,reply:answer.reply,intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
-      await drawConversation();return {handled:true,response:answer.reply,origin:'Meta · work order and field context',sourceIds:answer.sourceIds,speak:true};
+      await drawConversation();return {handled:true,response:answer.reply,origin:answer.provenance?.provider==='CarryForward'?'Work order · exact source excerpt':'Meta · work order and field context',sourceIds:answer.sourceIds,speak:true};
     }
     const result = routeJobCommand(text, await refreshContext());
     requireCurrent();
@@ -354,23 +358,38 @@ export async function mountCloudSession(root, {
         const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
         timing.mark('classificationStarted');
         const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct',turnId:clip.id},{timeoutMs:130000,signal:abort.signal});timing.mark('classificationReady');
-        ensureTurn();reply=answer.reply;speechTicket=answer.speech;origin='Meta · work order and field context';
+        ensureTurn();reply=answer.reply;speechTicket=answer.speech;origin=answer.provenance?.provider==='CarryForward'?'Work order · exact source excerpt':'Meta · work order and field context';
         if(answer.intent==='report'){
           const prior=answer.correctsSourceId?state.sources[answer.correctsSourceId]:null;
           const result=await saveAnswer(text,{fromHold:true,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
             audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
-          ensureTurn();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;speechTicket=answer.reply==='Got it.'?result.speech:null;origin=result.origin;
+          ensureTurn();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;speechTicket=result.speech;
+          if(answer.reply!=='Got it.'&&answer.speech&&result.speech){try{speechTicket=await voiceGrant({kind:'compose',jobId,parts:[answer.speech,result.speech]});}catch{speechTicket=null;}}
+          origin=result.origin;
         }
         await saveConversation(db,{id:recordId,timing:timing.snapshot(),jobId,at:new Date().toISOString(),question:text,reply:reply.slice(0,2000),intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});recorded=true;
       }
+      if(intent==='final'&&config.speech?.enabled){try{speechTicket=await voiceGrant({kind:'final',order,events:state.events});}catch{speechTicket=null;}}
       view.setResponse(reply,{origin});await drawConversation();await view.refresh();ensureTurn();
       conversationBusy=false;if(document.visibilityState==='hidden'){view.setActivity('ready');return;}view.setActivity('speaking');
       speak(reply,{speech:speechTicket,onOutput:output=>{timing.output=output;},onTiming:name=>{timing.mark(name);if(recorded)updateConversationTiming(db,recordId,jobId,timing.snapshot()).then(()=>drawConversation()).catch(()=>{});},onState:next=>{if(valid())view.setActivity(next);},onError:error=>{if(valid()){view.setActivity('ready');view.setResponse(reply+' '+error.message,{origin});}}});
     }finally{conversationBusy=false;if(conversationAbort===abort)conversationAbort=null;}
   }
 
-  function stopSpeaking() { speaker.stop(); if(valid())view?.setActivity('ready'); }
-  function speak(text,callbacks={}) { requireIdle();speaker.speak(text,callbacks); }
+  function stopSpeaking() { briefSpeechEpoch++;speaker.stop(); if(valid())view?.setActivity('ready'); }
+  async function voiceGrant(input){
+    const response=await fetch('/api/speech/visit',{method:'POST',headers:{'Content-Type':'application/json','X-CarryForward-Intent':'speech'},body:JSON.stringify(input),signal:AbortSignal.timeout(5000)});
+    if(!response.ok)throw Error('This readout will use local speech.');return (await response.json()).speech;
+  }
+  async function speak(text,callbacks={}) {
+    requireIdle();
+    if(!callbacks.speech&&config.speech?.enabled&&text===buildVisitBrief(order).spoken){
+      const epoch=briefSpeechEpoch;
+      try{const grant=await voiceGrant({kind:'brief',order});text=grant.displayText;callbacks={...callbacks,speech:grant};}catch{/* Local readout remains available. */}
+      if(!valid()||briefSpeechEpoch!==epoch||document.visibilityState==='hidden')return;
+    }
+    return speaker.speak(text,callbacks);
+  }
 
   requireCurrent();
   view = mountCloud(root, {
@@ -418,10 +437,30 @@ export async function mountCloudSession(root, {
       const reply=document.createElement('p');reply.textContent='CarryForward: '+row.reply;
       const source=document.createElement('small');source.textContent=(row.sourceIds||[]).join(' · ');card.append(question,reply,source);if(row.timing){const times=document.createElement('small');times.textContent=timingSummary(row.timing);card.append(times);}content.append(card);}
   }
+  await refreshContext();
   await drawConversation({restore:true});
+  const trialKey=`carryforward.trial-feedback.v1:${jobId}`;
+  let trialResults=[];
+  try{trialResults=readTrialFeedback(localStorage.getItem(trialKey),jobId);}catch{}
+  const trial=document.createElement('details');trial.className='cf-trial';
+  const trialHeading=document.createElement('summary');trialHeading.textContent='Test this visit';trial.append(trialHeading);
+  const trialNote=document.createElement('p');trialNote.textContent='Fictional rehearsal only. Results are your feedback, not work performed, evidence or automatic model scores. No test sends anything by itself.';trial.append(trialNote);
+  for(const item of visitTrialCases(order)){
+    const card=document.createElement('section');card.className='cf-trial-row';
+    const title=document.createElement('strong');title.textContent=item.title;
+    const prompt=document.createElement('p');prompt.textContent=item.prompt;
+    const expected=document.createElement('small');expected.textContent='Look for: '+item.expected;
+    const result=document.createElement('select');result.setAttribute('aria-label',item.title+' test result');
+    for(const [value,label] of [['not_tried','Not tried'],['pass','Passed'],['needs_work','Needs work']]){const option=document.createElement('option');option.value=value;option.textContent=label;result.append(option);}
+    const note=document.createElement('textarea');note.maxLength=1000;note.placeholder='What happened?';note.setAttribute('aria-label',item.title+' feedback');
+    const prior=trialResults.find(row=>row.id===item.id);result.value=prior?.result||'not_tried';note.value=prior?.note||'';
+    const save=()=>{try{const next=[...trialResults.filter(row=>row.id!==item.id),{id:item.id,result:result.value,note:note.value,at:new Date().toISOString()}];saveTrialFeedback(localStorage,trialKey,jobId,next);trialResults=next;trialNote.textContent='Test feedback saved on this device. Use Save conversation review to export it with the questions, replies and timing.';}catch(error){trialNote.textContent='Feedback was not saved: '+error.message;}};
+    result.onchange=save;note.onchange=save;card.append(title,prompt,expected,result,note);trial.append(card);
+  }
+  view.extraTools.append(trial);
   const exportConversation=document.createElement('button');exportConversation.type='button';exportConversation.textContent='Save conversation review';
   exportConversation.onclick=async()=>{try{requireIdle();const clips=await listAudioByJob(db,jobId);
-    const packet={version:'carryforward.conversation-review.v1',exportedAt:new Date().toISOString(),order,conversation:await listConversation(db,jobId),events:await listEvents(db,jobId),voiceTranscripts:clips.map(c=>({id:c.id,name:c.name,transcription:c.transcription})),note:'Text only. Earlier source-lookup replies were not saved. Raw transcripts are machine text; questions are not reports.'};
+    const packet={version:'carryforward.conversation-review.v1',exportedAt:new Date().toISOString(),order,conversation:await listConversation(db,jobId),trialFeedback:{kind:'owner_usability_feedback_not_field_evidence',results:trialResults},events:await listEvents(db,jobId),voiceTranscripts:clips.map(c=>({id:c.id,name:c.name,transcription:c.transcription})),note:'Text only. Earlier source-lookup replies were not saved. Raw transcripts are machine text; questions are not reports.'};
     const url=URL.createObjectURL(new Blob([JSON.stringify(packet,null,2)],{type:'application/json'})),anchor=document.createElement('a');anchor.href=url;anchor.download=jobId+'-conversation-review.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
   }catch(error){view.setResponse(error.message);}};view.extraTools.append(exportConversation);
   const newVisit=document.createElement('button');newVisit.type='button';newVisit.textContent='New fictional work order';newVisit.onclick=async()=>{try{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}catch(error){view.setResponse(error.message);}};view.extraTools.append(newVisit);
@@ -486,8 +525,9 @@ export async function mountCloudSession(root, {
     return true;
   }
   const cleanup = () => dispose(false);
-  cleanup.canNavigate = () => !capture && !saving && !conversationBusy;
-  cleanup.refresh = () => view.refresh();
+  cleanup.canNavigate = () => !capture && !saving && !conversationBusy && view.canNavigate();
+  cleanup.openCamera = () => {requireIdle();if(!conversationBusy)return view.openCamera();return false;};
+  cleanup.refresh = async () => {await refreshContext();return view.refresh();};
   cleanup.setResponse = (...args) => view.setResponse(...args);
   return cleanup;
 }

@@ -477,3 +477,20 @@ body.visit-pages .jobs button { flex-shrink: 0; min-height: 44px; }
 .cf-voice-first .cf-contact-heading .cf-customer { margin: 0; }
 .cf-briefing-action { min-height: 44px; padding: 8px 12px; border: 1px solid #b9c9be; border-radius: 14px; }
 .cf-briefing-action[aria-pressed=true] { background: #dce9e1; }
+
+/* Camera remains one compact companion to hold-to-speak. */
+.cf-voice-first .cf-dock{display:flex;align-items:stretch;gap:10px}
+.cf-voice-first .cf-talk{flex:1;min-width:0}
+.cf-camera-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1px solid #b8cbc2;border-radius:24px;background:#edf3ed;color:#193e38;padding:14px;min-width:68px;font:inherit;font-size:14px}
+.cf-camera-action .cf-icon{width:24px;height:24px}
+.cf-camera-action:disabled{opacity:.45}
+.cf-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:8px 0 12px;max-width:100%;overscroll-behavior-x:contain}
+.cf-photo-strip[hidden]{display:none}
+.cf-cloud .cf-photo-thumb{display:flex;flex-direction:column;line-height:1.2;flex:0 0 78px;border:1px solid #b8cbc2;border-radius:12px;overflow:hidden;background:#fff;color:#31584d;padding:0;font:inherit;font-size:11px}
+.cf-photo-thumb img{display:block;width:78px;height:68px;object-fit:cover}
+.cf-cloud .cf-photo-thumb span{font-size:11px;display:block;padding:4px 2px}
+
+.cf-trial-row{border-top:1px solid #d5dfd7;padding:12px 0}.cf-trial-row p{margin:6px 0}.cf-trial-row small{display:block;color:#53695e}.cf-trial-row select,.cf-trial-row textarea{max-width:100%;font:inherit}.cf-trial-row textarea{display:block;width:100%;min-height:60px;margin-top:8px}.cf-trial-feedback{display:flex;gap:8px;flex-wrap:wrap}
+
+.cf-cloud{touch-action:pan-y pinch-zoom}
+.cf-photo-strip{flex-wrap:wrap}

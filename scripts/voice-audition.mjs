@@ -1,4 +1,5 @@
 // Creates files only; never opens an audio device. --generate is explicit.
+import {setTimeout as pause} from 'node:timers/promises';
 import {readFile,writeFile,mkdir,stat} from 'node:fs/promises';import {createHash} from 'node:crypto';
 import {configuredSpeech,SPEECH_VOICES} from '../lib/speech.mjs';
 import {encodeMonoWav} from '../public/audio.js';
@@ -8,15 +9,18 @@ let manifest={at:new Date().toISOString(),generated:false,account:'Sign-in and r
 try{manifest=JSON.parse(await readFile(new URL('manifest.json',directory),'utf8'));}catch{}
 if(process.argv.includes('--generate')){
  const service=await configuredSpeech({...process.env,CARRYFORWARD_SPEECH_PROVIDER:'elevenlabs'});if(!service)throw Error('Configure the approved ElevenLabs key file first. No speech was generated.');
- if(manifest.items.length)throw Error('Auditions already exist. Review them before deliberately creating another charged set.');
+ if(manifest.items.length&&!process.argv.includes('--resume'))throw Error('Auditions already exist. Use --resume only to finish missing lines without regenerating saved audio.');
+ for(const item of manifest.items){const bytes=await readFile(new URL(item.file,directory));if(createHash('sha256').update(bytes).digest('hex')!==item.sha256)throw Error('Existing audition hash mismatch; no regeneration permitted.');}
  for(const [voice] of Object.entries(SPEECH_VOICES))for(let i=0;i<lines.length;i++){
+  if(manifest.items.some(item=>item.voice===voice&&item.line===i+1))continue;
+  await pause(4000); // Pace account checks on the free tier; never retry a dispatched synthesis.
   const chunks=[],meta=await service.stream({text:lines[i],voice,signal:AbortSignal.timeout(90000),onChunk:chunk=>{chunks.push(Buffer.from(chunk));}});
   const pcm=Buffer.concat(chunks),samples=new Float32Array(pcm.length/2);for(let n=0;n<samples.length;n++)samples[n]=pcm.readInt16LE(n*2)/32768;
   const wav=Buffer.from(encodeMonoWav([samples],24000)),file=`${voice}-${service.model}-${i+1}.wav`;await writeFile(new URL(file,directory),wav,{mode:0o600});
   manifest.items.push({file,line:i+1,text:lines[i],...meta,sha256:createHash('sha256').update(wav).digest('hex'),note:'Provider startup measures server receipt of first PCM bytes, not phone playback or subjective quality.'});
   await writeFile(new URL('manifest.json',directory),JSON.stringify(manifest,null,2),{mode:0o600});
  }
- manifest.generated=true;manifest.account='Starter included-credit and configured model/voice checks passed for these requests; no overages enabled.';
+ manifest.generated=true;manifest.account=`${service.plan} included-credit and configured model/voice checks passed for these requests; no overages enabled.`;
 }
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rows=Object.entries(SPEECH_VOICES).map(([voice,v])=>`<section><h2>${esc(v.name)}</h2>${lines.map((line,i)=>{const item=manifest.items.find(item=>item.voice===voice&&item.line===i+1);return `<article><p>${esc(line)}</p>${item?`<audio controls preload="none" src="${esc(item.file)}"></audio><small>${esc(item.model)} · ${item.firstByteMs} ms to server first PCM byte</small>`:'<small>Not generated — account setup is pending.</small>'}</article>`;}).join('')}</section>`).join('');

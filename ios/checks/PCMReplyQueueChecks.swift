@@ -11,7 +11,7 @@ struct PCMReplyQueueChecks {
         let next = PCMReplyQueue.Identity(id:UUID().uuidString,jobId:"DEMO-QUIET-B",turnId:"turn-b")
         var samples = Data()
         for i in 0..<8192 { var value = Int16(sin(Double(i)*0.1)*12000).littleEndian; withUnsafeBytes(of:&value) { samples.append(contentsOf:$0) } }
-        try queue.begin(old)
+        try queue.begin(old, playbackRate: 1.4)
         try queue.append(old,sequence:0,bytes:samples.prefix(8192))
         let rendered = try queue.renderOffline(2048)
         precondition(rendered.frameLength > 0)

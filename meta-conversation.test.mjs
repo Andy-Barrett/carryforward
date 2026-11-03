@@ -33,15 +33,31 @@ test('validated question returns provenance; disabled/malformed/incomplete calls
  await assert.rejects(converseWithMeta(input,{token:'fixture',fetchImpl:async()=>new Response(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:'broken'}]}]}))}),/unreadable/);
 });
 test('swipes follow owner mapping and ignore vertical motion, controls and a busy capture',()=>{
- assert.equal(swipeTarget('companion',-100,5),'jobs');assert.equal(swipeTarget('companion',100,5),'briefing');
+ assert.equal(swipeTarget('companion',-100,5),'jobs');assert.equal(swipeTarget('companion',100,5),'camera');
  assert.equal(swipeTarget('companion',100,90),null);assert.equal(swipeTarget('companion',20,0),null);assert.equal(swipeTarget('review',100,0),null);
- const listeners={},root={addEventListener:(k,v)=>listeners[k]=v,removeEventListener:k=>delete listeners[k]},target={closest:()=>null};let busy=true,navigated=null;
- const cleanup=bindVisitSwipes(root,{getStep:()=> 'companion',canNavigate:()=>!busy,navigate:value=>navigated=value});
+ const listeners={},root={addEventListener:(k,v)=>listeners[k]=v,removeEventListener:k=>delete listeners[k]},target={closest:()=>null};let busy=true,navigated=null,cameraOpened=0;
+ const cleanup=bindVisitSwipes(root,{getStep:()=> 'companion',canNavigate:()=>!busy,navigate:value=>navigated=value,openCamera:()=>cameraOpened++});
  const down=()=>listeners.pointerdown({pointerType:'touch',pointerId:1,clientX:200,clientY:200,target});
  const up=()=>listeners.pointerup({pointerId:1,clientX:50,clientY:205});down();up();assert.equal(navigated,null);
- busy=false;down();up();assert.equal(navigated,'jobs');navigated=null;listeners.pointerdown({pointerType:'touch',pointerId:1,clientX:200,clientY:200,target:{closest:()=>({})}});up();assert.equal(navigated,null);cleanup();assert.equal(Object.keys(listeners).length,0);
+ busy=false;down();listeners.pointerup({pointerId:1,clientX:350,clientY:205});assert.equal(cameraOpened,1);assert.equal(navigated,null);down();up();assert.equal(navigated,'jobs');navigated=null;listeners.pointerdown({pointerType:'touch',pointerId:1,clientX:200,clientY:200,target:{closest:()=>({})}});up();assert.equal(navigated,null);cleanup();assert.equal(Object.keys(listeners).length,0);
 });
 
 test('measurement corrections bind a supplied active source rather than automatically editing the last turn',()=>{const p=prepareConversation({...input,testimony:[{id:'measurement',text:'Output 4.2 kW.'},{id:'latest-monitoring',text:'Monitoring is live.'}]});const changed=validateConversation({...answer,intent:'report',correctsSourceId:'measurement'},p);assert.equal(changed.correctsSourceId,'measurement');assert.throws(()=>validateConversation({...answer,intent:'report',correctsSourceId:'other-job-reading'},p),/correction target/);assert.throws(()=>validateConversation({...answer,correctsSourceId:'measurement'},p),/correction target/);});
 
 test('explicit communication preferences change tone instructions without changing source facts',()=>{const direct=prepareConversation({...input,communicationStyle:'direct'}),conversational=prepareConversation({...input,communicationStyle:'conversational'});assert.match(direct.request.instructions,/skip banter/);assert.match(conversational.request.instructions,/invited humor/);assert.deepEqual(direct.request.input,conversational.request.input);assert.throws(()=>prepareConversation({...input,communicationStyle:'unsafe'}),/style/);});
+
+test('preparation questions carry the current local date and distinguish missing materials from no need',()=>{
+ const p=prepareConversation({...input,text:'Do I need wiring? What contingencies should I prepare for?'},{now:new Date('2026-11-03T15:00:00Z')});
+ const packet=JSON.parse(p.request.input[0].content[0].text);assert.deepEqual(packet.asOf,{date:'2026-11-03',timeZone:'America/Chicago'});
+ assert.match(p.request.instructions,/does not mean none will be needed/);assert.match(p.request.instructions,/appointment has passed/);assert.match(p.request.instructions,/not whether a section/);assert.equal(packet.sources[0].text,JSON.stringify(order));
+});
+
+test('exact assignment lookup avoids inference only for unambiguous questions without new field testimony',async()=>{
+ const {answerConversation}=await import('./lib/meta-conversation.mjs');
+ const gate=await answerConversation({...input,text:"Uh, what's the code to get in the gate?"},{fetchImpl:()=>assert.fail('A literal source read needs no inference')});
+ assert.equal(gate.provenance.provider,'CarryForward');assert.equal(gate.provenance.model,'sourced-assignment-lookup');assert.equal(gate.intent,'question');assert.deepEqual(gate.sourceIds,['access-gate']);assert.match(gate.reply,/2468#/);assert.ok(order.briefing.access[0].text.startsWith(gate.provenance.excerpt));
+ const model=await answerConversation({...input,text:'What inverter model is listed?'},{fetchImpl:()=>assert.fail()});assert.match(model.reply,/SE7600H-US/);
+ for(const text of ['I changed the gate code to 1234.','What gate code was used before?','What inverter model and safe isolation steps?','What wiring should I bring?','Can I troubleshoot alone?'])await assert.rejects(answerConversation({...input,text}),/disabled/);
+ await assert.rejects(answerConversation({...input,text:'What is the gate code?',testimony:[{id:'new-access',text:'The gate code changed.'}]}),/disabled/);
+ const ambiguous={...order,briefing:{...order.briefing,access:[...order.briefing.access,{...order.briefing.access[0],id:'other-gate'}]}};await assert.rejects(answerConversation({...input,order:ambiguous,text:'What is the gate code?'}),/disabled/);
+});

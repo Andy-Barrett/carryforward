@@ -45,3 +45,13 @@ test('pairing attempts are bounded and oversized bodies cannot establish a sessi
  clock=900001;assert.equal((await call(gate,{...input,body:`code=${code}`})).status,303);
  assert.equal((await call(gate,{...input,body:'x'.repeat(300)})).status,413);
 });
+
+test('stable local hostname stays separate from the explicitly private bind interface',async()=>{
+ const {mkdtemp,writeFile,rm}=await import('node:fs/promises');const {tmpdir}=await import('node:os');const {join}=await import('node:path');const dir=await mkdtemp(join(tmpdir(),'cf-host-'));
+ try{for(const [file,value] of [['key','synthetic-key'],['cert','synthetic-cert'],['code',code]])await writeFile(join(dir,file),value);
+ const env={CARRYFORWARD_PHONE_HTTPS:'1',CARRYFORWARD_PHONE_HOST:'192.168.1.236',CARRYFORWARD_PHONE_ORIGIN_HOST:'macbook-pro.local',CARRYFORWARD_PHONE_KEY:join(dir,'key'),CARRYFORWARD_PHONE_CERT:join(dir,'cert'),CARRYFORWARD_PHONE_CODE:join(dir,'code'),CARRYFORWARD_OPERATIONS_DB:join(dir,'operations.sqlite')};
+ const config=await phoneConfig(env);assert.equal(config.host,'192.168.1.236');assert.equal(config.originHost,'macbook-pro.local');
+ for(const host of ['example.com','macbook-pro.local.evil.example','a.b.local','user@mac.local'])await assert.rejects(phoneConfig({...env,CARRYFORWARD_PHONE_ORIGIN_HOST:host}),/explicit single-label/);
+ await assert.rejects(phoneConfig({...env,CARRYFORWARD_PHONE_HOST:'0.0.0.0'}),/private IPv4/);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});

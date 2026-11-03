@@ -22,6 +22,12 @@ Target design is not implemented behavior. Keep that distinction clear in code, 
 - No push, public visibility change, deployment, account permission change, provider write, or outbound message without explicit task-specific authorization. Normal local changes, focused verification, and local commits are allowed.
 - Preserve unrelated changes. Do not rewrite history, discard edits, or bypass tool permissions or sandbox restrictions.
 
+## November 3 contest release direction
+
+The owner approved the prepared MIT license and dependency notices, a normal push of the reviewed CarryForward source/history to `Andy-Barrett/carryforward`, and public visibility for that repository. This includes the fictional demo assets and selected app icon. Credentials, private safety-manual context, phone backups and recordings remain excluded. This approval does not deploy a service, submit the contest entry or grant organizer promotional rights.
+
+The owner also chose to prepare the monthly ElevenLabs Starter checkout so Sarah can remain the contest voice. Verify the exact checkout before purchase and generate fresh public audio only after suitable licensing is active. No paid upgrade has been completed at this checkpoint. Existing local speech and Meta spending caps remain unchanged.
+
 ## Product rules
 
 - The target primary interface is a short, natural interview with job photos; the current form is a fallback and working prototype.

@@ -22,8 +22,8 @@ Use a clear phone screen and prevent personal notification banners from entering
 
 ## Close the release decisions
 
-- Review the exact source candidate and proposed license/notices. Publishing the source and history, changing repository visibility and adding a license remain explicit owner decisions.
-- Resolve the final voice rights before publication. [ElevenLabs publishing guidance](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform) limits Free output to non-commercial use with specified attribution; a later paid plan does not retroactively cover earlier Free output commercially. Check the actual paid plan/model terms or use another cleared soundtrack. No paid plan has been purchased.
+- The owner approved the MIT license, dependency notices, reviewed source/history push and public GitHub visibility on November 3. The license and notices are now included; publication readback remains to be completed. Private credentials, safety-manual context, backups and recordings remain excluded.
+- Resolve the final voice rights before publication. [ElevenLabs publishing guidance](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform) limits Free output to non-commercial use with specified attribution; a later paid plan does not retroactively cover earlier Free output commercially. Check the actual paid plan/model terms or use another cleared soundtrack. The owner chose to prepare monthly Starter checkout to keep Sarah; no paid plan has been purchased. Fresh contest audio must be generated after suitable licensing is active.
 - Prepare final video/captions and accessible links. Review the complete final form and promotional permission with the owner before submission. Do not report a receipt until the platform supplies one.
 
 No company-library expansion, Android development, live Perihelion integration or production deployment is part of this finishing pass.

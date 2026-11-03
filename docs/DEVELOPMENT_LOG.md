@@ -229,3 +229,9 @@ The owner confirmed the final report directly on the iPhone. CarryForward then a
 The current report retains the original machine transcripts and correction rather than silently rewriting them. Its work order remains the canonical fictional Elena Brooks assignment. No photo was added in this continuous visit; the separate native camera test is not folded into it. Assignment admission occurred during this handoff, not before its earlier spoken briefing. The contest recording should start with actual API assignment admission and retain its own continuous master.
 
 No new Meta or ElevenLabs inference, production write, push, deployment or public submission occurred. Current app code remains unchanged. The authenticated participant guide and blank final submission form were read using the owner-approved participant account; no new agreement or promotional grant was accepted.
+
+## November 3 — approved source licensing and publication preparation
+
+Andy approved the prepared MIT license, dependency notices, normal push of the reviewed CarryForward source/history and public visibility for Andy-Barrett/carryforward. The root license/notices and npm license metadata now reflect that decision. Private credentials, safety context, phone backups and recordings remain excluded. App behavior is unchanged from the demonstrated candidate. Publication readback is the next authorized step; no contest entry or promotional grant is included.
+
+The owner chose to prepare monthly ElevenLabs Starter checkout for Sarah. No subscription purchase or new voice/model generation occurred in this preparation. Fresh public voice output must follow suitable active licensing; existing local caps remain unchanged.

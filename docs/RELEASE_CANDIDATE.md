@@ -8,7 +8,7 @@ A clean extraction installed the locked dependency from the local npm cache with
 
 Native build 18 and the updated web shell have a bounded physical conversation pass plus the same visit’s owner-confirmed API closeout, original-audio readback and separate simulator acceptance with two Operations follow-ups. Camera capture passed separately. Android remains deferred; production integration and a hosted release remain unbuilt.
 
-The proposed MIT license and dependency notice are reviewable ignored files beside the archive. They are proposals only: no project license has been added. GitHub was checked as private with no detected license. Source publication, license choice and final submission remain owner decisions. Metadata-only release notes after this candidate do not change the demonstrated app; refresh the archive/manifest for the final approved publication commit.
+The owner approved MIT licensing, dependency notices, a normal source/history push and public repository visibility on November 3. Root LICENSE and THIRD_PARTY_NOTICES.md now carry those notices. The last GitHub observation was private; public publication and readback are the next authorized steps. Contest submission remains separate. Metadata-only release changes after this candidate do not change the demonstrated app; the final publication archive/manifest will identify its exact commit.
 
 Next is the identified continuous contest recording and [submission preparation](CONTEST_FINISH_2026-11-03.md), including voice-output publication rights. No public push, visibility change, deployment, upload or contest submission occurred in preparing this candidate.
 
@@ -23,7 +23,7 @@ The archive was extracted to a fresh temporary directory. All 67 tests passed th
 
 A bounded scan of the candidate's 19 reachable commits and 174 reachable file blobs found no flagged local-data/credential paths or matches for the checked private-key, AWS access-ID, GitHub-token and long `sk-` token signatures. No blobs were skipped by the scan's size bound. A scan is not a guarantee that all kinds of secrets or security defects have been detected. The archive and scan manifests stay ignored under `.local/releases/d38f94f/`.
 
-## Remaining release decisions and evidence
+## Historical October 30 remaining decisions and evidence
 
 - Actual iPhone/Android camera, microphone, installation and interruption checks remain pending. No physical device is represented as tested.
 - `adb` and `idevice_id` were not found on the current command path. Xcode exposed `simctl`, but its runtime inventory did not complete; the inventory command was terminated without installing runtimes or restarting services. No simulator validation is claimed.

@@ -113,3 +113,7 @@ Drafts and photo attachments stay in this browser. IndexedDB stores job sessions
 For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).
 
 A private [iPhone development target](ios/README.md) now reuses this web app through SwiftUI/WKWebView. The app renders the brief and visit workspace in an iPhone Air simulator. An owner-approved Personal Team build now loads the current briefing on the physical iPhone through the paired private HTTPS service. We have now run one fictional visit on the iPhone through live speech, a camera photo, Meta review and an API handoff to the local test inbox. Both photos and the voice clip arrived intact, with four follow-ups still open. A Home/background recording and server-stopped cold startup now have bounded iPhone passes. New local recording with the server stopped and retained playback after update/reconnection also passed. The remaining interruption, airplane-mode and Android checks are still open. See the [phone results](docs/PHONE_VALIDATION.md).
+
+## License
+
+CarryForward is released under the [MIT license](LICENSE). Dependency notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Provider services, generated voice output and private company documents retain their own terms.

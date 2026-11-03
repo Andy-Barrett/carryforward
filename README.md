@@ -77,9 +77,9 @@ npm test
 
 A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
 
-The current iPhone build 14 is installed. After reproducing post-microphone speech cutoffs, local Apple replies now render to an in-memory WAV and play through the native audio player. The owner confirmed two consecutive complete replies, with matching native completion logs. The main screen also has a visible Briefing control. Broader interruption and continuous-visit acceptance remain separate. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
+The current iPhone development build is 18. Sarah’s brisker playback and shorter gate-code wait have owner passes. Right swipes now use the native rear camera after reproducing WebKit picker rejection; camera opening, Cancel and reopening were observed on the phone. The new capture-to-thumbnail check and continuous visit remain pending. Photo tap retains the ordinary picker. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
 
-The November 3 local pass has 157 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+The November 3 local pass has 172 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 

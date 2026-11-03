@@ -60,3 +60,45 @@ test('navigation cannot interrupt a busy visit or carry a gesture between pages'
  h.fire('touchstart');h.setStep('jobs');h.fire('touchend',{x:150});assert.deepEqual(h.actions,[]);
  h.fire('touchstart');h.fire('touchend',{x:150});assert.deepEqual(h.actions,['companion']);
 });
+
+test('swipe uses explicit picker while tap preserves click; denied activation releases the busy lock',()=>{
+ let clicks=0,pickers=0,deny=false;const errors=[];
+ const input={value:'',click(){clicks++;},showPicker(){pickers++;if(deny)throw new DOMException('No gesture','NotAllowedError');}};
+ const camera=bindJobCamera(input,{onFiles:()=>{},onError:error=>errors.push(error.message)});
+ assert.equal(camera.open(),true);assert.equal(clicks,1);assert.equal(pickers,0);input.oncancel();
+ assert.equal(camera.open({swipe:true}),true);assert.equal(pickers,1);assert.equal(clicks,1);input.oncancel();
+ deny=true;assert.equal(camera.open({swipe:true}),false);assert.equal(camera.busy(),false);assert.match(errors[0],/Tap Photo/);
+ assert.equal(camera.open(),true);assert.equal(clicks,2);input.oncancel();camera.dispose();
+ const legacy={value:'',click(){clicks++;}};const fallback=bindJobCamera(legacy,{onFiles:()=>{}});
+ assert.equal(fallback.open({swipe:true}),true);assert.equal(clicks,3);fallback.dispose();
+});
+
+
+function nativeHarness({onFiles=async()=>{}}={}){
+ const listeners=new Map(),messages=[],errors=[];let clicks=0;
+ const events={addEventListener:(type,fn)=>listeners.set(type,fn),removeEventListener:type=>listeners.delete(type)};
+ const bridge={postMessage:message=>messages.push(message)};
+ const input={value:'',click(){clicks++;},showPicker(){assert.fail('Native swipe must not use WebKit picker');}};
+ const camera=bindJobCamera(input,{jobId:'DEMO-JOB',eventTarget:events,nativeBridge:()=>bridge,onFiles,onError:error=>errors.push(error.message)});
+ return {camera,messages,errors,listeners,clicks:()=>clicks,fire:async detail=>listeners.get('carryforward:camera')?.({detail}),leave:()=>listeners.get('pagehide')?.()};
+}
+test('native camera results are request/job bound, admitted once and retain the save lock',async()=>{
+ let calls=0,release;const h=nativeHarness({onFiles:async files=>{calls++;assert.equal(files.length,1);assert.equal(files[0].type,'image/jpeg');assert.equal(files[0].name,'camera-test.jpg');assert.deepEqual([...new Uint8Array(await files[0].arrayBuffer())],[255,216,255]);await new Promise(resolve=>release=resolve);}});
+ h.camera.open({swipe:true});const request=h.messages[0];assert.equal(request.action,'open');assert.equal(h.camera.busy(),true);assert.equal(h.camera.open(),false);
+ const photo={...request,state:'photo',mime:'image/jpeg',name:'camera-test.jpg',dataBase64:'/9j/'};
+ await h.fire({...photo,id:'stale'});await h.fire({...photo,jobId:'OTHER'});assert.equal(calls,0);
+ const save=h.fire(photo);await new Promise(resolve=>setTimeout(resolve,0));assert.equal(calls,1);assert.equal(h.camera.busy(),true);assert.equal(h.camera.open(),false);
+ await h.fire(photo);assert.equal(calls,1);release();await save;assert.equal(h.camera.busy(),false);
+ h.camera.open();assert.equal(h.clicks(),1);h.camera.dispose();assert.equal(h.listeners.size,0);
+});
+test('native cancellation, invalid payloads and a closed page never admit evidence or strand controls',async()=>{
+ let calls=0;const h=nativeHarness({onFiles:async()=>calls++});
+ const open=()=>{h.camera.open({swipe:true});return h.messages.at(-1);};
+ let request=open();await h.fire({...request,state:'cancel'});assert.equal(h.camera.busy(),false);
+ request=open();await h.fire({...request,state:'error',message:'Camera unavailable'});assert.match(h.errors.at(-1),/unavailable/);assert.equal(h.camera.busy(),false);
+ for(const invalid of [{mime:'image/png',dataBase64:'AAAA'},{mime:'image/jpeg',dataBase64:'!@#'},{mime:'image/jpeg',dataBase64:'A'.repeat(6_666_669)}]){
+  request=open();await h.fire({...request,state:'photo',...invalid});assert.equal(h.camera.busy(),false);
+ }
+ request=open();h.leave();assert.equal(h.messages.at(-1).action,'cancel');assert.equal(h.messages.at(-1).id,request.id);await h.fire({...request,state:'photo',mime:'image/jpeg',dataBase64:'/9j/'});assert.equal(calls,0);
+ request=open();h.camera.dispose();assert.equal(h.messages.at(-1).action,'cancel');assert.equal(h.listeners.size,0);assert.equal(calls,0);
+});

@@ -624,7 +624,7 @@ export function mountCloud(root, {
     else clearResponse();
     await refresh();
   }, {review: true});
-  const camera=bindJobCamera(cameraInput,{
+  const camera=bindJobCamera(cameraInput,{jobId:order.id,
     canOpen:()=>valid()&&!busy&&!cameraBusy&&!['connecting','listening','reviewing'].includes(activity)&&!!onPhotoFiles,
     onOpening:()=>onStopSpeaking?.(),onState:value=>{cameraBusy=value;syncControls();},
     onFiles:async files=>{say('Saving photo…');const result=await onPhotoFiles(files);if(!valid())return;say(result?.message||'Photo saved locally.');await refresh();},
@@ -690,6 +690,6 @@ export function mountCloud(root, {
     for (const video of shell.querySelectorAll('video')) video.pause();
     shell.remove();
   };
-  Object.assign(cleanup, {openCamera:()=>camera.open(),canNavigate:()=>!camera.busy(),setPhotos,refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase, extraTools:toolsContent, setHeard:text=>{heard.textContent=`I heard: ${text}`;heard.hidden=!text;}});
+  Object.assign(cleanup, {openCamera:options=>camera.open(options),canNavigate:()=>!camera.busy(),setPhotos,refresh, submit, setActivity, setInputLevel, setResponse, showEvidence, setDraft, zoomEvidence, openBrief, setConnection, setClips, changePhase, extraTools:toolsContent, setHeard:text=>{heard.textContent=`I heard: ${text}`;heard.hidden=!text;}});
   return cleanup;
 }

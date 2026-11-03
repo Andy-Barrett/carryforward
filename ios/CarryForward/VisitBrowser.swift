@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import UIKit
 import AVFAudio
+import AVFoundation
 
 @MainActor
 final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
@@ -18,6 +19,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     private let clipPlayback = NativeClipPlayback()
     private let speechSession = LocalSpeechSession()
     private let replyAudio = NativeReplyAudio()
+    fileprivate let jobCamera = NativeJobCamera()
     private var downloads: [ObjectIdentifier: URL] = [:]
     var route: String { policy?.origin.absoluteString ?? "No valid origin configured" }
 
@@ -60,6 +62,13 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         controller.add(speechSession, name: "carryForwardSpeech")
         controller.add(replyAudio, name: "carryForwardSpeechAudio")
         controller.add(self, name: "carryForwardContact")
+        jobCamera.webView = webView; jobCamera.policy = policy
+        jobCamera.onOpen = { [weak self] in
+            self?.speechSession.stop(reason: "camera-open"); self?.replyAudio.stop()
+            self?.clipPlayback.stop(); self?.playbackSession.deactivate()
+            self?.webView.pauseAllMediaPlayback()
+        }
+        controller.add(jobCamera, name: "carryForwardCamera")
         controller.addUserScript(WKUserScript(source: """
             (() => {
               document.addEventListener('click', event => {
@@ -133,6 +142,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         }
     }
     func interruptCapture() {
+        jobCamera.cancel()
         let wasCapturing = webView.microphoneCaptureState != .none || webView.cameraCaptureState != .none
         webView.setMicrophoneCaptureState(.none)
         webView.setCameraCaptureState(.none)
@@ -285,6 +295,7 @@ struct VisitWebView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         let host = UIViewController()
         browser.presenter = host
+        browser.jobCamera.presenter = host
         browser.webView.translatesAutoresizingMaskIntoConstraints = false
         host.view.addSubview(browser.webView)
         NSLayoutConstraint.activate([
@@ -588,5 +599,120 @@ private final class NativeReplyAudio: NSObject, WKScriptMessageHandler {
     private func emit(_ identity: PCMReplyQueue.Identity, _ state: String) {
         guard let data = try? JSONSerialization.data(withJSONObject: ["id":identity.id,"jobId":identity.jobId,"turnId":identity.turnId,"state":state]), let json = String(data: data, encoding: .utf8) else { return }
         webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('carryforward-speech-audio',{detail: \(json)}));", completionHandler: nil)
+    }
+}
+
+
+// One explicit job-scoped camera capture. No library enumeration, provider
+// upload, automatic shutter, background restart or certificate override.
+@MainActor
+fileprivate final class NativeJobCamera: NSObject, WKScriptMessageHandler, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    weak var webView: WKWebView?
+    weak var presenter: UIViewController?
+    var policy: EndpointPolicy?
+    var onOpen: (() -> Void)?
+    private struct Request { let id: String; let jobId: String }
+    private var request: Request?
+    private var picker: UIImagePickerController?
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "carryForwardCamera", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, policy?.allows(url) == true,
+              let body = message.body as? [String: Any], let action = body["action"] as? String,
+              let id = body["id"] as? String, id.range(of: "^[A-Za-z0-9-]{1,80}$", options: .regularExpression) != nil,
+              let jobId = body["jobId"] as? String, !jobId.isEmpty, jobId.count <= 200, !jobId.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { return }
+        if action == "cancel" {
+            if request?.id == id && request?.jobId == jobId { cancel() }
+            return
+        }
+        guard action == "open" else { return }
+        let next = Request(id: id, jobId: jobId)
+        guard request == nil, let presenter, presenter.presentedViewController == nil,
+              UIApplication.shared.applicationState == .active,
+              webView?.microphoneCaptureState == WKMediaCaptureState.none,
+              webView?.cameraCaptureState == WKMediaCaptureState.none else {
+            emit(next, state: "error", message: "Finish recording or close the current screen before opening the camera."); return
+        }
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            emit(next, state: "error", message: "Camera capture is unavailable on this device. Tap Photo to select a supplied test image."); return
+        }
+        request = next
+        record("requested", id: id)
+        Task { [weak self] in
+            let permission = AVCaptureDevice.authorizationStatus(for: .video)
+            var allowed = permission == .authorized
+            if permission == .notDetermined { allowed = await AVCaptureDevice.requestAccess(for: .video) }
+            guard let self, self.request?.id == next.id else { return }
+            guard allowed else { self.finish(next, state: "error", message: "Camera access is off. Enable CarryForward camera access in Settings to take a photo."); return }
+            guard UIApplication.shared.applicationState == .active, let host = self.presenter,
+                  host.presentedViewController == nil, let current = self.webView?.url, self.policy?.allows(current) == true else {
+                self.finish(next, state: "cancel"); return
+            }
+            self.onOpen?()
+            let camera = UIImagePickerController()
+            camera.sourceType = .camera; camera.mediaTypes = ["public.image"]
+            camera.cameraCaptureMode = .photo; camera.cameraDevice = .rear
+            camera.allowsEditing = false; camera.delegate = self
+            camera.modalPresentationStyle = .fullScreen
+            self.picker = camera
+            host.present(camera, animated: true) { self.record("presented", id: next.id) }
+        }
+    }
+
+    func cancel() {
+        guard let request else { return }
+        finish(request, state: "cancel")
+    }
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        guard self.picker === picker, let request else { return }
+        finish(request, state: "cancel")
+    }
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        guard self.picker === picker, let request else { return }
+        // This JPEG is the native camera's encoded output, not an imported
+        // file or an EXIF-derived observation time. Never resize silently.
+        guard let image = info[.originalImage] as? UIImage,
+              let data = image.jpegData(compressionQuality: 0.92), !data.isEmpty else {
+            finish(request, state: "error", message: "The captured photo could not be encoded. Nothing was saved."); return
+        }
+        guard data.count <= 5_000_000 else {
+            finish(request, state: "error", message: "The captured photo exceeds the 5 MB limit. Nothing was saved. Use Photo to select a smaller image."); return
+        }
+        finish(request, state: "photo", data: data)
+    }
+    private func finish(_ value: Request, state: String, message: String? = nil, data: Data? = nil) {
+        guard request?.id == value.id && request?.jobId == value.jobId else { return }
+        request = nil
+        record(state, id: value.id, bytes: data?.count)
+        let camera = picker; picker = nil
+        let send = { [weak self] in self?.emit(value, state: state, message: message, data: data) }
+        if let camera, camera.presentingViewController != nil { camera.dismiss(animated: true) { send() } }
+        else { send() }
+    }
+    // States and byte counts only; no image bytes, job/customer text or keys.
+    private var diagnostics: [[String: Any]] = []
+    private func record(_ state: String, id: String, bytes: Int? = nil) {
+        #if DEBUG
+        var entry: [String: Any] = ["at": ISO8601DateFormatter().string(from: Date()), "state": state, "id": id,
+            "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"]
+        if let bytes { entry["bytes"] = bytes }
+        diagnostics.append(entry); diagnostics = Array(diagnostics.suffix(64))
+        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
+              let data = try? JSONSerialization.data(withJSONObject: diagnostics) else { return }
+        let directory = base.appendingPathComponent("CarryForward", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? data.write(to: directory.appendingPathComponent("camera-diagnostics.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        #endif
+    }
+    private func emit(_ value: Request, state: String, message: String? = nil, data: Data? = nil) {
+        guard let webView, let current = webView.url, policy?.allows(current) == true else { return }
+        var payload: [String: Any] = ["id": value.id, "jobId": value.jobId, "state": state]
+        if let message { payload["message"] = String(message.prefix(300)) }
+        if let data {
+            payload["mime"] = "image/jpeg"; payload["name"] = "camera-\(UUID().uuidString).jpg"
+            payload["dataBase64"] = data.base64EncodedString()
+        }
+        guard let bytes = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: bytes, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.dispatchEvent(new CustomEvent('carryforward:camera',{detail:\(json)}))", completionHandler: nil)
     }
 }

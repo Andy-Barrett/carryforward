@@ -137,3 +137,12 @@ The private phone route needs attention before the next test: the Mac's current 
 ## Builds 12–14 — current phone checkpoint
 
 The November 3 replacement private origin and root trust are working. Build 13 made Briefing visible and logged speech states without text; it reproduced post-capture synthesis stalls. Build 14 uses `SpeechPCMCollector` to render local Apple speech into a bounded in-memory WAV, then native AVAudioPlayer output. Both build targets compile, and the owner confirmed two complete consecutive post-microphone replies on the installed physical build. The text-free native completion log and source/configuration receipts stay ignored. No microphone or Meta call starts from Briefing; its readout is local. See [phone validation](../docs/PHONE_VALIDATION.md) and [context boundaries](../docs/CONVERSATION_CONTEXT.md).
+
+
+## Build 18 — camera from a swipe
+
+The web handler recognized the right swipe but WebKit rejected picker activation after the drag. A fixed-origin, main-frame `carryForwardCamera` handler now opens one native rear still-camera session for that explicit action. The app must be active, without competing capture or a presented screen. The matching request/job receives a bounded JPEG result or cancellation; disposed, duplicate, stale and wrong-job results cannot be admitted. Camera cancellation on backgrounding does not restart capture. The normal Photo tap remains the WebKit picker.
+
+The native camera encodes JPEG at 0.92 quality, without resizing, and rejects output over the existing 5 MB limit. That encoded original goes through the normal atomic evidence save and thumbnail refresh. Capture is not an independently established observation time. No full-library access, automatic shutter, image upload or provider request is added. Debug diagnostics retain only up to 64 state/counter entries under the app's private Caches directory.
+
+Physical opening, Cancel and reopening were observed after build 18 installation; the two prior thumbnails remained. Native capture/Use Photo/new-thumbnail acceptance is still pending. The Simulator unavailable-camera response preserves usable navigation. Signed-device/unsigned-Simulator builds and all 172 Node checks pass.

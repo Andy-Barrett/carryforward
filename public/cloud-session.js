@@ -526,7 +526,7 @@ export async function mountCloudSession(root, {
   }
   const cleanup = () => dispose(false);
   cleanup.canNavigate = () => !capture && !saving && !conversationBusy && view.canNavigate();
-  cleanup.openCamera = () => {requireIdle();if(!conversationBusy)return view.openCamera();return false;};
+  cleanup.openCamera = options => {requireIdle();if(!conversationBusy)return view.openCamera(options);return false;};
   cleanup.refresh = async () => {await refreshContext();return view.refresh();};
   cleanup.setResponse = (...args) => view.setResponse(...args);
   return cleanup;

@@ -120,7 +120,7 @@ const handler = async (req, res) => {
       if ((reviews.get(countKey)||0)>=(conversation?30:5)) throw new Error(`The bounded ${kind} session limit was reached; saved work is unchanged`);
       reviews.set(countKey,(reviews.get(countKey)||0)+1);
       if (transcribing) return json(200,await transcribeWithMeta(input,{token:guardToken}));
-      if(path.endsWith("/answer")){const answer=await answerConversation(input,{token:guardToken,reasoningEffort:'minimal',companyContext:companyContextForMeta});answer.speech=speechTickets.issue({jobId:id,turnId:input.turnId,text:answer.reply});return json(200,answer);}
+      if(path.endsWith("/answer")){const answer=await answerConversation(input,{token:guardToken,reasoningEffort:'minimal',companyContext:companyContextForMeta});answer.speech=speechTickets.issue({jobId:id,turnId:input.turnId,text:answer.reportReply?(answer.reply==='Got it.'?answer.reportReply:answer.reply+' '+answer.reportReply):answer.reply});return json(200,answer);}
       const proposal=await reviewWithMeta(input,{token:guardToken,reasoningEffort:conversation?'minimal':'low'});
       const spoken=(proposal.acknowledgement?proposal.acknowledgement+' ':'')+(proposal.nextQuestion?.text||'Your update is saved. Anything still unverified stays open for follow-up.');
       return json(200,{proposal,speech:speechTickets.issue({jobId:id,turnId:input.turnId,text:spoken})});

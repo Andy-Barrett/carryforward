@@ -284,7 +284,7 @@ export async function saveConversation(db,record){
 }
 
 export async function updateConversationTiming(db,id,jobId,timing){
-  const allowed=['release','localSaved','asrStarted','asrReady','classificationStarted','classificationReady','reviewStarted','reviewReady','ttsRequested','firstByte','firstPlayable','completed','localFallback'];
+  const allowed=['release','localSaved','asrStarted','asrReady','classificationStarted','classificationReady','combinedReviewReady','reviewStarted','reviewReady','ttsRequested','firstByte','firstPlayable','completed','localFallback'];
   if(!timing||!timing.points||Object.entries(timing.points).some(([key,value])=>!allowed.includes(key)||!Number.isFinite(value)||value<0||value>300000))throw Error('Invalid speech timing');
   const tx=db.transaction('conversation','readwrite'),done=txDone(tx);
   try{const store=tx.objectStore('conversation'),record=await requestTo(store.get(id));if(!record||record.jobId!==jobId)throw Error('Timing belongs to another conversation');store.put({...record,timing:{...timing,points:{...record.timing?.points,...timing.points}}});}

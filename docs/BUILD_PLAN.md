@@ -88,3 +88,6 @@ The owner replaced the four-stage controls with a single hold/release conversati
 ## Next product milestone — company library and assignment context
 
 After the current phone audio/context acceptance, use the [company-context contract](COMPANY_CONTEXT_CONTRACT.md) for two fictional companies, role/integration principals, company-scoped identity/idempotency, exact authorized source versions and offline-cache boundaries. Preserve retained prototype evidence and existing API compatibility. Source processing/admin UI, real authentication, uploads and commercial billing follow proven isolation; none is currently implemented. The same note records the short departure brief, optional nonintrusive travel discussion and parked detail stages. Current hold-to-speak is not accepted driving support.
+
+
+November 3 report follow-up: the continuous trial has owner passes for briefing and onsite answers. The first report preserved production/warranty follow-ups but took 31.16 s to first playable output. Classification and interpretation now share one guarded response, and replies name actual open items/owners. A generated text check validated in 7.31 s; physical latency, correction, explicit deferral and final review remain acceptance work.

@@ -1,6 +1,6 @@
 import {visitTrialCases,readTrialFeedback,saveTrialFeedback} from './visit-trial.js';
 import {createTurnTiming,timingSummary} from './turn-timing.js';
-import {conversationIntent,spokenVisitSummary} from './visit-flow.js';
+import {conversationIntent,spokenVisitSummary,spokenReportReply} from './visit-flow.js';
 import {buildVisitBrief} from './visit-brief.js';
 import {requestReview} from './review-request.js';
 import {createReplySpeaker} from './reply-speech.js';
@@ -246,6 +246,12 @@ export async function mountCloudSession(root, {
       if((audio?.liveReview===true||metadata.fromHold===true) && config.metaEnabled===true && !callbackError){
         view.setActivity('reviewing');
         try {
+          if(metadata.singleReview){
+            if(metadata.reviewError||!metadata.proposal)throw Error(metadata.reviewError||'No valid interpretation was returned');
+            metadata.ensureTurn?.();
+            await dispatch('interpretation.received',metadata.proposal);
+            return {speech:metadata.speech,response:spokenReportReply(order,state),origin:'Model interpretation · muse-spark-1.3',speak:true};
+          }
           const reviewed=await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:metadata.ensureTurn||requireCurrent,...(metadata.fromHold?{request:async(_url,payload)=>{metadata.timing?.mark('reviewStarted');const result=await requestReview('/api/conversation/review',{...payload,turnId:metadata.turnId},{signal:metadata.signal});metadata.timing?.mark('reviewReady');return result;}}:{})});
           const open=Object.values(state.branches).filter(branch=>branch.state!=='supported').length;
           const acknowledgement=metadata.fromHold?state.interpretations.at(-1)?.acknowledgement:null;
@@ -357,14 +363,16 @@ export async function mountCloudSession(root, {
         const history=(await listConversation(db,jobId)).slice(-12);
         const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
         timing.mark('classificationStarted');
-        const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct',turnId:clip.id},{timeoutMs:130000,signal:abort.signal});timing.mark('classificationReady');
+        const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct',turnId:'turn-'+clip.id,events:state.events,
+          pendingReport:{id:'turn-'+clip.id,text,audio:{id:clip.id,kind:'audio',sha256:clip.originalSha256,wavSha256:clip.wavSha256,name:clip.name},transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}},{timeoutMs:130000,signal:abort.signal});timing.mark('classificationReady');
+        if(answer.proposal)timing.mark('combinedReviewReady');
         ensureTurn();reply=answer.reply;speechTicket=answer.speech;origin=answer.provenance?.provider==='CarryForward'?'Work order · exact source excerpt':'Meta · work order and field context';
         if(answer.intent==='report'){
           const prior=answer.correctsSourceId?state.sources[answer.correctsSourceId]:null;
-          const result=await saveAnswer(text,{fromHold:true,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
+          const result=await saveAnswer(text,{fromHold:true,singleReview:true,proposal:answer.proposal,reviewError:answer.reviewError,speech:answer.speech,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
             audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
           ensureTurn();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;speechTicket=result.speech;
-          if(answer.reply!=='Got it.'&&answer.speech&&result.speech){try{speechTicket=await voiceGrant({kind:'compose',jobId,parts:[answer.speech,result.speech]});}catch{speechTicket=null;}}
+          if(!answer.reportReply&&answer.reply!=='Got it.'&&answer.speech&&result.speech){try{speechTicket=await voiceGrant({kind:'compose',jobId,parts:[answer.speech,result.speech]});}catch{speechTicket=null;}}
           origin=result.origin;
         }
         await saveConversation(db,{id:recordId,timing:timing.snapshot(),jobId,at:new Date().toISOString(),question:text,reply:reply.slice(0,2000),intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});recorded=true;

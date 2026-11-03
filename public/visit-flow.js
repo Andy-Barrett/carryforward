@@ -36,3 +36,12 @@ export function spokenVisitSummary(order,state) {
   const open=update.checks.filter(check=>!check.reported);
   return `Here’s the draft visit update. You reported: ${latest} ${open.length?`Still open: ${open.map(check=>`${check.label}${check.owner?`, with ${check.owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they are not independently verified.'} This has not been delivered to Operations.`;
 }
+
+// Derive the open-work acknowledgement from saved branch states, rather than
+// trusting a conversational promise that an obligation was kept open.
+export function spokenReportReply(order,state){
+  const open=(order.checks||[]).filter(check=>state.branches[check.id]?.state!=='supported');
+  const acknowledgement=state.interpretations.at(-1)?.acknowledgement||'Your update is saved.';
+  const followup=open.length?`Still open: ${open.map(check=>`${check.label}${state.branches[check.id]?.owner?`, with ${state.branches[check.id].owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they still need human review.';
+  return `${acknowledgement} ${followup}${state.activeQuestion?' '+state.activeQuestion.text:''}`;
+}

@@ -1,8 +1,8 @@
 # Spoken replies
 
-November 3 current checkpoint: ElevenLabs **Free / v4 Turbo / Sarah** is working on native build 18 with 1.4× playback. The owner accepted the brisker pace and complete final readout in the continuous fictional visit. That visit subsequently completed its exact-revision local API handoff with two Operations follow-ups retained. Later report turns took 13.60–20.25 s to first playable output; latency remains variable. Camera acceptance is a separate trial. See [the current field trial](FIELD_TRIAL_2026-11-03.md). The owner subsequently chose to prepare monthly Starter checkout for fresh contest audio. No paid subscription has been purchased.
+November 3 current checkpoint: ElevenLabs **monthly Starter / v4 Turbo / Sarah** is working on native build 18 with 1.4× playback. The owner accepted the brisker pace and complete final readout in the continuous fictional visit. That visit subsequently completed its exact-revision local API handoff with two Operations follow-ups retained. Later report turns took 13.60–20.25 s to first playable output; latency remains variable. Camera acceptance is a separate trial. See [the current field trial](FIELD_TRIAL_2026-11-03.md). The owner completed Starter checkout after the Free phone trial. Active monthly Starter and disabled overages were verified; one fresh fictional Sarah line completed after activation. Both private development servers now expect Starter. Existing Free audio remains historical trial evidence.
 
-Publication review is separate from successful playback. ElevenLabs’ [publishing guidance](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform) restricts Free output to non-commercial use and requires its specified attribution for non-commercial publication. A paid plan does not retroactively license Free-generated audio for commercial use. Its [terms](https://elevenlabs.io/terms-of-use) and any applicable model/service terms still apply. The contest form requests permission for organizer promotion, so resolve the final soundtrack rights before publication; no automatic plan change or legal classification of the contest is made here.
+Publication review is separate from successful playback. ElevenLabs’ [publishing guidance](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform) restricts Free output to non-commercial use and requires its specified attribution for non-commercial publication. A paid plan does not retroactively license Free-generated audio for commercial use. Its [terms](https://elevenlabs.io/terms-of-use) and any applicable model/service terms still apply. The contest form requests permission for organizer promotion, so use newly generated paid-plan audio for the final recording; no legal classification of the contest is made here.
 
 The remaining dated sections preserve earlier results. Build-11/14/17 pending statements below describe those checkpoints, not the latest accepted behavior.
 
@@ -16,13 +16,13 @@ Apple uses the iOS-managed synthesis session at rate 0.60; browser local speech 
 
 ## Optional provider setup
 
-The owner authorized the discussed monthly ElevenLabs Starter scope on November 2: advertised $1 first month, then $6/month, 30,000 included credits. The owner subsequently chose the free allowance for this trial. The live account API verified Free status, 10,000 included credits, zero extension and the configured model/voice access. Starter was not purchased.
+The owner authorized the discussed monthly ElevenLabs Starter scope on November 2: advertised $1 first month, then $6/month, 30,000 included credits. The owner first chose the free allowance for the phone trial, then completed Starter checkout on November 3. The live account API now verifies active monthly Starter, disabled extension and the configured model/voice. The initial Starter balance included 8,250 unused Free credits plus its 30,000 monthly credits. This follows the provider’s [upgrade and rollover rules](https://elevenlabs.io/docs/overview/administration/billing).
 
 Retain the owner-approved seven-day restricted key in an ignored server-side file and set:
 
 ```sh
 CARRYFORWARD_SPEECH_PROVIDER=elevenlabs
-CARRYFORWARD_SPEECH_PLAN=free
+CARRYFORWARD_SPEECH_PLAN=starter
 CARRYFORWARD_ELEVENLABS_KEY_FILE=<private server key-file path>
 CARRYFORWARD_SPEECH_MODEL=eleven_v4_turbo
 CARRYFORWARD_SPEECH_VOICE=sarah
@@ -30,7 +30,7 @@ CARRYFORWARD_SPEECH_VOICE=sarah
 
 Defaults are provisional. Sarah, Jessica and Matilda are the fixed stock-voice candidates; `eleven_flash_v2_5` is the other allowed model. Authenticated stock/model access and 24 kHz PCM synthesis were exercised on Free. Unsupported or changed API terms fail closed to local speech. No additional runtime dependency was installed.
 
-The adapter defaults to Free and verifies the selected exact plan (Free up to 10,000; explicitly configured monthly Starter up to 30,000), disabled allowance extension and a supported model with a conservative credit multiplier no greater than one. Account balance/overage state is checked on each utterance; model/stock catalogs cache for ten minutes. Only bounded reply or derived readout text reaches ElevenLabs. Original microphone audio, images, full work orders and provider keys never enter that request.
+The adapter defaults to Free and verifies the selected exact plan (Free up to 10,000; explicitly configured monthly Starter up to 90,000 including its documented two months of rollover), disabled allowance extension and a supported model with a conservative credit multiplier no greater than one. Account balance/overage state is checked on each utterance; model/stock catalogs cache for ten minutes. Only bounded reply or derived readout text reaches ElevenLabs. Original microphone audio, images, full work orders and provider keys never enter that request.
 
 The independent speech ledger reserves at most **6,000 characters / 60 requests**, with 1,600 characters per reply. Reservations are conservative and never refunded after a cancellation/failure. They are not a billing statement. A locked or invalid ledger blocks dispatch; it is never silently reset. The existing shared **$10 Meta guard remains separate and unchanged**.
 

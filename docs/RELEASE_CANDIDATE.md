@@ -1,6 +1,14 @@
-# Reviewable local source candidate
+# Source release record
 
-## November 3 candidate
+## November 3 public release
+
+[Andy-Barrett/carryforward](https://github.com/Andy-Barrett/carryforward) is public under MIT. The owner approved source/history publication, the fictional assets and selected app icon. GitHub detected MIT, published main matched the local commit, and unauthenticated raw reads matched README, LICENSE, dependency notices and package metadata. Credentials, private safety context, backups and recordings remain excluded. This is source publication; a hosted service and contest submission remain pending.
+
+The first licensed public commit is `934706d6cdfa3975fc74c909197dde216fc7da33`. Its tracked-source archive has 178 files, 3,514,138 bytes and SHA-256 `81801023d0fba396150463ad33c16c693cf7369eb647dec7e7fdfb23c019361c`. Its fresh extraction installed the locked dependency with lifecycle scripts disabled. The outgoing history scan covered 55 reachable commits and 653 blobs, with no skipped blobs or matches for the checked signatures/sensitive paths. [GitHub Checks passed](https://github.com/Andy-Barrett/carryforward/actions/runs/41693962973). These scans are bounded checks, not a security guarantee.
+
+A subsequent focused fix accepts documented Starter credit rollover without changing the 6,000-character/60-request local cap, exact monthly tier check or no-overage requirements. All 187 Node checks pass, and a fresh Sarah synthesis completed after active Starter verification. Private publication manifests identify each archived commit precisely. Earlier candidate archives below are retained as historical evidence.
+
+## November 3 pre-license candidate
 
 The current tested code candidate is `4a07fcf9db6e7d176c5525ed98162ff56b1851a8`. Its tracked-source-only archive contains 175 files and is 3,508,206 bytes. SHA-256: `4995f1d0b7cdf68f5f3fa8c60b7cec79e88e8900f974bef0827ee79d48ef0282`. The ignored manifest and archive are under `.local/releases/contest-20261103/`.
 

@@ -26,7 +26,7 @@ Target design is not implemented behavior. Keep that distinction clear in code, 
 
 The owner approved the prepared MIT license and dependency notices, a normal push of the reviewed CarryForward source/history to `Andy-Barrett/carryforward`, and public visibility for that repository. This includes the fictional demo assets and selected app icon. Credentials, private safety-manual context, phone backups and recordings remain excluded. This approval does not deploy a service, submit the contest entry or grant organizer promotional rights.
 
-The owner also chose to prepare the monthly ElevenLabs Starter checkout so Sarah can remain the contest voice. Verify the exact checkout before purchase and generate fresh public audio only after suitable licensing is active. No paid upgrade has been completed at this checkpoint. Existing local speech and Meta spending caps remain unchanged.
+The owner also chose to prepare the monthly ElevenLabs Starter checkout so Sarah can remain the contest voice. Verify the exact checkout before purchase and generate fresh public audio only after suitable licensing is active. The owner completed Starter checkout, and active monthly entitlement plus disabled overages were verified. The adapter now accepts documented Starter rollover; the separate local 6,000-character/60-request cap and $10 Meta cap remain unchanged. One fresh fictional Sarah sample was generated after activation. GitHub source publication and MIT detection were verified; contest submission is still pending.
 
 ## Product rules
 

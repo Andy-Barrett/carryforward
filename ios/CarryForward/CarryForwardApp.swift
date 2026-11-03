@@ -8,22 +8,25 @@ struct CarryForwardApp: App {
 
     var body: some Scene {
         WindowGroup {
-            VStack(spacing: 0) {
-                HStack {
-                    Text("CarryForward").font(.headline)
-                    Spacer()
-                    Button("Connection details", systemImage: "info.circle") { showConnection = true }.labelStyle(.iconOnly)
-                    Button("Reconnect", systemImage: "arrow.clockwise") { browser.confirmReload() }.labelStyle(.iconOnly).accessibilityLabel("Reconnect to the same origin")
-                }.padding(.horizontal, 16).padding(.vertical, 10).background(.thinMaterial)
-                if let issue = browser.connectionError {
-                    Text(issue).font(.callout).padding().frame(maxWidth: .infinity).background(.thinMaterial)
-                }
-                if let error = browser.configurationError {
-                    ContentUnavailableView("Development origin required", systemImage: "network.slash", description: Text(error))
-                } else {
-                    VisitWebView(browser: browser)
+            ZStack {
+                Color(red: 10/255, green: 15/255, blue: 31/255).ignoresSafeArea()
+                VStack(spacing: 0) {
+                    if let issue = browser.connectionError {
+                        HStack {
+                            Text(issue).font(.callout)
+                            Spacer()
+                            Button("Connection details", systemImage: "info.circle") { showConnection = true }.labelStyle(.iconOnly)
+                            Button("Reconnect", systemImage: "arrow.clockwise") { browser.confirmReload() }.labelStyle(.iconOnly)
+                        }.padding().background(.thinMaterial)
+                    }
+                    if let error = browser.configurationError {
+                        ContentUnavailableView("Connection unavailable", systemImage: "network.slash", description: Text(error))
+                    } else {
+                        VisitWebView(browser: browser)
+                    }
                 }
             }
+            .preferredColorScheme(.dark)
             .sheet(isPresented: $showConnection) {
                 NavigationStack {
                     Form {

@@ -174,3 +174,10 @@ The owner completed the handoff fields and confirmed the report directly on the 
 Independent authenticated HTTPS readback matched the full interview, original/amended testimony links, the corrected 2.4 kW pre-work observation and retained monitoring/no-replacement reports. Every original voice file matched SHA-256, MIME and size: seven files totaling 1,179,102 bytes. The report/media revisions agreed with the saved phone confirmation. No photo was in this visit.
 
 Source receipt was recorded before a separate simulator acceptance for the exact same packet revision. The result is `accepted_with_followups`: production and warranty both remain deferred with Operations. Acceptance covers the handoff; it does not independently verify the technician’s report or complete physical work. Private source snapshots and queued/received/accepted API receipts are retained locally. No new inference calls were made. The next recording must start with actual assignment admission and preserve its own continuous master.
+
+
+## November 3 — build 19 visual check
+
+Build 19 removes the duplicate native title/reconnect bar during a healthy connection and uses the Perihelion navy background around the web view. Error/reconnect controls remain available on a connection failure. The signed device build and installation succeeded. Normal close/reopen activated the updated offline shell; no visit store or pairing credential was cleared.
+
+On the connected physical iPhone, the transparent football, single brand bar, navy/gold conversation and four assignment cards rendered. A retained final update exposed low-contrast status text and an overflowing dock; the corrected shell showed readable status text and the entire talk/camera dock while the report scrolled. Existing photo thumbnails were also retained. Device Hub was returned to Simulator with keyboard capture off. This was a visual/navigation pass, not a new microphone, speech, camera or handoff acceptance run. The earlier build-18 continuous trial remains the functional evidence.

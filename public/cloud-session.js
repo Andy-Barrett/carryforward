@@ -466,13 +466,13 @@ export async function mountCloudSession(root, {
     const save=()=>{try{const next=[...trialResults.filter(row=>row.id!==item.id),{id:item.id,result:result.value,note:note.value,at:new Date().toISOString()}];saveTrialFeedback(localStorage,trialKey,jobId,next);trialResults=next;trialNote.textContent='Test feedback saved on this device. Use Save conversation review to export it with the questions, replies and timing.';}catch(error){trialNote.textContent='Feedback was not saved: '+error.message;}};
     result.onchange=save;note.onchange=save;card.append(title,prompt,expected,result,note);trial.append(card);
   }
-  view.extraTools.append(trial);
+
   const exportConversation=document.createElement('button');exportConversation.type='button';exportConversation.textContent='Save conversation review';
   exportConversation.onclick=async()=>{try{requireIdle();const clips=await listAudioByJob(db,jobId);
     const packet={version:'carryforward.conversation-review.v1',exportedAt:new Date().toISOString(),order,conversation:await listConversation(db,jobId),trialFeedback:{kind:'owner_usability_feedback_not_field_evidence',results:trialResults},events:await listEvents(db,jobId),voiceTranscripts:clips.map(c=>({id:c.id,name:c.name,transcription:c.transcription})),note:'Text only. Earlier source-lookup replies were not saved. Raw transcripts are machine text; questions are not reports.'};
     const url=URL.createObjectURL(new Blob([JSON.stringify(packet,null,2)],{type:'application/json'})),anchor=document.createElement('a');anchor.href=url;anchor.download=jobId+'-conversation-review.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }catch(error){view.setResponse(error.message);}};view.extraTools.append(exportConversation);
-  const newVisit=document.createElement('button');newVisit.type='button';newVisit.textContent='New fictional work order';newVisit.onclick=async()=>{try{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}catch(error){view.setResponse(error.message);}};view.extraTools.append(newVisit);
+  }catch(error){view.setResponse(error.message);}};
+  const newVisit=document.createElement('button');newVisit.type='button';newVisit.textContent='New fictional work order';newVisit.onclick=async()=>{try{requireIdle();stopSpeaking();await onNewVoiceDemo?.();}catch(error){view.setResponse(error.message);}};const practice=document.createElement('details');practice.className='cf-practice-tools';const practiceLabel=document.createElement('summary');practiceLabel.textContent='Practice tools';practice.append(practiceLabel,trial,exportConversation,newVisit);view.extraTools.append(practice);
   if (restored) view.setDraft?.(draft, { audio: draftAudio, focus: false });
 
   async function refreshConnection() {

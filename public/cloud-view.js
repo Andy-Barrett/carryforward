@@ -101,7 +101,7 @@ export function mountCloud(root, {
   const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow'); handoffButton.hidden=true;
   actions.append(jobButton, sourcesButton, handoffButton);
   rail.append(brand, jobIdentity, actions);
-  const tools=el('details','cf-tools');tools.append(el('summary','','Details'));
+  const tools=el('details','cf-tools');tools.append(el('summary','','More'));
   const toolsContent=el('div','cf-tools-content');tools.append(toolsContent);
   const heard=el('p','cf-heard');heard.hidden=true;
   const journey = el('div','cf-journey');
@@ -195,12 +195,13 @@ export function mountCloud(root, {
     const address=contact?.address||order.property;
     if(address){const location=el('a','cf-contact-link',address);location.href='https://maps.apple.com/?q='+encodeURIComponent(address);location.setAttribute('aria-label',`Open address in Maps: ${address}`);customer.append(location);}
     rail.replaceChildren(customer);
-    toolsContent.append(ordersButton,sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
+    toolsContent.append(ordersButton,sourcesButton,typeButton,composer,addButton,hearButton,history,savedState);
     handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
     composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
     responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
     talkButton.classList.add('cf-hold');dock.replaceChildren(talkButton,cameraButton);
-    lower.append(heard,notice,activityLabel,inputMeter,photos,dock,footer,tools,fileInput,cameraInput);
+    const secondary=el('div','cf-visit-actions');secondary.append(handoffButton,tools);
+    lower.append(heard,notice,activityLabel,inputMeter,photos,dock,footer,secondary,fileInput,cameraInput);
   }else lower.append(notice,composer,dock,activityLabel,inputMeter,savedState,phaseActions,history,footer,fileInput);
   shell.append(rail,journey,main,lower);
   root.replaceChildren(shell);
@@ -289,7 +290,7 @@ export function mountCloud(root, {
     scope.append(list);
     for (const record of visitBrief.history) scope.append(el('p','cf-brief-history',`${record.date} · ${record.text}`),el('p','cf-brief-source',`Original work-order history · ${record.id}`));
     const full=el('details','cf-full-brief');full.append(el('summary','','Access, customer notes and job details'),grid,scope);
-    const compact=el('div','cf-work-order');compact.append(el('h2','','Work order'),el('p','',order.reportedIssue||''));
+    const compact=el('div','cf-work-order');compact.append(el('h2','','The job'),el('p','',(order.reportedIssue||'').match(/^(.+?[.!?])(?:\s|$)/)?.[1]||order.reportedIssue||''));
     const assigned=el('ul');for(const text of order.requestedWork||[])assigned.append(el('li','',text));if(!voiceOnly)compact.append(assigned);
     const controls = el('div','cf-brief-controls');
     const tools = button('Work order and job selection','cf-text-action','source');
@@ -399,7 +400,8 @@ export function mountCloud(root, {
     if (!valid()) return;
     const branches = Object.values(state?.branches || {});
     const openCount = branches.filter(b => b.state !== 'supported').length;
-    handoffButton.replaceChildren(el('span', '', 'Handoff'), ...(openCount ? [el('span', 'cf-open-count', String(openCount))] : []), icon('arrow'));
+    const hasReport=Object.values(state?.sources||{}).some(source=>source.kind==='testimony');
+    handoffButton.replaceChildren(el('span', '', 'Final update'), ...(hasReport&&openCount ? [el('span', 'cf-open-count', String(openCount))] : []), icon('arrow'));
     handoffButton.setAttribute('aria-label', `Review handoff${branches.length ? `, ${openCount} unresolved ${openCount === 1 ? 'item' : 'items'}` : ''}`);
     renderHistory();
     renderResponse();

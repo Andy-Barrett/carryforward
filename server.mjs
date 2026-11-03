@@ -31,6 +31,8 @@ let speechService=null;try{speechService=await configuredSpeech();}catch{console
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/field.css": ["field.css", "text/css"],
+  "/football-mark-v1.png": ["football-mark-v1.png", "image/png"],
   "/app-icon-192.png": ["app-icon-192.png", "image/png"],
   "/app-icon-512.png": ["app-icon-512.png", "image/png"],
   "/apple-touch-icon.png": ["apple-touch-icon.png", "image/png"],

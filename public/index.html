@@ -6,23 +6,22 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#183c31" />
+    <meta name="theme-color" content="#0a0f1f" />
     <title>CarryForward · Field operations</title>
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/cloud.css" />
+    <link rel="stylesheet" href="/field.css" />
   </head>
   <body>
     <header class="companion-header">
-      <a class="brand" href="/">↗ CarryForward</a
-      ><span class="badge">YOUR FIELD COMPANION</span>
+      <button class="brand" data-step="companion" aria-label="CarryForward conversation"><img src="/football-mark-v1.png" alt="" width="42" height="34" /><span>CarryForward</span></button>
       <nav class="companion-nav" aria-label="Main workspace">
-        <button data-step="companion">Conversation</button>
-        <button data-step="review">Handoff</button>
-        <details class="job-tools"><summary>Job tools</summary><div>
-          <button data-step="briefing">Work order &amp; import</button>
+        <button data-step="jobs" class="workspace-link" aria-label="Work orders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+        <details class="job-tools"><summary aria-label="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></summary><div>
+          <button data-step="briefing">Work order details</button>
           <button data-step="interview">Evidence review</button>
           <button data-step="capture">Detailed record</button>
-          <button id="sample">Sample work order ↓</button>
+          <button id="sample">Download sample</button>
         </div></details>
       </nav>
     </header>

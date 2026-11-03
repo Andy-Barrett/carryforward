@@ -495,9 +495,11 @@ function jobListHtml() {
   const assigned=jobSessions.filter(s=>s.jobId===order.id||demoIds.has(s.jobId));
   assigned.sort((a,b)=>Number(b.jobId===order.id)-Number(a.jobId===order.id)||a.jobId.localeCompare(b.jobId));
   const retained=jobSessions.filter(s=>!assigned.includes(s)).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-  const rows=sessions=>`<ul class="jobs">${sessions.map(s=>
-    `<li><div><strong>${esc(s.order?.customer||'Saved work order')}</strong><p>${esc(s.order?.customerContact?.address||s.order?.property||'')}</p><small>${s.jobId===order.id?'Current visit · ':''}${esc(s.order?.reportedIssue||'Saved visit')}</small></div><button type="button" data-switch="${esc(s.jobId)}" aria-label="Open work order for ${esc(s.order?.customer||s.jobId)}">Open</button></li>`
-  ).join('')}</ul>`;
+  const titles={'DEMO-SYS-017':'Inverter & warranty follow-up','DEMO-SYS-018':'Monitoring connection','DEMO-SYS-019':'Production review','DEMO-SYS-020':'Storm inspection'};
+  const rows=sessions=>`<ul class="jobs">${sessions.map(s=>{
+    const current=s.jobId===order.id, title=titles[s.order?.systemId]||'Service visit';
+    return `<li><button type="button" class="job-card${current?' is-current':''}" data-switch="${esc(s.jobId)}" aria-label="Open work order for ${esc(s.order?.customer||s.jobId)}"><span class="job-card-meta"><span>${esc(s.jobId.replace('DEMO-','').slice(0,24))}</span>${current?'<span class="job-current">Current visit</span>':''}</span><strong>${esc(s.order?.customer||'Saved work order')}</strong><span class="job-card-title">${esc(title)}</span><span class="job-card-address">${esc(s.order?.customerContact?.address||s.order?.property||'')}</span><span class="job-card-arrow" aria-hidden="true">↗</span></button></li>`;
+  }).join('')}</ul>`;
   return rows(assigned)+(retained.length?`<details><summary>Earlier saved visits · ${retained.length}</summary>${rows(retained)}</details>`:'');
 }
 function render() {
@@ -540,7 +542,7 @@ function render() {
     }).then(cleanup => { if(current()) cloudSession = cleanup; else cleanup?.(); })
       .catch(err => { if(current()) root.textContent = `Conversation could not open: ${err.message}`; });
   } else if (step === "jobs") {
-    $("#view").innerHTML=`<section class="panel"><h2>Work orders</h2><div class="interview-actions"><button id="back-conversation">Back to conversation</button><button id="fresh-work-order">New test work order</button></div>${jobListHtml()}</section>`;
+    $("#view").innerHTML=`<section class="panel work-order-list"><div class="work-list-heading"><div><p class="eyebrow">YOUR ASSIGNMENTS</p><h1>Work orders</h1></div><button id="back-conversation" class="quiet-button">Current visit <span aria-hidden="true">→</span></button></div>${jobListHtml()}<details class="practice-tools"><summary>Practice visits</summary><button id="fresh-work-order" class="quiet-button">Start a fresh practice visit</button></details></section>`;
     $("#back-conversation").onclick=()=>navigateStep('companion');
     $("#fresh-work-order").onclick=()=>newVoiceDemo().catch(error=>notify(error.message));
     document.querySelectorAll('[data-switch]').forEach(b=>b.onclick=()=>switchJob(b.dataset.switch));

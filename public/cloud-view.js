@@ -334,8 +334,17 @@ export function mountCloud(root, {
     finalPane.hidden=phase.id!=='final';if(finalPane.hidden)return;
     const update=finalVisitUpdate(order,state);finalPane.replaceChildren();
     if(!update.hasReport){finalPane.append(el('p','','No report has been sent yet. A saved recording needs reviewed words before it becomes a report. Go back to add your update.'));return;}
-    finalPane.append(el('p','cf-final-status',update.confirmation),el('h2','','What you reported'));
-    for(const note of update.notes){if(note.amendedBy?.length)finalPane.append(el('small','','Earlier report · has a correction below'));if(note.amends)finalPane.append(el('small','','Correction to an earlier report'));if(!note.reviewed)finalPane.append(el('small','','Machine transcript · awaiting confirmation'));finalPane.append(el('p','cf-final-note',note.text));}
+    finalPane.append(el('p','cf-final-status',update.confirmation));
+    if(update.findings.length){
+      finalPane.append(el('h2','','Draft findings'),el('p','','Check these against your report before confirming.'));
+      for(const finding of update.findings)finalPane.append(el('p','cf-final-note',finding.text));
+    }else{
+      finalPane.append(el('h2','','Saved reports'));
+      if(update.reviewPending)finalPane.append(el('p','cf-final-status','Report review is still pending. Earlier findings have not been reused.'));
+    }
+    const history=update.findings.length?el('details','cf-final-history'):finalPane;
+    if(update.findings.length){history.append(el('summary','','Original reports and corrections'));finalPane.append(history);}
+    for(const note of update.notes){if(note.amendedBy?.length)history.append(el('small','','Earlier report · has a correction below'));if(note.amends)history.append(el('small','','Correction to an earlier report'));if(!note.reviewed)history.append(el('small','','Machine transcript · awaiting confirmation'));history.append(el('p','cf-final-note',note.text));}
     finalPane.append(el('h2','','Outcome and follow-up'));
     for(const check of update.checks){const row=el('article','cf-outcome');row.append(el('h3','',check.label),el('p','',check.status),el('p','',check.note));if(!check.reported)row.append(el('p','',check.owner?`Follow-up owner: ${check.owner}`:'Follow-up owner still needed'));finalPane.append(row);}
   }

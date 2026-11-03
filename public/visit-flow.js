@@ -10,8 +10,9 @@ export function visitStage(value,fallback='brief') {
 }
 export function finalVisitUpdate(order,state) {
   if(state&&state.jobId!==order.id)throw Error('The final update belongs to another job.');
-  const turns=Object.values(state?.sources||{}).filter(source=>source.kind==='testimony'&&!source.supersededBy);
-  return {hasReport:turns.length>0,notes:turns.map(turn=>({id:turn.id,text:turn.text,...(turn.amends?{amends:turn.amends}:{}),...(turn.amendedBy?{amendedBy:turn.amendedBy}:{}),reviewed:turn.transcription?.reviewed!==false})),
+  const turns=Object.values(state?.sources||{}).filter(source=>source.kind==='testimony'&&!source.supersededBy&&!source.excluded);
+  const findings=state?.reviewRequired?[]:(state?.observations||[]).filter(item=>!item.supersededBy&&item.sourceIds?.length&&item.sourceIds.every(id=>{const source=state.sources[id];return source&&!source.excluded&&!source.supersededBy&&(!source.derivedFrom||!state.sources[source.derivedFrom]?.excluded);})).map(item=>({id:item.id,text:item.claim,sourceIds:[...item.sourceIds]})).reverse();
+  return {hasReport:turns.length>0,findings,reviewPending:!!state?.reviewRequired,notes:turns.map(turn=>({id:turn.id,text:turn.text,...(turn.amends?{amends:turn.amends}:{}),...(turn.amendedBy?{amendedBy:turn.amendedBy}:{}),reviewed:turn.transcription?.reviewed!==false})),
     checks:(order.checks||[]).map(check=>{const branch=state?.branches?.[check.id];return {
       id:check.id,label:check.label,reported:branch?.state==='supported',
       status:branch?.state==='supported'?'Reported · needs human review':'Follow-up open',
@@ -32,9 +33,11 @@ export function conversationIntent(text) {
 export function spokenVisitSummary(order,state) {
   const update=finalVisitUpdate(order,state);
   if(!update.hasReport)return 'I don’t have a visit report yet. Tell me what you found, what you did, and what still needs attention.';
-  const latest=update.notes.slice(-3).map(note=>`${note.amendedBy?.length?'Earlier report, amended below: ':note.amends?'Correction: ':''}${note.text.slice(0,450)}`).join(' ');
+  const latest=update.findings.length
+    ?update.findings.slice(0,8).map(finding=>finding.text.replace(/^Technician[- ](?:reported(?: correction)?|corrected)\s*:?\s*/i,'').replace(/^they\b/i,'you')).join(' ')
+    :update.notes.slice(-3).map(note=>`${note.amendedBy?.length?'Earlier report, amended below: ':note.amends?'Correction: ':''}${note.text.slice(0,450)}`).join(' ');
   const open=update.checks.filter(check=>!check.reported);
-  return `Here’s the draft visit update. You reported: ${latest} ${open.length?`Still open: ${open.map(check=>`${check.label}${check.owner?`, with ${check.owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they are not independently verified.'} This has not been delivered to Operations.`;
+  return `Here’s the draft visit update. ${update.reviewPending?'Report review is still pending. Your saved words:':'You reported:'} ${latest} ${open.length?`Still open: ${open.map(check=>`${check.label}${check.owner?`, with ${check.owner}`:''}`).join('; ')}.`:'The recorded checks have supporting reports; they are not independently verified.'} This has not been delivered to Operations.`;
 }
 
 // Derive the open-work acknowledgement from saved branch states, rather than

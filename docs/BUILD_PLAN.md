@@ -94,3 +94,6 @@ November 3 report follow-up: the continuous trial has owner passes for briefing 
 
 
 November 3 persistence follow-up: the owner accepted quicker speech and clear open-work wording, but saved-state audit found production ownership was not written. Quoted follow-up events and partial report amendments now pass 184 checks and one guarded text check. Activate the web-shell update, test one correction/explicit-Operations instruction, inspect persisted owners and monitoring, then finish the same visit's final draft review. Do not count the earlier spoken acknowledgement as a persisted-owner pass.
+
+
+November 3 current checkpoint: physical saved-state readback now passes partial reading correction, retained monitoring/no replacement, and both deferred Operations owners. Final readout uses current findings with raw transcript/correction history expandable. 186 checks pass. Finish the same visit's final draft review; delivery and acceptance remain separate and unperformed for this visit.

@@ -79,7 +79,7 @@ A typed evidence reference is a technician’s reference to a record; the comple
 
 The current iPhone development build is 18. Sarah’s brisker playback and shorter gate-code wait have owner passes. Right swipes now use the native rear camera after reproducing WebKit picker rejection; camera opening, Cancel and reopening were observed on the phone. The owner confirmed capture, Use Photo and a new thumbnail. The continuous visit remains pending. Photo tap retains the ordinary picker. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
 
-The November 3 local pass has 184 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+The November 3 local pass has 186 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. The final draft reads current source-linked findings, with original reports and corrections kept in expandable history. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 

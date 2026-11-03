@@ -80,3 +80,7 @@ November 1 scope update: Andy deferred Android work for the current contest pass
 ## November 2 priority — one hold and a useful reply
 
 The owner replaced the four-stage controls with a single hold/release conversation and requested remembered connection/microphone permission. The implementation preserves original evidence, unreviewed ASR, bounded source lookup, one-question review and separate final confirmation/acceptance. Customer contact links sit beneath the name; other tools stay under Details. Automatic connection is observed on the physical iPhone. The first new hold failed at microphone setup; build 8 and the full fictional work-order → onsite → report → final-update conversation need their own owner evidence. Android remains deferred.
+
+## Next product milestone — company library and assignment context
+
+After the current phone audio/context acceptance, use the [company-context contract](COMPANY_CONTEXT_CONTRACT.md) for two fictional companies, role/integration principals, company-scoped identity/idempotency, exact authorized source versions and offline-cache boundaries. Preserve retained prototype evidence and existing API compatibility. Source processing/admin UI, real authentication, uploads and commercial billing follow proven isolation; none is currently implemented. The same note records the short departure brief, optional nonintrusive travel discussion and parked detail stages. Current hold-to-speak is not accepted driving support.

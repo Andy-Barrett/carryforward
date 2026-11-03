@@ -57,3 +57,9 @@ Sixteen guarded Meta calls were made during the overnight work. At the recorded 
 All 150 Node checks passed. Native signed-device and unsigned-Simulator build 11 compiled. Software-only browser and native PCM rendering passed without enabling speakers. Build 11 rendered in iPhone Air Simulator/iOS 26.5 after safe shell refresh/reopen; right swipe opened details and left swipe returned. These observations do not prove physical audio reliability. Build 11 was not installed on the physical phone overnight.
 
 Official references: [ElevenLabs model guide](https://elevenlabs.io/docs/eleven-api/choosing-the-right-model), [streaming TTS](https://elevenlabs.io/docs/api-reference/text-to-speech/stream), [Meta reasoning settings](https://dev.meta.ai/docs/reasoning). Actual account capabilities take precedence over advertised availability.
+
+## November 3 local Apple output repair
+
+Build 13 diagnostics reproduced speech-progress stalls after microphone use without a matching app stop; two local briefing restarts continued audibly. Build 14 replaces direct system `speak` output with local PCM rendering and AVAudioPlayer playback. The collector is bounded, cancellation is final, completion IDs are checked and failures leave the reply readable. The owner confirmed two complete consecutive replies after microphone use on the physical phone; native player completion logs corroborate the tested durations. This is the current Apple path. Provider streaming/ElevenLabs is unchanged and still lacks physical acceptance.
+
+`ios/checks/SpeechRenderChecks.swift` exercises synthetic-buffer bounds/cancellation and two actual silent Apple renders with WAV decoding on the Mac. It is not a hardware listening test. See [physical observations](PHONE_VALIDATION.md).

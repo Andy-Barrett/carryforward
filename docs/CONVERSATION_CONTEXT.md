@@ -30,3 +30,21 @@ Reference summaries were reviewed November 2, 2026:
 - [OSHA solar fall hazards](https://www.osha.gov/green-jobs/solar/falls).
 - [OSHA occupational heat overview](https://www.osha.gov/heat-exposure).
 - [Apple system-managed speech sessions](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer/usesapplicationaudiosession) and [speech rate](https://developer.apple.com/documentation/avfaudio/avspeechutterance/rate).
+
+## November 3 — approved company context and job references
+
+The owner directed loading the October 1 company safety manual and pointed this task to “Update safety manual date.” The retained verified source revision matches its approval receipt. It records owner acceptance and owner-reported Safety Officer approval on November 3; it does not establish completed site planning, training or job authorization. Thirty-five substantive policy/operating-annex sections were extracted verbatim with heading links into ignored private storage. Forms and the external-reference list are excluded. The private original, approval receipt and extracted body are not committed or served as public assets.
+
+`CARRYFORWARD_COMPANY_CONTEXT` selects a bounded, validated local bundle. Explicit bad configuration fails startup. `CARRYFORWARD_COMPANY_CONTEXT_META_APPROVED=1` is separately required to include it in Meta requests; the owner explicitly approved relevant manual excerpts for technician answers and three fictional checks on November 3. Without that flag, private sections stay out of model context. The source file itself returns 404 from the web server. No live Drive synchronization or general upload UI is implemented.
+
+For each question, retrieval supplies the responsibilities and daily-planning sections plus up to four relevant sections, with a 24,000-character bound. Each carries section ID, exact source revision, heading URL, approval basis and confirmation date. Answers save the selected IDs and cited metadata in provenance. The broader company platform remains [proposed](COMPANY_CONTEXT_CONTRACT.md); this configuration is process-wide and is not multi-company isolation.
+
+The demo SE7600H-US now has short reviewed summaries and links for two official SolarEdge family guides: LCD `MAN-01-00306-1.1` (July 2018) and SetApp `MAN-01-00541-1.4` (August 2020). Both are candidate references, not an exact-unit procedure match. The assignment lacks full part number/configuration. The catalog is explicitly limited to the fictional demonstration system, including cloned visits; it is not general manufacturer-document ingestion. PDFs are not redistributed. Manual selection/operating authority cannot be granted by importing a matching model name.
+
+Dated work-order customer history is now also supplied as individually citable, job/system-scoped sources, preserving its dates and reported status. This remains the fictional assignment's history; no actual customer collection or Perihelion integration occurred. Current testimony, historical reports, model replies and measured outcomes remain separate.
+
+Three actual guarded Spark HTTP checks returned: Stephen Gann as Safety Officer with the company section citation; neither LCD nor SetApp guide confirmed without the nameplate/variant; and warranty/replacement shipment unconfirmed with Operations retaining the update. An initial attempted check was refused because the guard was serving the owner's phone turn; it made no additional model request and did not retry automatically. The three checks were run deliberately after the phone test ended. This is a bounded development check, not a general accuracy benchmark.
+
+157 Node checks pass, including source collision/wrong-equipment boundaries, dated history/provenance, private-file exclusion and default-off manual transmission. The aggregate guard remains $10; after these checks it held 184 requests and $7.714877 reserved, not a final charge. No reset or new provider was used.
+
+Official source links: [LCD family guide](https://knowledge-center.solaredge.com/sites/kc/files/se_hd_wave_inverter_installation_guide_na.pdf), [SetApp family guide](https://knowledge-center.solaredge.com/sites/kc/files/se_hd_wave_inverter_with_SetApp_installation_guide_na.pdf).

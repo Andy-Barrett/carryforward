@@ -79,7 +79,7 @@ export function mountCloud(root, {
   let currentAction = 0, draftSave = Promise.resolve(), activeEvidenceDialog = null;
   const visitBrief = buildVisitBrief(order);
   let phase = visitStage(startPhase,startWithBrief ? 'brief' : 'onsite');
-  let briefOpen = phase.id === 'brief', liveAvailable = false, clipCount = 0;
+  let briefOpen = phase.id === 'brief', liveAvailable = false, clipCount = 0, readingBrief = false;
   const shell = el('section', 'cf-cloud');
   shell.dataset.activity = 'ready'; shell.classList.toggle('cf-voice-first',voiceOnly);document.body.classList.toggle('voice-first',voiceOnly);
   shell.setAttribute('aria-label', 'CarryForward field conversation');
@@ -92,7 +92,7 @@ export function mountCloud(root, {
   jobIdentity.append(jobName);
   const actions = el('nav', 'cf-rail-actions');
   actions.setAttribute('aria-label', 'Current job');
-  const jobButton = button('The brief', 'cf-small-action');
+  const jobButton = button('Briefing', 'cf-small-action cf-briefing-action', 'volume');
   const sourcesButton = button('Sources', 'cf-small-action', 'source');
   const handoffButton = button('Handoff', 'cf-small-action cf-handoff', 'arrow'); handoffButton.hidden=true;
   actions.append(jobButton, sourcesButton, handoffButton);
@@ -181,13 +181,14 @@ export function mountCloud(root, {
   next.onclick=()=>run(async()=>{if(phase.id==='final'){await onNavigate?.('review');return;}changePhase(VISIT_STAGES[VISIT_STAGES.indexOf(phase)+1].id);});
   phaseActions.append(previous,next);
   if(voiceOnly){
-    const customer=el('div','cf-contact');customer.append(el('p','cf-customer',order.customer||'Current visit'));
+    const customer=el('div','cf-contact');
+    const heading=el('div','cf-contact-heading');heading.append(el('p','cf-customer',order.customer||'Current visit'),jobButton);customer.append(heading);
     const contact=order.customerContact;
     if(contact?.phone){const row=el('div','cf-contact-phone');row.append(el('span','cf-phone-number',contact.phone));const number=contact.phone.replace(/[^+0-9]/g,'');for(const [label,scheme] of [['Call','tel:'],['Text','sms:']]){const action=el('a','cf-contact-link',label);action.href=scheme+number;action.setAttribute('aria-label',`${label} ${order.customer} at ${contact.phone}`);row.append(action);}customer.append(row);}
     const address=contact?.address||order.property;
     if(address){const location=el('a','cf-contact-link',address);location.href='https://maps.apple.com/?q='+encodeURIComponent(address);location.setAttribute('aria-label',`Open address in Maps: ${address}`);customer.append(location);}
     rail.replaceChildren(customer);
-    toolsContent.append(jobButton,sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
+    toolsContent.append(sourcesButton,handoffButton,typeButton,composer,addButton,hearButton,history,savedState,el('p','cf-private-note','Fictional test assignment. Hold to speak sends new speech to Meta for a reply.'));
     handoffButton.hidden=false;typeButton.hidden=false;typeButton.querySelector('span:last-child').textContent='Type a message';
     composer.hidden=true;sendButton.hidden=true;composerHint.textContent='Press Enter to send';
     responseActions.hidden=true;phaseActions.hidden=true;footer.hidden=true;
@@ -206,6 +207,9 @@ export function mountCloud(root, {
   function setActivity(next) {
     if (!valid() || !ACTIVITY.has(next)) return;
     activity = next; activityLabel.hidden = next === 'ready';
+    if (next === 'ready' || next === 'connecting' || next === 'listening') readingBrief = false;
+    jobButton.replaceChildren(icon(readingBrief ? 'stop' : 'volume'), el('span', '', readingBrief ? 'Stop briefing' : 'Briefing'));
+    jobButton.setAttribute('aria-pressed', String(readingBrief));
     if(next==='listening'||next==='connecting')say('');
     shell.dataset.activity = next;
     activityLabel.textContent = voiceOnly?({ready:'',connecting:'Opening microphone…',listening:'Listening — release when you’re done',reviewing:'Thinking…',speaking:'Replying…'}[next]):{ready: 'Ready when you are', connecting:'Starting live voice', listening: 'Microphone is listening', reviewing: 'Reviewing the job evidence', speaking: 'Reading the response aloud'}[next];
@@ -250,7 +254,6 @@ export function mountCloud(root, {
     return `${BRIEF_KIND_LABELS[note.kind]} · ${source.title} · ${source.id} · ${source.revision}${source.page ? ` · p. ${source.page}` : ''}`;
   }
   function renderBrief() {
-    if(voiceOnly)toolsContent.querySelector('.cf-full-brief')?.remove();
     briefPane.hidden = !briefOpen;
     if (!briefOpen || briefPane.childElementCount) return;
     const grid = el('div','cf-brief-grid');
@@ -588,7 +591,12 @@ export function mountCloud(root, {
     if (control) { control.setAttribute('aria-pressed', String(expanded)); control.replaceChildren(icon('expand'), el('span', '', expanded ? 'Fit to view' : 'Zoom in')); }
     return true;
   }
-  jobButton.onclick = () => { if (!busy && activity !== 'listening' && activity !== 'reviewing') openBrief(); };
+  jobButton.onclick = async () => {
+    if (busy || activity === 'connecting' || activity === 'listening' || activity === 'reviewing') return;
+    if (readingBrief) { await onStopSpeaking?.(); if (valid()) setActivity('ready'); return; }
+    openBrief(); readingBrief = true; setActivity('speaking');
+    await readAloud(visitBrief.spoken);
+  };
   function navigate(destination) {
     if (!valid() || busy || activity === 'listening' || activity === 'reviewing') return;
     try { Promise.resolve(onNavigate?.(destination)).catch(error => say(error.message || 'That view could not be opened.', true)); }
@@ -636,9 +644,14 @@ export function mountCloud(root, {
   if(voiceOnly){talkButton.onclick=null;releaseHold=bindHoldToSpeak(talkButton,{start:()=>{if(!valid()||busy)return null;return onHold?.();},onError:error=>{if(valid()){setActivity('ready');say(error.message,true);}}});}
   hearButton.onclick = async () => {
     if (activity === 'speaking') { await onStopSpeaking?.(); if (valid()) setActivity('ready'); return; }
-    try { await onSpeak?.(briefOpen ? visitBrief.spoken : responseText.textContent, {onState: next => { if (valid()) setActivity(next); }, onError: error => { if (valid()) { setActivity('ready'); say(error?.message || String(error), true); } }}); }
-    catch (error) { if (valid()) { setActivity('ready'); say(error.message || 'Spoken output unavailable.', true); } }
+    await readAloud(briefOpen ? visitBrief.spoken : responseText.textContent);
   };
+  async function readAloud(text) {
+    try {
+      if (typeof onSpeak !== 'function') throw new Error('Spoken output unavailable. The work order is readable under Details.');
+      await onSpeak(text, {onState: next => { if (valid()) setActivity(next); }, onError: error => { if (valid()) { setActivity('ready'); say(error?.message || String(error), true); } }});
+    } catch (error) { if (valid()) { setActivity('ready'); say(error.message || 'Spoken output unavailable.', true); } }
+  }
   syncControls();
   refresh();
   const cleanup = () => {

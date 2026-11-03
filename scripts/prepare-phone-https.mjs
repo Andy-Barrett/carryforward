@@ -12,7 +12,7 @@ const root=new URL('../.local/phone-https/',import.meta.url);await mkdir(root,{r
 const dir=new URL(name+'/',root);await mkdir(dir,{mode:0o700});
 const run=args=>{const result=spawnSync('openssl',args,{cwd:dir,stdio:'pipe'});if(result.status!==0)throw Error('Certificate preparation failed: '+result.stderr.toString());};
 await writeFile(new URL('server.ext',dir),`basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:${host}\n`,{mode:0o600,flag:'wx'});
-run(['req','-x509','-newkey','rsa:2048','-nodes','-days','3','-sha256','-subj','/CN=CarryForward Temporary Phone Trial CA','-addext','basicConstraints=critical,CA:TRUE,pathlen:0','-addext','keyUsage=critical,keyCertSign,cRLSign','-keyout','ca.key','-out','ca.pem']);
+run(['req','-x509','-newkey','rsa:2048','-nodes','-days','3','-sha256','-subj',`/CN=CarryForward Phone Trial CA ${name}`,'-addext','basicConstraints=critical,CA:TRUE,pathlen:0','-addext','keyUsage=critical,keyCertSign,cRLSign','-keyout','ca.key','-out','ca.pem']);
 run(['req','-new','-newkey','rsa:2048','-nodes','-subj','/CN=CarryForward Private Phone Trial','-keyout','server.key','-out','server.csr']);
 run(['x509','-req','-in','server.csr','-CA','ca.pem','-CAkey','ca.key','-CAcreateserial','-days','3','-sha256','-extfile','server.ext','-out','server.pem']);
 run(['x509','-in','ca.pem','-outform','DER','-out','CarryForward-Phone-Trial.cer']);

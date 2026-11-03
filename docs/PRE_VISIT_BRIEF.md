@@ -19,3 +19,7 @@ The new sample is DEMO-WO-1043 / DEMO-SYS-017. It intentionally does not change 
 ## Verification and remaining work
 
 95 Node 24 tests pass, including optional-contract/roundtrip, bounds, old assignment preservation, unapproved reference handling, recall and model evidence-boundary checks. Desktop and 390×844 phone emulation checked the seven sections, Continue, recall and layout. Desktop also checked draft preservation and actual PDF preview. Speech and microphone were not activated, and no actual model call occurred in this increment. Physical device checks remain separate. Approved site/equipment procedures and applicable company ladder rules must come from authorized sources; this sample intentionally shows them as missing.
+
+## November 3 visible control
+
+The one-hold screen now has a visible Briefing control beside the customer name. It recalls the supplied pre-visit brief and starts local readout; Stop briefing stops it. No microphone or Meta request starts from this control. Full source-tagged notes remain under Details, including after repeated refreshes. The owner heard two interrupted/restarted readouts on build 13. Future departure/travel/parked stages are specified in [the company context roadmap](COMPANY_CONTEXT_CONTRACT.md); they are not implemented by this button.

@@ -63,7 +63,7 @@ npm test
 ## What works today
 
 - A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Text, photos, sources, saved recordings and handoff tools are under Details. See [the simple visit](docs/SIMPLE_VISIT.md).
-- Guarded Meta answers with the full work order, recent job conversation, public Perihelion background and general safety references. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
+- Guarded Meta answers with the full work order, recent job conversation, dated demo history, public Perihelion background, general safety references and candidate SolarEdge family-manual summaries. An explicitly approved private company-safety context can supply bounded cited sections. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
 - A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
 - Work-order briefing with site and system identifiers, assigned scope, and source history.
 - Validated JSON work-order import and a downloadable sample.
@@ -77,9 +77,9 @@ npm test
 
 A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
 
-The current iPhone build 10 is installed; build 11 adds the optional streaming-audio queue and compiles for both targets. The owner has heard one hold/release gate-code answer, but reported intermittent cutoffs. We have not yet established reliable consecutive spoken replies. The prepared changes add cancellation handling, faster text reasoning, clear spoken numbers and separate turn timings. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
+The current iPhone build 14 is installed. After reproducing post-microphone speech cutoffs, local Apple replies now render to an in-memory WAV and play through the native audio player. The owner confirmed two consecutive complete replies, with matching native completion logs. The main screen also has a visible Briefing control. Broader interruption and continuous-visit acceptance remain separate. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
 
-The November 3 local pass has 150 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+The November 3 local pass has 157 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 
@@ -106,7 +106,7 @@ The JSON format is a prototype contract, not an adopted Perihelion API. The loca
 
 This is an early prototype built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. It began as a business-transition concept and was narrowed to field operations before model integration. The base completeness review is deterministic. Optional server-side Meta review now interprets saved synthetic testimony and selected job images through the approved aggregate spending guard; it remains disabled unless explicitly configured.
 
-The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
+The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. The owner-approved safety-manual snapshot stays in ignored private server storage; it is not part of the distributed source or public app shell. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
 
 Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. The tested upgrade and rollback paths are documented above; quota recovery, browser eviction, portable media import and broader physical phone behavior still need validation.
 

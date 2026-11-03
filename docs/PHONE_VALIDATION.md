@@ -158,3 +158,10 @@ November 3 build 17 follow-up: the owner confirmed that the gate-code wait was s
 
 
 November 3 build 18: the owner reported that the corrected web swipe still failed while Photo worked. Inspection reproduced a recognized swipe with WebKit activation rejection. The native camera adapter now opens from a right swipe on the physical phone; Cancel and a second opening passed, with matching state-only diagnostics. Two existing thumbnails remained after installation. The owner subsequently completed capture and Use Photo and confirmed “New thumbnail appears.” The physical swipe/capture/thumbnail flow passes; broader continuous-visit acceptance remains separate. Simulator camera unavailability leaves navigation usable. Both build targets and 172 Node checks pass. No provider inference or speech was requested for this increment.
+
+
+## November 3 continuous conversation acceptance
+
+On native build 18 with the updated web shell, the owner completed one fictional visit through briefing, preparation, onsite access questions, a multi-outcome report, a 2.4 kW pre-work correction, explicit Operations follow-ups and final review. The final response was “Correct draft; full readout finishes.” Saved-state replay independently confirms the amendment history, retained monitoring/no-replacement testimony, and production plus warranty deferred with Operations. It does not independently verify physical work or telemetry.
+
+This is a bounded iPhone conversation pass, with variable report latency still recorded in [the field trial](FIELD_TRIAL_2026-11-03.md). It includes no new photo; the camera pass above remains separate. The current visit is not yet admitted to the local simulator API, delivered, received or accepted. Android remains deferred. Acceptance recording and handoff preview preparation made no new provider calls; 186 previously passing Node checks remain the latest software verification.

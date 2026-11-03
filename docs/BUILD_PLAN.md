@@ -18,7 +18,7 @@ November 3: the continuous fictional iPhone conversation passes through briefing
 
 Native build 18 also has a separate owner pass for right swipe → camera → Use Photo → new thumbnail. This continuous visit did not add a photo. Sarah’s brisk 1.4× pace is accepted; report latency still varies. All 186 Node checks pass, and 42 HTTPS shell assets passed. See [the field trial](FIELD_TRIAL_2026-11-03.md) and [physical validation](PHONE_VALIDATION.md).
 
-Next, review and confirm this visit’s handoff fields, send the exact confirmed revision through the existing local Operations simulator, and verify readback of original media, corrections and both open owners. This visit has not been admitted or delivered to that API; the older accepted trial is separate. Receipt and Operations acceptance remain separate actions. Then finish the contest demonstration and release preparation before expanding the company library. Android and live Perihelion integration remain deferred.
+The same visit has now completed owner confirmation, actual API admission/delivery, source receipt and separate simulator acceptance with two follow-ups retained. Seven original audio files and all eleven investigation events matched authenticated readback. Assignment admission happened at handoff; a fresh contest master should show API admission before the briefing. Next, freeze the demonstrated code and finish the recording, source/license package and submission review before expanding the company library. Android and live Perihelion integration remain deferred.
 
 The current app preserves a text fallback, job-scoped source recall, evidence history and offline drafts. General document ingestion/retrieval, full-duplex voice and production deployment remain unbuilt. The slices below retain their original acceptance intent; a local prototype is not a completed field deployment.
 
@@ -95,3 +95,6 @@ November 3 persistence follow-up: the owner accepted quicker speech and clear op
 
 
 November 3 current checkpoint: physical saved-state readback now passes partial reading correction, retained monitoring/no replacement, and both deferred Operations owners. Final readout uses current findings with raw transcript/correction history expandable. 186 checks pass. The owner then confirmed the correct draft and complete readout. Delivery and acceptance remain separate and unperformed for this visit.
+
+
+November 3 API closeout: the current continuous visit was owner-confirmed, queued, received and separately accepted with two Operations follow-ups. All seven original voice-file hashes/MIME/sizes, exact report/media revision, eleven investigation events and amendment links matched actual authenticated HTTP readback. This supersedes the earlier undelivered status without changing those historical observations. No model calls or application changes occurred in this closeout.

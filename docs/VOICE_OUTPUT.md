@@ -1,6 +1,10 @@
 # Spoken replies
 
-November 3 current checkpoint: ElevenLabs **Free** is configured, with 10,000 included credits and no overages verified through the API. Sarah was selected after 18 actual fictional audition clips across three stock voices. No paid subscription was purchased. The owner heard two complete Sarah replies on build 15, then requested a faster pace and less delay. Build 17 provides 1.4× pitch-preserving native playback; its final owner check is pending.
+November 3 current checkpoint: ElevenLabs **Free / v4 Turbo / Sarah** is working on native build 18 with 1.4× playback. The owner accepted the brisker pace and complete final readout in the continuous fictional visit. That visit subsequently completed its exact-revision local API handoff with two Operations follow-ups retained. Later report turns took 13.60–20.25 s to first playable output; latency remains variable. Camera acceptance is a separate trial. See [the current field trial](FIELD_TRIAL_2026-11-03.md). No paid subscription has been purchased.
+
+Publication review is separate from successful playback. ElevenLabs’ [publishing guidance](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform) restricts Free output to non-commercial use and requires its specified attribution for non-commercial publication. A paid plan does not retroactively license Free-generated audio for commercial use. Its [terms](https://elevenlabs.io/terms-of-use) and any applicable model/service terms still apply. The contest form requests permission for organizer promotion, so resolve the final soundtrack rights before publication; no automatic plan change or legal classification of the contest is made here.
+
+The remaining dated sections preserve earlier results. Build-11/14/17 pending statements below describe those checkpoints, not the latest accepted behavior.
 
 ## One interaction
 
@@ -75,6 +79,6 @@ Two saved build-15 turns measured ASR at 1.1–1.2 s, Meta reasoning at 5.8–7.
 
 Authenticated `/api/speech/visit` grants derive briefing text from the validated assignment, final summary text from replayed investigation events, or a composition of two existing reply grants. They never accept arbitrary synthesis text or send media. Stop/new hold/background cancels a pending briefing readout. Oversized or unavailable expressive readouts use local speech. The full sourced brief stays inspectable; its short readout does not admit field evidence or equipment-procedure approval.
 
-The selected icon and camera/trial changes are documented in [the field trial](FIELD_TRIAL_2026-11-03.md). Build 17 compiles on both targets; the owner acceptance for its faster pace and fresh stable-host workspace remains pending.
+The selected icon and camera/trial changes are documented in [the field trial](FIELD_TRIAL_2026-11-03.md). Build 17 compiled on both targets; its faster pace and stable-host workspace were subsequently owner-accepted, followed by the build-18 camera and continuous-visit passes above.
 
 Current protocol references: [v4 Turbo models](https://elevenlabs.io/docs/overview/models), [dialogue WebSocket](https://elevenlabs.io/docs/eleven-api/guides/how-to/websockets/realtime-tdd), [subscription verification](https://elevenlabs.io/docs/api-reference/user/subscription/get).

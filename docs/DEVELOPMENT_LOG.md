@@ -1,5 +1,11 @@
 # Development record
 
+## Latest accepted checkpoint — November 3, 2026
+
+November 3 latest checkpoint: native build 18 and the updated web shell have an owner-passed continuous fictional conversation through final readout. The same visit now has an actual owner confirmation and local API handoff. Seven original voice files (1,179,102 bytes) matched SHA-256/MIME/size readback; eleven investigation events and the reading amendment arrived intact. Production and warranty remain deferred with Operations. Source receipt and simulator acceptance were recorded separately for the same revision, resulting in `accepted_with_followups`. These are reported facts, not verified telemetry or completed field work. Camera capture passed in a separate trial. All 186 Node checks remain the latest software verification; no application code changed for this handoff. See [field trial](FIELD_TRIAL_2026-11-03.md) and [phone validation](PHONE_VALIDATION.md).
+
+Dated entries below retain their original observations; older pending build, voice and camera checks are not the current status.
+
 ## October 30, 2026 — direction and baseline
 
 Andy Barrett narrowed CarryForward from a broad business-transition idea to a field-operations product informed by running Perihelion Solar. The accepted direction is a short, natural interview that uses job photos and work-order context to identify missing observations and unfinished commitments. New evidence may open or resolve investigation branches. Communication style can adapt; evidence requirements do not.
@@ -214,3 +220,12 @@ The subsequent web change removes an await on the stale initial AudioContext res
 Native build 9 compiles for signed physical iOS and unsigned Simulator, retaining automatic authentication and the same data store. The contact header lists the number as plain text beside Call and Text, with a separate Maps address. Link policy checks reject foreign destinations, invalid numbers and SMS bodies/queries. No call or text was sent during verification. Mobile/desktop browser views have no horizontal overflow; the bottom test note is absent and supporting information stays under Details. All 125 Node checks pass, alongside Mac native policy checks; the current source's physical first-hold behavior remains pending.
 
 There have now been three actual provider calls in this increment: the generated-fictional ASR/Spark pair and the owner’s fictional gate-question ASR. The unchanged aggregate ledger is 93 conservative reservations / $5.739667 of $10. No new report was confirmed, delivered or accepted in this replacement.
+
+
+## November 3 — close the continuous phone visit through the API
+
+The owner confirmed the final report directly on the iPhone. CarryForward then admitted the assignment, seven original voice clips and eleven investigation events through its existing private HTTPS simulator API, bound the packet to that exact saved confirmation, and queued it. Independent HTTP readback matched every original file’s SHA-256, MIME and length, the report/media revision, full interview, amendment links and both deferred Operations owners. Source receipt and acceptance were separate HTTP actions for the same packet revision. The result was accepted with two follow-ups, not completion of production verification or warranty work.
+
+The current report retains the original machine transcripts and correction rather than silently rewriting them. Its work order remains the canonical fictional Elena Brooks assignment. No photo was added in this continuous visit; the separate native camera test is not folded into it. Assignment admission occurred during this handoff, not before its earlier spoken briefing. The contest recording should start with actual API assignment admission and retain its own continuous master.
+
+No new Meta or ElevenLabs inference, production write, push, deployment or public submission occurred. Current app code remains unchanged. The authenticated participant guide and blank final submission form were read using the owner-approved participant account; no new agreement or promotional grant was accepted.

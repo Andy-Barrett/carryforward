@@ -7,6 +7,8 @@ import { randomBytes } from "node:crypto";
 import { transcribeWithMeta } from "./lib/meta-transcribe.mjs";
 import {converseWithMeta} from "./lib/meta-conversation.mjs";
 import { reviewWithMeta } from "./lib/meta-review.mjs";
+import {handleSpeech} from "./lib/speech-api.mjs";
+import {SpeechTickets,configuredSpeech,SPEECH_VOICES} from "./lib/speech.mjs";
 import { OperationsStore } from "./lib/operations.mjs";
 import { handleOperations } from "./lib/operations-api.mjs";
 const phone = await phoneConfig();
@@ -20,9 +22,14 @@ const sessionCookie = `carryforward_session=${localSession}; HttpOnly; SameSite=
 const enabled = process.env.CARRYFORWARD_META_ENABLED === "1";
 const liveEnabled = enabled && process.env.CARRYFORWARD_LIVE_VOICE_ENABLED === "1";
 const guardToken = enabled ? (await readFile(process.env.CARRYFORWARD_GUARD_TOKEN_FILE, "utf8")).trim() : null;
+const speechTickets=new SpeechTickets();
+let speechService=null;try{speechService=await configuredSpeech();}catch{console.warn('Optional speech unavailable; local voice remains enabled.');}
 let reviewBusy = false;
 const reviews = new Map();
 const files = {
+  "/speech-text.js": ["speech-text.js", "text/javascript"],
+  "/turn-timing.js": ["turn-timing.js", "text/javascript"],
+  "/reply-speech.js": ["reply-speech.js", "text/javascript"],
   "/demo-work-orders.js": ["demo-work-orders.js", "text/javascript"],
   "/visit-navigation.js": ["visit-navigation.js", "text/javascript"],
   "/held-voice.js": ["held-voice.js", "text/javascript"],
@@ -73,7 +80,8 @@ const handler = async (req, res) => {
   if (gate && await gate(req,res,path,origin)) return;
   const json = (status, body) => { res.writeHead(status, {"Content-Type":"application/json", "Cache-Control":"no-store"}); res.end(JSON.stringify(body)); };
   if (await handleOperations(req,res,path,{store:operations,authorize:()=>req.headers["x-carryforward-intent"] === "operations" && (!req.headers.origin || req.headers.origin===origin) && (req.headers.cookie||"").split("; ").includes(`carryforward_session=${localSession}`)})) return;
-  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled,liveVoiceEnabled:liveEnabled}); }
+  if (path === "/api/config" && req.method === "GET") { res.setHeader("Set-Cookie", sessionCookie); return json(200, {metaEnabled:enabled,model:enabled ? "muse-spark-1.3" : null,transcriptionEnabled:enabled,liveVoiceEnabled:liveEnabled,speech:{enabled:!!speechService,provider:speechService?'ElevenLabs':'local',voices:Object.entries(SPEECH_VOICES).map(([key,v])=>({key,name:v.name})),defaultVoice:speechService?.voice||'sarah'}}); }
+  if(path==='/api/speech'&&req.method==='POST')return handleSpeech(req,res,{service:speechService,tickets:speechTickets,authorize:()=>req.headers.origin===origin&&req.headers['x-carryforward-intent']==='speech'&&(req.headers.cookie||'').split('; ').includes(`carryforward_session=${localSession}`)});
   if (["/api/review", "/api/transcribe", "/api/conversation/transcribe", "/api/conversation/review", "/api/conversation/answer"].includes(path) && req.method === "POST") {
     if (!enabled) return json(503,{error:"Meta review disabled"});
     if (req.headers.origin !== origin || req.headers["x-carryforward-intent"] !== "review" || !(req.headers.cookie || "").split("; ").includes(`carryforward_session=${localSession}`)) return json(403,{error:"Open this local application before requesting a review"});
@@ -94,9 +102,10 @@ const handler = async (req, res) => {
       if ((reviews.get(countKey)||0)>=(conversation?30:5)) throw new Error(`The bounded ${kind} session limit was reached; saved work is unchanged`);
       reviews.set(countKey,(reviews.get(countKey)||0)+1);
       if (transcribing) return json(200,await transcribeWithMeta(input,{token:guardToken}));
-      if(path.endsWith("/answer")) return json(200,await converseWithMeta(input,{token:guardToken}));
-      const proposal=await reviewWithMeta(input,{token:guardToken});
-      return json(200,{proposal});
+      if(path.endsWith("/answer")){const answer=await converseWithMeta(input,{token:guardToken,reasoningEffort:'minimal'});answer.speech=speechTickets.issue({jobId:id,turnId:input.turnId,text:answer.reply});return json(200,answer);}
+      const proposal=await reviewWithMeta(input,{token:guardToken,reasoningEffort:conversation?'minimal':'low'});
+      const spoken=(proposal.acknowledgement?proposal.acknowledgement+' ':'')+(proposal.nextQuestion?.text||'Your update is saved. Anything still unverified stays open for follow-up.');
+      return json(200,{proposal,speech:speechTickets.issue({jobId:id,turnId:input.turnId,text:spoken})});
     } catch (error) { return json(400,{error:error.message}); }
     finally { reviewBusy=false; }
   }

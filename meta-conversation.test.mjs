@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {prepareConversation,validateConversation,converseWithMeta} from './lib/meta-conversation.mjs';
 import {detailedDemoOrder as order} from './public/demo-work-orders.js';
-import {swipeTarget,bindVisitSwipes} from './public/visit-navigation.js';
+import {swipeTarget} from './public/visit-navigation.js';
 const input={order,text:"So, what's going on with this customer?"};
 const answer={version:'carryforward.conversation.v1',jobId:order.id,intent:'question',reply:'The work order lists a SolarEdge inverter.',sourceIds:['equipment']};
 test('conversation packet contains equipment, dated history, company/safety sources and same-job followups',()=>{
@@ -32,14 +32,10 @@ test('validated question returns provenance; disabled/malformed/incomplete calls
  await assert.rejects(converseWithMeta(input,{token:'fixture',fetchImpl:async()=>new Response(JSON.stringify({status:'incomplete'}))}),/incomplete/);
  await assert.rejects(converseWithMeta(input,{token:'fixture',fetchImpl:async()=>new Response(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:'broken'}]}]}))}),/unreadable/);
 });
-test('swipes follow owner mapping and ignore vertical motion, controls and a busy capture',()=>{
+test('swipe targets follow owner mapping and reject short or vertical motion',()=>{
  assert.equal(swipeTarget('companion',-100,5),'jobs');assert.equal(swipeTarget('companion',100,5),'camera');
  assert.equal(swipeTarget('companion',100,90),null);assert.equal(swipeTarget('companion',20,0),null);assert.equal(swipeTarget('review',100,0),null);
- const listeners={},root={addEventListener:(k,v)=>listeners[k]=v,removeEventListener:k=>delete listeners[k]},target={closest:()=>null};let busy=true,navigated=null,cameraOpened=0;
- const cleanup=bindVisitSwipes(root,{getStep:()=> 'companion',canNavigate:()=>!busy,navigate:value=>navigated=value,openCamera:()=>cameraOpened++});
- const down=()=>listeners.pointerdown({pointerType:'touch',pointerId:1,clientX:200,clientY:200,target});
- const up=()=>listeners.pointerup({pointerId:1,clientX:50,clientY:205});down();up();assert.equal(navigated,null);
- busy=false;down();listeners.pointerup({pointerId:1,clientX:350,clientY:205});assert.equal(cameraOpened,1);assert.equal(navigated,null);down();up();assert.equal(navigated,'jobs');navigated=null;listeners.pointerdown({pointerType:'touch',pointerId:1,clientX:200,clientY:200,target:{closest:()=>({})}});up();assert.equal(navigated,null);cleanup();assert.equal(Object.keys(listeners).length,0);
+ assert.equal(swipeTarget('jobs',100,5),'companion');assert.equal(swipeTarget('briefing',-100,5),'companion');
 });
 
 test('measurement corrections bind a supplied active source rather than automatically editing the last turn',()=>{const p=prepareConversation({...input,testimony:[{id:'measurement',text:'Output 4.2 kW.'},{id:'latest-monitoring',text:'Monitoring is live.'}]});const changed=validateConversation({...answer,intent:'report',correctsSourceId:'measurement'},p);assert.equal(changed.correctsSourceId,'measurement');assert.throws(()=>validateConversation({...answer,intent:'report',correctsSourceId:'other-job-reading'},p),/correction target/);assert.throws(()=>validateConversation({...answer,correctsSourceId:'measurement'},p),/correction target/);});

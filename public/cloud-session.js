@@ -1,7 +1,8 @@
+import {createTurnTiming,timingSummary} from './turn-timing.js';
 import {conversationIntent,spokenVisitSummary} from './visit-flow.js';
 import {buildVisitBrief} from './visit-brief.js';
 import {requestReview} from './review-request.js';
-import {createLocalSpeaker} from './local-speech.js';
+import {createReplySpeaker} from './reply-speech.js';
 import { mountCloud } from './cloud-view.js';
 import {chooseCloudReview,prepareCloudHandoff} from './cloud-dialogs.js';
 import {reviewEvidence} from './evidence-review.js';
@@ -10,7 +11,7 @@ import { createJobContext, routeJobCommand } from './job-context.js';
 import { resourcesForJob } from './cloud-resources.js';
 import { loadInterview } from './interview.js';
 import { reduceInvestigation, interviewHandoff } from './investigation.js';
-import { appendEvent, listPhotosByJob, listAudioByJob, savePhotoWithEvent, listConversation, saveConversation, listEvents } from './jobstore.js';
+import { appendEvent, listPhotosByJob, listAudioByJob, savePhotoWithEvent, listConversation, saveConversation, listEvents, updateConversationTiming } from './jobstore.js';
 import { newEventId, hashBytes } from './evidence.js';
 import { mountVoice } from './voice.js';
 
@@ -33,10 +34,13 @@ export async function mountCloudSession(root, {
   let alive = true, saving = false, capture = false, conversationBusy=false, voice = null, view = null;
   let state = await loadInterview(db, order), context = createJobContext(order);
   let draft = '', draftAudio = null, draftId = newEventId(), speech = null, refreshSequence = 0;
-  const speaker=createLocalSpeaker();
+  const speaker=createReplySpeaker({jobId,getConfig:()=>config});
   let callbackError = '';
   let config = {metaEnabled:false,transcriptionEnabled:false,liveVoiceEnabled:false}, needsPairing=false;
   const photoUrls = new Map();
+  let replyEpoch=0,conversationAbort=null;
+  const interruptReply=()=>{if(document.visibilityState==='hidden'){replyEpoch++;conversationAbort?.abort();speaker.stop();}};
+  document.addEventListener('visibilitychange',interruptReply);
   const valid = () => alive && root.isConnected;
   const requireCurrent = () => { if (!valid()) throw new Error('This job view has closed. Reopen the job before continuing.'); };
   const requireIdle = () => {
@@ -209,7 +213,7 @@ export async function mountCloudSession(root, {
       // Reload before append; appendEvent still rejects a concurrent stale writer.
       state = await loadInterview(db, order);
       requireCurrent();
-      callbackError = '';
+      metadata.ensureTurn?.();callbackError = '';
       const audio = checkedAudio(metadata.audio,{allowUnreviewed:metadata.fromHold===true});
       let answerId=metadata.turnId||draftId;
       const alreadySaved = state.sources[answerId];
@@ -238,10 +242,10 @@ export async function mountCloudSession(root, {
       if((audio?.liveReview===true||metadata.fromHold===true) && config.metaEnabled===true && !callbackError){
         view.setActivity('reviewing');
         try {
-          await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:requireCurrent,...(metadata.fromHold?{request:(_url,payload)=>requestReview('/api/conversation/review',payload)}:{})});
+          const reviewed=await reviewEvidence({order,selected:[],readPhotos:getPhotos,readState:async()=>{state=await loadInterview(db,order);requireCurrent();return state;},dispatch,ensureCurrent:metadata.ensureTurn||requireCurrent,...(metadata.fromHold?{request:async(_url,payload)=>{metadata.timing?.mark('reviewStarted');const result=await requestReview('/api/conversation/review',{...payload,turnId:metadata.turnId},{signal:metadata.signal});metadata.timing?.mark('reviewReady');return result;}}:{})});
           const open=Object.values(state.branches).filter(branch=>branch.state!=='supported').length;
           const acknowledgement=metadata.fromHold?state.interpretations.at(-1)?.acknowledgement:null;
-          return {response:(acknowledgement?acknowledgement+' ':'')+(state.activeQuestion?.text||`Got it. ${open} ${open===1?'item still needs':'items still need'} verification for the handoff.`),origin:'Model interpretation · muse-spark-1.3',speak:true};
+          return {speech:reviewed.speech,response:reviewed.speech?.displayText||(acknowledgement?acknowledgement+' ':'')+(state.activeQuestion?.text||`Got it. ${open} ${open===1?'item still needs':'items still need'} verification for the handoff.`),origin:'Model interpretation · muse-spark-1.3',speak:true};
         }catch(error){return {response:`Your answer is saved. AI review did not finish: ${error.message}`,origin:'Saved testimony · AI review incomplete'};}
         finally{if(valid())view.setActivity('ready');}
       }
@@ -275,7 +279,7 @@ export async function mountCloudSession(root, {
     if(config.metaEnabled && !/^(?:show|open|zoom|next|previous|back|replay)\b/i.test(text.trim())){
       const history=(await listConversation(db,jobId)).slice(-12);
       const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
-      const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony},{timeoutMs:130000});requireCurrent();
+      const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct'},{timeoutMs:130000});requireCurrent();
       if(answer.intent==='report')return false;
       await saveConversation(db,{id:newEventId(),jobId,at:new Date().toISOString(),question:text,reply:answer.reply,intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
       await drawConversation();return {handled:true,response:answer.reply,origin:'Meta · work order and field context',sourceIds:answer.sourceIds,speak:true};
@@ -335,31 +339,34 @@ export async function mountCloudSession(root, {
     }finally{saving=false;}
   }
 
-  async function spokenTurn({clip,text}) {
+  async function spokenTurn({clip,text,timing=createTurnTiming()}) {
+    const recordId='conversation-'+clip.id;let recorded=false;const epoch=++replyEpoch,abort=new AbortController();conversationAbort=abort;
+    const ensureTurn=()=>{requireCurrent();if(epoch!==replyEpoch||document.visibilityState==='hidden')throw Error('Conversation paused; the voice note remains saved.');};
     requireIdle();conversationBusy=true;stopSpeaking();view.setHeard(text);view.setActivity('reviewing');
     try {
-      state=await loadInterview(db,order);requireCurrent();
-      const intent=conversationIntent(text);let reply,origin='From this work order';
+      state=await loadInterview(db,order);ensureTurn();
+      const intent=conversationIntent(text);let speechTicket=null,reply,origin='From this work order';
       if(intent==='final'){view.changePhase('final');reply=spokenVisitSummary(order,state);origin='Draft visit update';}
       else if(intent==='onsite'){view.changePhase('onsite');reply='You’re onsite. What are you finding?';}
       else if(intent==='report'){view.changePhase('report');reply='Go ahead. What did you do, and what still needs attention?';}
       else {
         const history=(await listConversation(db,jobId)).slice(-12);
         const testimony=Object.values(state.sources).filter(item=>item.kind==='testimony'&&!item.supersededBy).slice(-20).map(item=>({id:item.id,text:item.text}));
-        const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony},{timeoutMs:130000});
-        requireCurrent();reply=answer.reply;origin='Meta · work order and field context';
+        timing.mark('classificationStarted');
+        const answer=await requestReview('/api/conversation/answer',{order,text,history,testimony,communicationStyle:state.communicationStyle||'direct',turnId:clip.id},{timeoutMs:130000,signal:abort.signal});timing.mark('classificationReady');
+        ensureTurn();reply=answer.reply;speechTicket=answer.speech;origin='Meta · work order and field context';
         if(answer.intent==='report'){
-          const prior=intent==='correction'?Object.values(state.sources).filter(s=>s.kind==='testimony'&&!s.supersededBy).at(-1):null;
-          const result=await saveAnswer(text,{fromHold:true,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
+          const prior=answer.correctsSourceId?state.sources[answer.correctsSourceId]:null;
+          const result=await saveAnswer(text,{fromHold:true,timing,signal:abort.signal,ensureTurn,turnId:'turn-'+clip.id,supersedes:prior?.id||null,branchId:state.activeQuestion?.branchId||null,
             audio:{audioId:clip.id,transcription:{rawText:text,reviewed:false,submission:'hold_release',provenance:clip.transcription.provenance}}});
-          requireCurrent();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;origin=result.origin;
+          ensureTurn();reply=(answer.reply==='Got it.'?'':answer.reply+' ')+result.response;speechTicket=answer.reply==='Got it.'?result.speech:null;origin=result.origin;
         }
-        await saveConversation(db,{id:'conversation-'+clip.id,jobId,at:new Date().toISOString(),question:text,reply:reply.slice(0,2000),intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});
+        await saveConversation(db,{id:recordId,timing:timing.snapshot(),jobId,at:new Date().toISOString(),question:text,reply:reply.slice(0,2000),intent:answer.intent,sourceIds:answer.sourceIds,provenance:answer.provenance});recorded=true;
       }
-      view.setResponse(reply,{origin});await drawConversation();await view.refresh();requireCurrent();
+      view.setResponse(reply,{origin});await drawConversation();await view.refresh();ensureTurn();
       conversationBusy=false;if(document.visibilityState==='hidden'){view.setActivity('ready');return;}view.setActivity('speaking');
-      speak(reply,{onState:next=>{if(valid())view.setActivity(next);},onError:error=>{if(valid()){view.setActivity('ready');view.setResponse(reply+' '+error.message,{origin});}}});
-    }finally{conversationBusy=false;}
+      speak(reply,{speech:speechTicket,onOutput:output=>{timing.output=output;},onTiming:name=>{timing.mark(name);if(recorded)updateConversationTiming(db,recordId,jobId,timing.snapshot()).then(()=>drawConversation()).catch(()=>{});},onState:next=>{if(valid())view.setActivity(next);},onError:error=>{if(valid()){view.setActivity('ready');view.setResponse(reply+' '+error.message,{origin});}}});
+    }finally{conversationBusy=false;if(conversationAbort===abort)conversationAbort=null;}
   }
 
   function stopSpeaking() { speaker.stop(); if(valid())view?.setActivity('ready'); }
@@ -409,7 +416,7 @@ export async function mountCloudSession(root, {
     for(const row of rows){const card=document.createElement('article');card.className='source';
       const question=document.createElement('p');question.textContent='You: '+row.question;
       const reply=document.createElement('p');reply.textContent='CarryForward: '+row.reply;
-      const source=document.createElement('small');source.textContent=(row.sourceIds||[]).join(' · ');card.append(question,reply,source);content.append(card);}
+      const source=document.createElement('small');source.textContent=(row.sourceIds||[]).join(' · ');card.append(question,reply,source);if(row.timing){const times=document.createElement('small');times.textContent=timingSummary(row.timing);card.append(times);}content.append(card);}
   }
   await drawConversation({restore:true});
   const exportConversation=document.createElement('button');exportConversation.type='button';exportConversation.textContent='Save conversation review';
@@ -472,7 +479,7 @@ export async function mountCloudSession(root, {
     }
     alive = false; refreshSequence++;
     observer.disconnect(); stopSpeaking();
-    voice?.dispose?.(); voice?.stop?.();
+    replyEpoch++;conversationAbort?.abort();document.removeEventListener('visibilitychange',interruptReply);speaker.dispose();voice?.dispose?.(); voice?.stop?.();
     view(); voicePanel.remove();
     for (const entry of photoUrls.values()) URL.revokeObjectURL(entry.url);
     photoUrls.clear();

@@ -184,3 +184,10 @@ The native contact row shows a plain number beside Call and Text. External SMS l
 ## November 2 conversational question path
 
 See [conversation context](CONVERSATION_CONTEXT.md). A guarded coordinator classifies new speech as question, report or clarification using the current assignment and bounded same-job conversation. Only clear reports reach the investigation reducer and its separate evidence reviewer. IndexedDB version 4 adds a conversation store without changing existing stores, report revisions or confirmations. Curated public company/safety context is server-owned background, not a procedure approval or a private Operations integration.
+
+
+## November 3 output and persistence boundary
+
+[Spoken replies](VOICE_OUTPUT.md) describes the optional authenticated ElevenLabs PCM seam. Only a one-use server-issued job/turn grant can request generated reply text. Browser and native queues cancel by utterance identity; no raw recording or job packet is forwarded to TTS. Apple speech stays active until provider setup. The native queue compiles and passes software rendering, but awaits actual phone playback acceptance. Text-only conversation uses validated minimal reasoning; selected-image review remains low.
+
+[Storage verification](LOCAL_STORAGE_VERIFICATION.md) records demonstrated transaction rollback and abandoned-upgrade fixes. IndexedDB remains v4, conversation/timing is separate from report evidence, and the simulator still uses the existing SQLite schema. No production data or hosted database was added. Portable browser media import remains unimplemented.

@@ -127,3 +127,12 @@ The revised answer route and richer fictional work order are documented in [conv
 Build 10 passed signed-device and unsigned-Simulator builds, installed on the same bundle and reopened through the saved connection without a code. The physical phone's left swipe opened the saved work-order list. The phone view then became black; control was released and the owner was asked to unlock CarryForward. Right-swipe details, the revised contact bridge, and repeated complete audible replies at the faster rate remain pending physical checks. The latest richer fixture is used for new visits; old visits and clips are retained. No microphone was started remotely, and no call, text, new Operations delivery or production change occurred. The final web shell is served by the private server; normal close/reopen activation is required if an older shell is still active.
 
 Local automated checks: 131 passed; native authentication/contact boundary checks passed. These do not establish physical audio acceptance.
+
+
+## November 3 overnight checkpoint — phone acceptance pending
+
+The owner reported one spoken answer followed by intermittent cutoffs. Build 10 separates Apple synthesis from WebKit's recording session and is installed; repeated full replies have not been confirmed. Build 11 adds an optional streaming PCM queue, cancellation identity, explicit failures and faster text reasoning. Both targets compile. The Simulator rendered the one-hold screen and right-swipe work-order details, then returned by left swipe. Software-only native/browser audio rendering is not a speaker/listening pass.
+
+No physical microphone, camera, call/text action or audible playback was started overnight. Build 11 was not installed on the phone. The next acceptance is ten short consecutive holds with complete audible replies, an intentional interrupt/new hold, a measurement correction and job switching, followed by the complete briefing → onsite question → report → final-update run. Check contact opening separately without completing a call/text.
+
+The Mac's Wi-Fi address now differs from the phone's fixed private origin. Its LAN preflight timed out; no successful phone reconnection is claimed. The retained server certificate expires November 3 at 20:34:51 UTC. Preserve the existing phone/origin evidence and Keychain credential before resolving the route/certificate. No security bypass or storage reset was introduced. Account and route details belong in ignored local receipts. See [morning handoff](MORNING_HANDOFF_2026-11-03.md).

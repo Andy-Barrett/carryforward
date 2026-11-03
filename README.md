@@ -69,7 +69,7 @@ npm test
 - Validated JSON work-order import and a downloadable sample.
 - Field reporting against individual work-order checks.
 - Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
-- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR, Spark evidence review and local system speech; full-duplex conversation remains unbuilt. The older reviewed-Send path has a November 1 iPhone pass; the replacement needs its own phone evidence. See [voice implementation](docs/LIVE_VOICE.md).
+- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR and Spark evidence review, with local system speech active. Optional ElevenLabs output is implemented but awaits account setup and physical validation; full-duplex conversation remains unbuilt. The older reviewed-Send path has a November 1 iPhone pass; repeated complete replies on the replacement remain a phone acceptance item. See [voice implementation](docs/LIVE_VOICE.md).
 - Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
 - Technician confirmation and JSON closeout export, including unresolved items.
 - Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
@@ -77,7 +77,9 @@ npm test
 
 A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
 
-The November 2 owner attempts exposed confusing controls and repeated connection/microphone prompts. The four-stage replacement still required too many steps, so the main screen now uses hold and release. Native build 9 remembers the private connection in the iPhone Keychain and reuses an already granted microphone permission for the fixed trusted origin. The retained clip is owner-confirmed audible through the build 6 player. The owner confirmed that the repeated microphone popup is gone and one hold/release question returned a spoken gate code. Several presses were needed before capture started, so first-hold readiness remains a usability limitation. See [current observations](docs/PHONE_VALIDATION.md).
+The current iPhone build 10 is installed; build 11 adds the optional streaming-audio queue and compiles for both targets. The owner has heard one hold/release gate-code answer, but reported intermittent cutoffs. We have not yet established reliable consecutive spoken replies. The prepared changes add cancellation handling, faster text reasoning, clear spoken numbers and separate turn timings. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
+
+The November 3 local pass has 150 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
 
 ## Where we’re taking it
 
@@ -106,7 +108,7 @@ This is an early prototype built for the **Meta Global AI Developer Hackathon**,
 
 The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
 
-Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. This is a prototype: storage conflicts, quota recovery and physical phone behavior still need validation.
+Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. The tested upgrade and rollback paths are documented above; quota recovery, browser eviction, portable media import and broader physical phone behavior still need validation.
 
 For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).
 

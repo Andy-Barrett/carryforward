@@ -124,3 +124,12 @@ The number is plain text with separate Call and Text links; the address opens Ma
 ## Build 10 — speech session and contact opening
 
 Spoken replies use an iOS-managed synthesis session, separate from WebKit recording and local clip playback, with native rate 0.60. Unexpected cancellation is surfaced to the page instead of silently looking like completion. Actual trusted contact taps cross a fixed-origin bridge to validated Phone, Messages or Maps destinations; no text body, send action or credential transfer is permitted. WebKit history gestures are disabled in favor of the app's work-order swipes. Both build targets compile and the signed app is installed. Physical repeated audible replies and external contact-action acceptance must be recorded separately. See [conversation context](../docs/CONVERSATION_CONTEXT.md).
+
+
+## Build 11 — optional streaming reply queue
+
+November 3: the exact final source compiled for signed physical iOS and unsigned Simulator. The new trusted-main-frame PCM bridge accepts only bounded sequenced 24 kHz samples with request/job/turn identity. `PCMReplyQueue` uses device-playback completion, cancels old identities and handles interruptions without replay. Apple local speech remains the configured output. ElevenLabs account/key and real provider transport are still unverified; no provider audio was generated.
+
+A quiet native executable rendered actual nonzero PCM in software and checked cancellation, stale identities, sequence limits and empty-stream failure, without speakers. Build 11 was installed/launched in iPhone Air Simulator, iOS 26.5. Reconnect then normal close/reopen activated the new cached shell without deleting evidence. The one-hold screen rendered, right swipe opened the detailed work order and left swipe returned. These are Simulator observations, not physical microphone/speaker results. No physical installation was performed overnight; the last installed phone build remains 10.
+
+The private phone route needs attention before the next test: the Mac's current Wi-Fi address differs from the saved origin, and the retained certificate expires November 3 at 20:34:51 UTC. Do not bypass TLS or switch origins without preserving the original phone evidence. Private runtime details and the morning sequence are retained locally. See [spoken replies](../docs/VOICE_OUTPUT.md), [storage checks](../docs/LOCAL_STORAGE_VERIFICATION.md) and [morning handoff](../docs/MORNING_HANDOFF_2026-11-03.md).

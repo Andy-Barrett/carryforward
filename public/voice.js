@@ -1,3 +1,4 @@
+import {createTurnTiming} from './turn-timing.js';
 import {startHeldVoice} from './held-voice.js';
 import {startLiveVoice} from './live-voice.js';
 import {requestReview} from './review-request.js';
@@ -11,7 +12,8 @@ const recovery=new Map();
 export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceSaved,onCaptureState,onRecordingState,liveEnabled=false,onPreview,onLiveDraft,onVoiceState,onInputLevel,onNewDemo,onClipsChanged,onSpokenTurn}){
   let clips=await listAudioByJob(db,jobId),message='',busy=false,recorder=null,stream=null,timer=null,interrupted=false,releaseInterruptions=()=>{};
   let live=null,held=null,disposed=false,micCheck=null,lastCapture=null;
-  const urls=[];
+  const urls=[];let voiceEpoch=0,asrAbort=null;
+  const pauseVoice=()=>{if(document.visibilityState==='hidden'){voiceEpoch++;asrAbort?.abort();held?.cancel();}};document.addEventListener('visibilitychange',pauseVoice);
   const clipBridge=globalThis.webkit?.messageHandlers?.carryForwardClipPlayback;
   let playingID=null,playTimer=null,quietPlayback=false,releaseRecordingAudio=()=>{};
   const stopClip=()=>{if(playingID)clipBridge?.postMessage({action:'stop',id:playingID});playingID=null;clearTimeout(playTimer);};
@@ -87,21 +89,22 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     if(busy||disposed)throw Error('Wait for the reply, then hold to speak.');
     if(!enabled||!/^DEMO-/.test(jobId))throw Error('Voice is unavailable. Reconnect this fictional work order.');
     if(clips.length>=AUDIO_LIMITS.clipsPerJob)throw Error('This visit has reached its local voice storage limit. Your recordings are saved.');
-    stopClip();busy=true;onCaptureState?.(true);
+    stopClip();busy=true;onCaptureState?.(true);const epoch=++voiceEpoch;
     try {held=startHeldVoice({onState:onVoiceState,onLevel:onInputLevel,onComplete:async result=>{
+      const timing=createTurnTiming({release:result.diagnostic?.releasedAt||performance.now()});
       let handedOff=false;lastCapture=result.diagnostic||null;
       try {
         if(result.cancelled||disposed||!root.isConnected||document.visibilityState==='hidden'){if(result.wav)await keep(new Blob([result.wav],{type:'audio/wav'}),'Interrupted conversation '+new Date().toLocaleTimeString(),true);message=result.error||'Recording cancelled. Nothing was sent.';if(!disposed&&root.isConnected)onPreview?.(message,true);return;}
         if(result.error){if(result.wav)await keep(new Blob([result.wav],{type:'audio/wav'}),'Unsent conversation '+new Date().toLocaleTimeString(),false);throw Error(result.error);}
         const clip=await keep(new Blob([result.wav],{type:'audio/wav'}),'Conversation '+new Date().toLocaleTimeString(),false);
         onCaptureState?.(false);onVoiceState?.('reviewing');onPreview?.('Listening to what you said…',true);
-        const bytes=new Uint8Array(result.wav);
-        const transcript=await requestReview('/api/conversation/transcribe',{synthetic:true,jobId,audioId:clip.id,audioBase64:base64(bytes),sha256:clip.wavSha256},{timeoutMs:110000});
-        if(transcript.jobId!==jobId||transcript.audioId!==clip.id||!transcript.transcript?.trim())throw Error('I didn’t catch any words. Hold to speak again.');
+        asrAbort=new AbortController();timing.mark('localSaved');timing.mark('asrStarted');const bytes=new Uint8Array(result.wav);
+        const transcript=await requestReview('/api/conversation/transcribe',{synthetic:true,jobId,audioId:clip.id,audioBase64:base64(bytes),sha256:clip.wavSha256},{timeoutMs:110000,signal:asrAbort.signal});
+        if(epoch!==voiceEpoch)throw Error('Conversation paused; the voice note stays saved.');timing.mark('asrReady');if(transcript.jobId!==jobId||transcript.audioId!==clip.id||!transcript.transcript?.trim())throw Error('I didn’t catch any words. Hold to speak again.');
         transcript.provenance={...transcript.provenance,complete:true,transport:'push-to-talk'};
         await updateAudioTranscription(db,clip.id,jobId,transcript);clip.transcription=transcript;clips=await listAudioByJob(db,jobId);
         if(disposed||!root.isConnected||document.visibilityState==='hidden'){message='Your voice note is saved. The conversation paused while you were away.';if(!disposed&&root.isConnected)onPreview?.(message,true);return;}
-        await onSpokenTurn?.({clip,text:transcript.transcript});handedOff=true;message='Conversation saved.';
+        await onSpokenTurn?.({clip,text:transcript.transcript,timing});handedOff=true;message='Conversation saved.';
       } catch(error){message=error.message;if(!disposed&&root.isConnected)onPreview?.(message,true);}
       finally {held=null;busy=false;if(!handedOff){onCaptureState?.(false);onVoiceState?.('ready');}if(!disposed&&root.isConnected)draw();}
     }});held.ready.catch(error=>{message=error.message;});return held;
@@ -177,5 +180,5 @@ export async function mountVoice(root,{db,jobId,enabled,onTranscript,onEvidenceS
     if(lastCapture){const detail=document.createElement('p');detail.className='voice-diagnostic';detail.textContent=`Last input check: ${lastCapture.phase}; ${lastCapture.audioMs} ms audio; ${lastCapture.samples} samples; peak ${lastCapture.peak.toFixed(4)}; RMS ${lastCapture.rms.toFixed(4)}; ${lastCapture.elapsedMs} ms held.`;root.append(detail);}
   }
   draw();
-  return {hold,start:()=>{if(liveEnabled)beginLive();else onPreview?.('Live interview unavailable. Use text, or explicitly choose Record voice note below.',true);},setAvailability:next=>{if(busy)return;const changed=enabled!==next.enabled||liveEnabled!==next.liveEnabled;enabled=next.enabled;liveEnabled=next.liveEnabled;if(changed&&root.isConnected)draw();},stop,dispose:()=>{disposed=true;held?.cancel();stopClip();releaseRecordingAudio();window.removeEventListener('carryforward-clip-playback',clipEvent);consentDialog?.close();live?.dispose();interrupted=true;stop();releaseInterruptions();observer.disconnect();onRecordingState?.(false);for(const url of urls)URL.revokeObjectURL(url);}};
+  return {hold,start:()=>{if(liveEnabled)beginLive();else onPreview?.('Live interview unavailable. Use text, or explicitly choose Record voice note below.',true);},setAvailability:next=>{if(busy)return;const changed=enabled!==next.enabled||liveEnabled!==next.liveEnabled;enabled=next.enabled;liveEnabled=next.liveEnabled;if(changed&&root.isConnected)draw();},stop,dispose:()=>{disposed=true;voiceEpoch++;asrAbort?.abort();document.removeEventListener('visibilitychange',pauseVoice);held?.cancel();stopClip();releaseRecordingAudio();window.removeEventListener('carryforward-clip-playback',clipEvent);consentDialog?.close();live?.dispose();interrupted=true;stop();releaseInterruptions();observer.disconnect();onRecordingState?.(false);for(const url of urls)URL.revokeObjectURL(url);}};
 }

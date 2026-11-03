@@ -17,6 +17,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     private let playbackSession = LocalPlaybackSession()
     private let clipPlayback = NativeClipPlayback()
     private let speechSession = LocalSpeechSession()
+    private let replyAudio = NativeReplyAudio()
     private var downloads: [ObjectIdentifier: URL] = [:]
     var route: String { policy?.origin.absoluteString ?? "No valid origin configured" }
 
@@ -44,10 +45,12 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.uiDelegate = self
         speechSession.webView = webView
         speechSession.policy = policy
-        playbackSession.onPlay = { [weak self] in self?.speechSession.stop(); self?.clipPlayback.stop() }
+        playbackSession.onPlay = { [weak self] in self?.speechSession.stop(); self?.replyAudio.stop(); self?.clipPlayback.stop() }
         clipPlayback.webView = webView; clipPlayback.policy = policy
-        clipPlayback.onPlay = { [weak self] in self?.speechSession.stop(); self?.playbackSession.deactivate() }
-        speechSession.onSpeak = { [weak self] in self?.clipPlayback.stop(); self?.playbackSession.deactivate() }
+        clipPlayback.onPlay = { [weak self] in self?.speechSession.stop(); self?.replyAudio.stop(); self?.playbackSession.deactivate() }
+        speechSession.onSpeak = { [weak self] in self?.replyAudio.stop(); self?.clipPlayback.stop(); self?.playbackSession.deactivate() }
+        replyAudio.webView = webView; replyAudio.policy = policy
+        replyAudio.onPlay = { [weak self] in self?.speechSession.stop(); self?.clipPlayback.stop(); self?.playbackSession.deactivate() }
         playbackSession.webView = webView
         playbackSession.policy = policy
         playbackSession.onFailure = { [weak self] in self?.status = $0 }
@@ -55,6 +58,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         controller.add(playbackSession, name: "carryForwardPlayback")
         controller.add(clipPlayback, name: "carryForwardClipPlayback")
         controller.add(speechSession, name: "carryForwardSpeech")
+        controller.add(replyAudio, name: "carryForwardSpeechAudio")
         controller.add(self, name: "carryForwardContact")
         controller.addUserScript(WKUserScript(source: """
             (() => {
@@ -134,6 +138,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.setCameraCaptureState(.none)
         webView.pauseAllMediaPlayback()
         speechSession.stop()
+        replyAudio.stop()
         playbackSession.deactivate()
         clipPlayback.stop()
         if wasCapturing { status = "Capture interrupted. Review local save status before recording again." }
@@ -164,6 +169,7 @@ final class VisitBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
             show("Finish recording before opening a contact action."); return
         }
         speechSession.stop()
+        replyAudio.stop()
         UIApplication.shared.open(url, options: [:]) { [weak self] opened in
             guard !opened else { return }
             Task { @MainActor [weak self] in self?.show("This device could not open that contact action.") }
@@ -475,4 +481,43 @@ private final class NativeClipPlayback: NSObject, WKScriptMessageHandler, AVAudi
         if notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { Task { @MainActor [weak self] in self?.stop() } }
     }
     enum PlaybackError: Error { case invalidDuration, couldNotStart }
+}
+
+
+@MainActor
+private final class NativeReplyAudio: NSObject, WKScriptMessageHandler {
+    weak var webView: WKWebView?
+    var policy: EndpointPolicy?
+    var onPlay: (() -> Void)?
+    private let queue = try? PCMReplyQueue()
+    override init() {
+        super.init()
+        queue?.onState = { [weak self] identity, state in self?.emit(identity, state) }
+        queue?.mayDeactivate = { [weak self] in self?.webView?.microphoneCaptureState == WKMediaCaptureState.none }
+    }
+    func stop() { queue?.stop() }
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "carryForwardSpeechAudio", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, policy?.allows(url) == true,
+              let body = message.body as? [String: Any], let action = body["action"] as? String,
+              let id = body["id"] as? String, UUID(uuidString: id) != nil,
+              let jobId = body["jobId"] as? String, jobId.hasPrefix("DEMO-"), jobId.count <= 300,
+              let turnId = body["turnId"] as? String, !turnId.isEmpty, turnId.count <= 200 else { return }
+        let identity = PCMReplyQueue.Identity(id: id, jobId: jobId, turnId: turnId)
+        if action == "stop" { queue?.stop(identity); return }
+        do {
+            guard let queue else { emit(identity, "error"); return }
+            if action == "begin" {
+                guard body["sampleRate"] as? Int == 24000, webView?.microphoneCaptureState == WKMediaCaptureState.none else { emit(identity, "error"); return }
+                onPlay?(); try queue.begin(identity)
+            } else if action == "chunk" {
+                guard let sequence = body["sequence"] as? Int, sequence >= 0, let encoded = body["pcmBase64"] as? String, encoded.count <= 21848, let data = Data(base64Encoded: encoded) else { emit(identity, "error"); return }
+                try queue.append(identity, sequence: sequence, bytes: data)
+            } else if action == "end" { queue.end(identity) }
+        } catch { emit(identity, "error") }
+    }
+    private func emit(_ identity: PCMReplyQueue.Identity, _ state: String) {
+        guard let data = try? JSONSerialization.data(withJSONObject: ["id":identity.id,"jobId":identity.jobId,"turnId":identity.turnId,"state":state]), let json = String(data: data, encoding: .utf8) else { return }
+        webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('carryforward-speech-audio',{detail: \(json)}));", completionHandler: nil)
+    }
 }

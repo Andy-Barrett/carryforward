@@ -13,3 +13,5 @@ test('deadline includes response body and preserves actionable provider errors',
  await assert.rejects(requestReview('/api/review',{}, {fetchImpl:async()=>({ok:false,json:async()=>({error:'Budget guard refused this request.'})})}),/Budget guard refused/);
  const data=await requestReview('/api/review',{}, {fetchImpl:async()=>({ok:true,json:async()=>({proposal:'bounded'})})});assert.deepEqual(data,{proposal:'bounded'});
 });
+
+test('caller cancellation ends the browser wait without an automatic retry',async()=>{const control=new AbortController();let calls=0;const pending=requestReview('/api/fixture',{}, {signal:control.signal,fetchImpl:async(_,options)=>{calls++;return new Promise((_,reject)=>{options.signal.addEventListener('abort',()=>reject(Error('Aborted')));});}});control.abort();await assert.rejects(pending,/paused.*no automatic retry/i);assert.equal(calls,1);});

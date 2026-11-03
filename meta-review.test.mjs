@@ -45,3 +45,5 @@ test('style is constrained by saved events and leaves source evidence and core i
  assert.deepEqual(a.sources,b.sources);assert.deepEqual(a.branches,b.branches);assert.equal(a.followups,b.followups);
  assert.throws(()=>prepareReview({...input,events:[...events,{id:'style',jobId:demoOrder.id,seq:2,type:'preference.changed',payload:{communicationStyle:'unbounded'}}]}),/Invalid communication style/);
 });
+
+test('minimal reasoning is explicit for text-only review; selected images keep low reasoning and all validators',()=>{assert.equal(prepareReview(input,{reasoningEffort:'minimal'}).request.reasoning.effort,'minimal');assert.throws(()=>prepareReview(input,{reasoningEffort:'none'}),/Unsupported/);const bytes=Buffer.from('image fixture'),sha256=createHash('sha256').update(bytes).digest('hex'),event={id:'photo-event',jobId:demoOrder.id,seq:2,type:'source.added',payload:{id:'photo-minimal',kind:'photo',sha256}},photo={id:'photo-minimal',jobId:demoOrder.id,mime:'image/png',dataBase64:bytes.toString('base64')};assert.equal(prepareReview({...input,events:[...events,event],photos:[photo]},{reasoningEffort:'minimal'}).request.reasoning.effort,'low');});

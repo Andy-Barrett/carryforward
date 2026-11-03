@@ -31,5 +31,5 @@ export async function reviewEvidence({order,selected,readState,readPhotos,dispat
   const latest=await readState(),latestPhotos=await readPhotos();ensureCurrent();
   if(latest.seq!==revision||inventory(latestPhotos)!==photoRevision)throw Error('The job or photos changed during review. Stale result was not applied.');
   await dispatch('interpretation.received',data.proposal);
-  return data.proposal;
+  return {...data.proposal,...(data.speech?{speech:data.speech}:{})};
 }

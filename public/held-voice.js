@@ -17,14 +17,14 @@ export function startHeldVoice({onState,onComplete,onLevel},deps={}) {
     try{await context.close();}catch{}try{if(audioSession?.type==='play-and-record')audioSession.type=previous&&previous!=='play-and-record'?previous:'playback';}catch{}onLevel?.(null);}
   async function finish(cancelled=false,error=null){
     if(finished)return finishing||Promise.resolve();
-    finished=true;
+    finished=true;const releasedAt=performance.now();
     finishing=(async()=>{
       clearTimeout(timer);release();
       if(node&&active){await new Promise(resolve=>{const stopTimer=setTimeout(resolve,250);node._stopped=()=>{clearTimeout(stopTimer);resolve();};node.port.postMessage('stop');});}
       active=false;await cleanup();
       const wav=packets.length?pcmWav(packets):null;
       const signal=wav?wavSignal(wav):null,quiet=!signal||signal.veryQuiet;
-      await onComplete({wav,cancelled,diagnostic:{phase,samples:localBytes/2,audioMs:localBytes/32,elapsedMs:Date.now()-started,rms:signal?.rms||0,peak:signal?.peak||0},error:error||(!cancelled&&(quiet||localBytes<6400)?(!localBytes&&phase!=='recording'?'The microphone was still opening. Keep holding until it turns red.':'I didn’t catch that. Hold while you speak, then release.'):null)});
+      await onComplete({wav,cancelled,diagnostic:{releasedAt,phase,samples:localBytes/2,audioMs:localBytes/32,elapsedMs:Date.now()-started,rms:signal?.rms||0,peak:signal?.peak||0},error:error||(!cancelled&&(quiet||localBytes<6400)?(!localBytes&&phase!=='recording'?'The microphone was still opening. Keep holding until it turns red.':'I didn’t catch that. Hold while you speak, then release.'):null)});
     })();return finishing;
   }
   async function begin(){try{

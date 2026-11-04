@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0a0f1f" />
+    <title>CarryForward · Field operations</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <link rel="stylesheet" href="/field.css" />
+  </head>
+  <body>
+    <header class="companion-header">
+      <button class="brand" data-step="companion" aria-label="CarryForward conversation"><img src="/football-mark-v1.png" alt="" width="42" height="34" /><span>CarryForward</span></button>
+      <nav class="companion-nav" aria-label="Main workspace">
+        <button data-step="jobs" class="workspace-link" aria-label="Work orders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+        <details class="job-tools"><summary aria-label="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></summary><div>
+          <button data-step="briefing">Work order details</button>
+          <button data-step="interview">Evidence review</button>
+          <button data-step="capture">Detailed record</button>
+          <button id="sample">Download sample</button>
+        </div></details>
+      </nav>
+    </header>
+    <main>
+      <section class="intro" hidden>
+        <p class="eyebrow">FROM WORK ORDER TO A CLEAR HANDOFF</p>
+        <h1>Know the job.<br />Bring back the evidence.</h1>
+        <p>
+          A focused briefing before the visit. A complete, reviewed handoff
+          after it.
+        </p>
+        <div class="notice">
+          Synthetic demonstration · Local prototype<br />Rule-based completeness
+          checks · Meta review is opt-in when configured<br />Local Operations simulator only · No equipment writes
+        </div>
+      </section>
+      <p id="connection-status" role="status"></p>
+      <p id="message" role="status"></p>
+      <div id="view"></div>
+      <details id="operations-tools" class="operations-tools"><summary>Operations simulator</summary><div id="operations-root"></div></details>
+      <footer>
+        Fictional local demonstration. You review the report. Operations accepts the handoff.
+      </footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+    <script type="module" src="/offline.js"></script>
+  </body>
+</html>

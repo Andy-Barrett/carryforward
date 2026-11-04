@@ -1,0 +1,30 @@
+# Prepared only. Syncing this file creates a paid service and persistent disk.
+# Publish only to the separately approved PRIVATE pilot repository.
+services:
+  - type: web
+    name: carryforward-private-pilot
+    runtime: node
+    plan: 0.5c-512mb
+    region: ohio
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --ignore-scripts
+    startCommand: node pilot/hosted.mjs
+    healthCheckPath: /readyz
+    disk:
+      name: carryforward-state
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: CF_PILOT_RELEASE_SCOPE
+        value: fictional-private-pilot-v1
+      - key: CF_PILOT_STATE_DIR
+        value: /var/data/carryforward
+      - key: CF_PILOT_ALLOWED_EMAILS
+        sync: false
+      - key: CF_PILOT_BOOTSTRAP_FILE
+        value: /etc/secrets/carryforward-pilot-accounts.json

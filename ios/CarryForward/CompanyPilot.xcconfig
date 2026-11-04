@@ -1,0 +1,13 @@
+// Use explicitly with -xcconfig CarryForward/CompanyPilot.xcconfig.
+// Dedicated candidate bundle/data container; never install over the contest app.
+PRODUCT_BUNDLE_IDENTIFIER = com.andybarrett.carryforward.companypilot
+CF_ORIGIN_SCHEME = http
+CF_ORIGIN_HOST = 127.0.0.1
+CF_ORIGIN_PORT = 4430
+CODE_SIGNING_ALLOWED = NO
+
+CF_COMPANY_PILOT = YES
+
+CF_DISPLAY_NAME = CarryForward Pilot
+
+CURRENT_PROJECT_VERSION = 22

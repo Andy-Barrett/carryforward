@@ -1,0 +1,99 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  demoOrder,
+  validateOrder,
+  reviewReport,
+  confirmReport,
+  exportCloseout,
+} from "./public/engine.js";
+const base = () => ({
+  technician: "Demo technician",
+  summary: "Replaced inverter. Monitoring remains offline.",
+  recordedAt: "2026-10-30T14:00:00Z",
+  entries: {
+    repair: {
+      status: "observed",
+      note: "Replaced inverter",
+      reference: "WO-note-1",
+      observedAt: "2026-10-30T13:00:00Z",
+    },
+  },
+  promises: "Send warranty registration",
+  followupOwner: "",
+});
+test("repair does not close production, monitoring or warranty obligations", () => {
+  const r = reviewReport(demoOrder, base());
+  assert.equal(r.openCount, 3);
+  assert.equal(r.findings.find((f) => f.id === "repair").outcome, "documented");
+  assert.ok(r.needsOwner);
+  assert.equal(r.operationsStatus, "Awaiting Operations acceptance");
+});
+test("observed result without evidence reference or valid time remains open", () => {
+  for (const change of [
+    { reference: "" },
+    { observedAt: "invalid" },
+    { note: "" },
+  ]) {
+    const report = base();
+    Object.assign(report.entries.repair, change);
+    assert.equal(reviewReport(demoOrder, report).openCount, 4);
+  }
+});
+test("confirmation preserves unresolved work and original scope in exported packet", () => {
+  const r = confirmReport(reviewReport(demoOrder, base()), "Demo technician");
+  const packet = JSON.parse(exportCloseout(demoOrder, r));
+  assert.equal(packet.closeout.openCount, 3);
+  assert.equal(packet.closeout.confirmation.name, "Demo technician");
+  assert.deepEqual(packet.workOrder.history, demoOrder.history);
+  assert.equal(
+    packet.closeout.operationsStatus,
+    "Awaiting Operations acceptance",
+  );
+});
+test("import rejects wrong versions, duplicate check IDs and excessive scope", () => {
+  assert.throws(() => validateOrder({ ...demoOrder, version: "unknown" }));
+  assert.throws(() =>
+    validateOrder({
+      ...demoOrder,
+      checks: [demoOrder.checks[0], demoOrder.checks[0]],
+    }),
+  );
+  assert.throws(() => validateOrder({ ...demoOrder, requestedWork: [] }));
+});
+test("not-applicable explanations are exceptions, never verified work", () => {
+  const report = base();
+  report.entries.monitoring = {
+    status: "not_applicable",
+    note: "Customer has no internet service",
+  };
+  const r = reviewReport(demoOrder, report);
+  assert.equal(
+    r.findings.find((f) => f.id === "monitoring").outcome,
+    "exception",
+  );
+  assert.equal(r.openCount, 2);
+  assert.throws(() => reviewReport(demoOrder, { ...report, technician: "" }));
+});
+
+test('interview-supported claims appear as reported while deferred and pending obligations remain open', () => {
+  const report={technician:'Synthetic tech',summary:'Replaced inverter.',recordedAt:'2026-10-30T10:00:00-05:00',entries:{},followupOwner:'Operations'};
+  const interview={jobId:demoOrder.id,branches:[{id:'repair',state:'supported',sourceIds:['t1'],reason:'Technician reports inverter replacement.'},{id:'production',state:'deferred',sourceIds:['t1'],reason:'Measurement deferred to Operations.',owner:'Operations'},{id:'monitoring',state:'supported',sourceIds:['t1'],reason:'Technician reports monitoring connected at 10:20.'},{id:'warranty',state:'needs_verification',sourceIds:['t1'],reason:'Registration is unfinished.',owner:'Operations'}]};
+  const result=reviewReport(demoOrder,report,interview);
+  assert.equal(result.reportedCount,2);assert.equal(result.openCount,2);
+  assert.equal(result.findings.find(f=>f.id==='repair').outcome,'reported');
+  assert.deepEqual(result.findings.find(f=>f.id==='repair').sourceIds,['t1']);
+  assert.equal(result.findings.find(f=>f.id==='warranty').followupOwner,'Operations');
+  assert.throws(()=>reviewReport(demoOrder,report,{...interview,jobId:'other'}),/another job/);
+});
+
+
+test('customer contact preserves source identity and refuses executable phone fields', () => {
+ const contact=validateOrder(demoOrder).customerContact;
+ assert.deepEqual(contact,demoOrder.customerContact);
+ for(const phone of ['javascript:alert(1)','+15015550143;123','911','1'.repeat(16)])
+  assert.throws(()=>validateOrder({...demoOrder,customerContact:{...contact,phone}}),/phone/);
+ assert.throws(()=>validateOrder({...demoOrder,customerContact:{phone:contact.phone,address:contact.address}}),/source/);
+ const without=structuredClone(demoOrder);delete without.customerContact;
+ assert.equal(validateOrder(without).customerContact,undefined);
+});

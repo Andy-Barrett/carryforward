@@ -1,0 +1,182 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createInvestigation, reduceInvestigation, interviewHandoff, INTERPRETATION_VERSION } from './public/investigation.js';
+const order = { id: 'job-1', checks: [{ id:'repair', question:'Repair?' }, { id:'monitoring', question:'Monitoring?' }] };
+const event = (s, type, payload) => ({ id:`event-${s.seq+1}`, jobId:s.jobId, seq:s.seq+1, type, payload });
+const apply = (s, type, p) => reduceInvestigation(s,event(s,type,p));
+const source = (s,id) => apply(s,'source.added',{id, kind:'testimony', text:'Technician observation'});
+const proposal = (s, changes=[], observations=[], nextQuestion=null) => ({version:INTERPRETATION_VERSION,jobId:s.jobId,baseRevision:s.inputRevision,model:'synthetic-fixture-not-live',changes,observations,nextQuestion});
+const change = (branchId,state,sourceIds) => ({branchId,state,sourceIds,reason:'New technician evidence'});
+
+test('new photo reopens only its affected branch and cannot imply monitoring from repair',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ s=apply(s,'source.added',{id:'photo1',kind:'photo',sha256:'a'.repeat(64)});
+ s=apply(s,'interpretation.received',proposal(s,[change('monitoring','needs_verification',['photo1'])],[],{branchId:'monitoring',text:'Was this after replacement?'}));
+ assert.equal(s.branches.repair.state,'supported'); assert.equal(s.branches.monitoring.state,'needs_verification');
+ assert.equal(s.activeQuestion.branchId,'monitoring');
+});
+test('corrections retain original claim and source provenance',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[],[{id:'o1',claim:'4.2 kW',sourceIds:['t1']}]));
+ s=source(s,'t2');
+ s=apply(s,'interpretation.received',proposal(s,[],[{id:'o2',claim:'2.4 kW',sourceIds:['t2'],supersedes:'o1'}]));
+ assert.equal(s.observations[0].claim,'4.2 kW'); assert.equal(s.observations[0].supersededBy,'o2');
+ assert.equal(s.observations[1].origin,'model_interpretation');
+});
+test('stale results, cross-job sources, malformed output and evidence-free reopening fail closed',()=>{
+ let s=source(createInvestigation(order),'t1'); const old=proposal(s);
+ s=source(s,'t2');
+ assert.throws(()=>apply(s,'interpretation.received',old),/Stale/);
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','supported',['other-job-photo'])])),/wrong-job/);
+ assert.throws(()=>apply(s,'interpretation.received',{...proposal(s),observations:{}}),/Unbounded/);
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','open',['t1'])])),/new material/);
+});
+test('human deferral preserves owner and cannot be silently reopened by model',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'branch.response',{branchId:'monitoring',action:'later',reason:'Office must check connection',owner:'Operations'});
+ assert.equal(s.branches.monitoring.owner,'Operations');
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('monitoring','supported',['t1'])])),/human reopening/);
+ s=apply(s,'branch.response',{branchId:'monitoring',action:'reopen',reason:'Tech can check now'});
+ assert.equal(s.branches.monitoring.state,'open');
+});
+test('equivalent questions are suppressed even if wording changes; explicit reopening allows retry',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'repair',text:'What work did you do?'}));
+ s=apply(s,'branch.response',{branchId:'repair',action:'already_answered',sourceIds:['t1'],reason:'See my first answer'});
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'repair',text:'Tell me about the work?'}));
+ assert.equal(s.activeQuestion,null); assert.equal(s.questions.length,1);
+ s=apply(s,'branch.response',{branchId:'repair',action:'reopen',reason:'I have a correction'});
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'repair',text:'What changed?'}));
+ assert.equal(s.questions.length,2);
+});
+test('duplicate retries are idempotent, conflicting IDs and out-of-order events rejected',()=>{
+ const s=createInvestigation(order), e=event(s,'source.added',{id:'t1',kind:'testimony',text:'Repair complete'});
+ const next=reduceInvestigation(s,e); assert.strictEqual(reduceInvestigation(next,e),next);
+ assert.throws(()=>reduceInvestigation(next,{...e,payload:{...e.payload,text:'Different'}}),/Conflicting/);
+ assert.throws(()=>reduceInvestigation(next,{...e,id:'other',seq:4}),/Out-of-order/);
+ assert.equal(s.seq,0); assert.equal(Object.keys(s.sources).length,0);
+});
+test('excluded support reopens verification without erasing historical observations',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])],[{id:'o1',claim:'Repair reported',sourceIds:['t1']}]));
+ s=apply(s,'source.excluded',{id:'t1'});
+ assert.equal(s.branches.repair.state,'needs_verification'); assert.equal(s.observations.length,1);
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])])),/excluded/);
+});
+test('three-question pass ceiling leaves remaining work open until explicit continuation',()=>{
+ const wide={id:'job-1',checks:['a','b','c','d'].map(id=>({id,question:id}))};
+ let s=source(createInvestigation(wide),'t1');
+ for (const branchId of ['a','b','c','d']) {
+   s=apply(s,'interpretation.received',proposal(s,[],[],{branchId,text:'Please clarify '+branchId}));
+   if(branchId!=='d') s=apply(s,'branch.response',{branchId,action:'later',reason:'Office follow-up'});
+ }
+ assert.equal(s.questions.length,3); assert.equal(s.activeQuestion,null); assert.equal(s.branches.d.state,'open');
+ s=apply(s,'review.continue',{});
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'d',text:'Can we check d now?'}));
+ assert.equal(s.activeQuestion.branchId,'d');
+});
+test('saved interview answers remain testimony and corrections invalidate referenced support',()=>{
+ let s=createInvestigation(order);
+ s=apply(s,'question.offered',{branchId:'repair',text:'What work did you do?'});
+ s=apply(s,'turn.recorded',{id:'answer1',branchId:'repair',text:'Replaced inverter.'});
+ assert.equal(s.branches.repair.state,'needs_verification'); assert.equal(s.sources.answer1.kind,'testimony');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['answer1'])]));
+ s=apply(s,'turn.recorded',{id:'answer2',branchId:'repair',text:'Correction: only inspected it.',supersedes:'answer1'});
+ assert.equal(s.sources.answer1.supersededBy,'answer2'); assert.equal(s.branches.repair.state,'needs_verification');
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','supported',['answer1'])])),/source/);
+});
+test('fallback interview cannot offer a second simultaneous or equivalent question',()=>{
+ let s=createInvestigation(order);
+ s=apply(s,'question.offered',{branchId:'repair',text:'What happened?'});
+ assert.throws(()=>apply(s,'question.offered',{branchId:'monitoring',text:'Online?'}),/policy/);
+ s=apply(s,'turn.recorded',{id:'a1',text:'Inspected it.',branchId:'repair'});
+ assert.throws(()=>apply(s,'question.offered',{branchId:'repair',text:'Tell me what happened?'}),/Equivalent/);
+});
+test('correction to another answer does not dismiss an unrelated active question',()=>{
+ let s=createInvestigation(order);
+ s=apply(s,'turn.recorded',{id:'initial',text:'Inspected inverter.',branchId:'repair'});
+ s=apply(s,'question.offered',{branchId:'monitoring',text:'Is monitoring live?'});
+ s=apply(s,'turn.recorded',{id:'correction',text:'Replaced inverter.',branchId:'repair',supersedes:'initial'});
+ assert.equal(s.activeQuestion.branchId,'monitoring');
+});
+test('new testimony requires reconciliation; deferral alone does not make a completed review stale',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));assert.equal(s.reviewRequired,false);
+ s=apply(s,'branch.response',{branchId:'monitoring',action:'later',reason:'Office follow-up'});assert.equal(s.reviewRequired,false);
+ s=apply(s,'turn.recorded',{id:'new-answer',text:'New observation changes the situation.'});assert.equal(s.reviewRequired,true);
+});
+
+ test('compound model questions are rejected and handoff accurately labels interpretation provenance',()=>{
+ let s=source(createInvestigation(order),'t1');
+ assert.match(interviewHandoff(s).mode,/no model interpretation/);
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[],[],{branchId:'repair',text:'Was it replaced? Can you measure output?'})),/Only one question/);
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ assert.match(interviewHandoff(s).mode,/source-linked model interpretations/);
+ assert.doesNotMatch(interviewHandoff(s).mode,/no model interpretation/);
+ });
+
+test('explicit job-local style changes preserve evidence, active questions and follow-up limits',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])],[],{branchId:'monitoring',text:'Is monitoring connected?'}));
+ const old=proposal(s);const before=structuredClone(s);
+ s=apply(s,'preference.changed',{communicationStyle:'conversational'});
+ assert.equal(s.communicationStyle,'conversational');assert.deepEqual(s.branches,before.branches);
+ assert.deepEqual(s.activeQuestion,before.activeQuestion);assert.equal(s.followups,before.followups);assert.equal(s.reviewRequired,false);
+ assert.throws(()=>apply(s,'interpretation.received',old),/Stale/);
+ assert.equal(interviewHandoff(s).communicationStyle,'conversational');
+ assert.equal(createInvestigation(order).communicationStyle,'direct');
+ assert.throws(()=>apply(s,'preference.changed',{communicationStyle:'ignore evidence requirements'}),/Invalid communication style/);
+ s=apply(s,'preference.changed',{communicationStyle:'direct'});assert.equal(s.communicationStyle,'direct');
+});
+
+test('review copies retain immutable original links and excluding the original reopens dependent support',()=>{
+ let s=apply(createInvestigation(order),'source.added',{id:'original',kind:'photo',sha256:'a'.repeat(64)});
+ const copy={id:'copy',kind:'photo',sha256:'b'.repeat(64),derivedFrom:'original',sourceSha256:'a'.repeat(64),derivation:{method:'browser-review-copy.v1',width:1600,height:900,quality:0.85}};
+ assert.throws(()=>apply(s,'source.added',{...copy,sourceSha256:'c'.repeat(64)}),/origin/);
+ assert.throws(()=>apply(s,'source.added',{...copy,derivedFrom:'another-job'}),/origin/);
+ s=apply(s,'source.added',copy);s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['copy'])]));
+ assert.equal(interviewHandoff(s).photoSources.find(p=>p.id==='copy').derivedFrom,'original');
+ s=apply(s,'source.excluded',{id:'original'});assert.equal(s.branches.repair.state,'needs_verification');
+ assert.throws(()=>apply(s,'interpretation.received',proposal(s,[change('repair','supported',['copy'])])),/excluded/);
+ s=apply(s,'source.excluded',{id:'copy'});assert.equal(s.sources.copy.excluded,true);
+ s=apply(s,'source.restored',{id:'original'});assert.equal(s.sources.copy.excluded,true);
+});
+
+test('explicit owner correction preserves outcomes, evidence and question limits with append-only history',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'branch.response',{branchId:'repair',action:'later',reason:'Check later',owner:'Previous owner'});
+ s=apply(s,'interpretation.received',proposal(s,[],[],{branchId:'monitoring',text:'Is monitoring connected?'}));
+ const before=structuredClone(s),old=proposal(s);
+ s=apply(s,'branches.owner-assigned',{branchIds:['repair','monitoring'],owner:' Operations '});
+ assert.equal(s.branches.repair.owner,'Operations');assert.equal(s.branches.monitoring.owner,'Operations');
+ for(const id of ['repair','monitoring'])assert.deepEqual(s.branches[id],{...before.branches[id],owner:'Operations'});
+ assert.deepEqual(s.activeQuestion,before.activeQuestion);assert.equal(s.followups,before.followups);
+ assert.deepEqual(s.sources,before.sources);assert.equal(s.reviewRequired,before.reviewRequired);
+ assert.equal(s.events.find(e=>e.type==='branch.response').payload.owner,'Previous owner');
+ assert.throws(()=>apply(s,'interpretation.received',old),/Stale/);
+ assert.equal(interviewHandoff(s).revision,before.seq+1);
+});
+
+test('owner assignment refuses unsupported scope and empty or unbounded payloads',()=>{
+ let s=source(createInvestigation(order),'t1');
+ s=apply(s,'interpretation.received',proposal(s,[change('repair','supported',['t1'])]));
+ for(const branchIds of [[],['unknown'],['repair'],['monitoring','monitoring'],Array(21).fill('monitoring')])
+   assert.throws(()=>apply(s,'branches.owner-assigned',{branchIds,owner:'Operations'}),/assignment|unresolved/);
+ for(const owner of ['',null,'x'.repeat(201)])
+   assert.throws(()=>apply(s,'branches.owner-assigned',{branchIds:['monitoring'],owner}),/assignment/);
+ assert.equal(s.branches.repair.owner,null);assert.equal(s.branches.monitoring.owner,null);
+});
+
+
+test('a partial correction keeps unrelated testimony and branch support while linking the amendment',()=>{
+ let state=createInvestigation(order);
+ const append=(type,payload)=>state=reduceInvestigation(state,{id:'a'+(state.seq+1),jobId:order.id,seq:state.seq+1,type,payload});
+ append('turn.recorded',{id:'combined',text:'Pre-work output 4.2 kW; monitoring is live; no replacement.'});
+ append('interpretation.received',{version:'carryforward.interpretation.v1',jobId:order.id,baseRevision:state.inputRevision,model:'fixture',observations:[],changes:[{branchId:'monitoring',state:'supported',sourceIds:['combined'],reason:'Technician reported live.'}],nextQuestion:null});
+ append('turn.recorded',{id:'reading-correction',text:'Correction: pre-work reading was 2.4, not 4.2.',amends:'combined'});
+ assert.equal(state.sources.combined.supersededBy,undefined);assert.equal(state.sources['reading-correction'].amends,'combined');assert.deepEqual(state.sources.combined.amendedBy,['reading-correction']);assert.equal(state.branches.monitoring.state,'supported');assert.deepEqual(state.branches.monitoring.sourceIds,['combined']);assert.equal(state.reviewRequired,true);
+ assert.throws(()=>append('turn.recorded',{id:'bad',text:'Ambiguous correction',amends:'combined',supersedes:'combined'}),/not both/);
+ assert.throws(()=>append('turn.recorded',{id:'bad',text:'Wrong source',amends:'foreign'}),/corrected answer/);
+});

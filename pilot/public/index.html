@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0a0f1f" />
+    <title>CarryForward · Company pilot</title>
+    <link rel="icon" href="/favicon-32.png" type="image/png" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <link rel="stylesheet" href="/field.css" />
+    <link rel="stylesheet" href="/pilot/pilot.css" />
+  </head>
+  <body>
+    <header class="pilot-header">
+      <button id="brand">
+        <img alt="" src="/football-mark-v1.png" />CarryForward</button
+      ><span id="company-label"></span
+      ><button id="account-button" hidden>Account</button
+      ><button id="logout" hidden>Sign out</button>
+    </header>
+    <nav id="nav" hidden></nav>
+    <p id="status" role="status"></p>
+    <main id="app" aria-live="polite"><p>Checking your session…</p></main>
+    <script type="module" src="/pilot/app.js"></script>
+  </body>
+</html>

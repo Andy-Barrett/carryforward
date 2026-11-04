@@ -1,0 +1,19 @@
+{
+  "name": "carryforward",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "better-auth": "1.7.16",
+    "pdfjs-dist": "6.5.438",
+    "ws": "8.22.1"
+  },
+  "license": "MIT"
+}

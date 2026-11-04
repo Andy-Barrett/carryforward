@@ -1,0 +1,228 @@
+{
+  "reviewer": "Codex, manual unblinded review by the case author",
+  "run": ".local/evaluations/first-pass-20261030",
+  "criterion": "Recognition of supplied reported outcomes and explicit unresolved obligations, not independent verification or automatic state updates.",
+  "limitations": [
+    "Initial branch states were supplied to both variants. Baseline summaries frequently repeat those open states while still acknowledging the reported facts. This confounds a comparison of state updates; do not score that as missing the reports.",
+    "This is not independent adjudication. Evidence quotes are mechanically checked against retained output, but the labels are judgments.",
+    "No real-world accuracy, human-effort or personality effect is established."
+  ],
+  "annotations": [
+    {
+      "caseId": "EVAL-01",
+      "acknowledgedReports": [
+        "repair",
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "recognizedUnresolved": [],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "inverter on DEMO-SYS-017 replaced Oct 30, 2026",
+        "2.4 kW measured on that inverter display",
+        "monitoring for that system showed connected",
+        "warranty registration certificate W-1 emailed to customer, who acknowledged receipt"
+      ]
+    },
+    {
+      "caseId": "EVAL-02",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "reports swapping the inverter",
+        "no output measurement or monitoring check",
+        "warranty paperwork remains undone with Operations owning it"
+      ]
+    },
+    {
+      "caseId": "EVAL-03",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "the inverter was replaced",
+        "cannot tell whether it was before or after replacement",
+        "Monitoring: explicitly deferred as unverified",
+        "Warranty: explicitly deferred",
+        "2.4 kW"
+      ]
+    },
+    {
+      "caseId": "EVAL-04",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "inverter replacement is done",
+        "It does not support the 4.2 kW claim; it conflicts with it",
+        "monitoring and warranty as",
+        "remain unverified"
+      ]
+    },
+    {
+      "caseId": "EVAL-05",
+      "acknowledgedReports": [
+        "repair",
+        "production",
+        "monitoring"
+      ],
+      "recognizedUnresolved": [
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "Inverter replacement on DEMO-SYS-017 completed",
+        "its display read 2.4 kW",
+        "Monitoring for this system showed connected at 14:20",
+        "Warranty registration is NOT delivered",
+        "Operations owns sending it on October 31"
+      ]
+    },
+    {
+      "caseId": "EVAL-06",
+      "acknowledgedReports": [
+        "repair",
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "recognizedUnresolved": [],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "explicitly corrects and supersedes",
+        "measured 2.4 kW on that inverter display",
+        "monitoring for that system showed connected",
+        "emailed warranty registration certificate W-1",
+        "The 4.2 kW figure should not be used"
+      ]
+    },
+    {
+      "caseId": "EVAL-07",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "inverter replaced on DEMO-SYS-017",
+        "Post-work production: deferred to Operations",
+        "Monitoring communication: still open",
+        "Warranty handoff: still open"
+      ]
+    },
+    {
+      "caseId": "EVAL-08",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "stating: inverter replaced",
+        "excluded: true and visualIncluded: false",
+        "No current output measurement",
+        "Monitoring is unverified",
+        "Warranty paperwork remains with Operations"
+      ]
+    },
+    {
+      "caseId": "EVAL-09",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "The technician reports: swapped the inverter",
+        "I never took an output reading",
+        "I did not record a time",
+        "Operations still needs to send the registration tomorrow"
+      ]
+    },
+    {
+      "caseId": "EVAL-10",
+      "acknowledgedReports": [],
+      "recognizedUnresolved": [
+        "repair",
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "performed no repair, no measurement, no monitoring check, and no warranty delivery",
+        "nothing should be marked complete on the basis of the sticker text"
+      ]
+    },
+    {
+      "caseId": "EVAL-11",
+      "acknowledgedReports": [
+        "repair"
+      ],
+      "recognizedUnresolved": [
+        "production",
+        "monitoring",
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "I replaced the inverter on DEMO-SYS-017",
+        "DEMO-SYS-999, which does not match the job system DEMO-SYS-017",
+        "No other output measurement was recorded",
+        "Monitoring is unverified",
+        "warranty is still with Operations"
+      ]
+    },
+    {
+      "caseId": "EVAL-12",
+      "acknowledgedReports": [
+        "repair",
+        "production",
+        "monitoring"
+      ],
+      "recognizedUnresolved": [
+        "warranty"
+      ],
+      "unsupportedCompletedOutcomes": [],
+      "evidenceQuotes": [
+        "Inverter replacement on DEMO-SYS-017 completed",
+        "its display read 2.4 kW",
+        "Monitoring for this system showed connected at 14:20",
+        "Warranty registration is NOT delivered",
+        "Operations owns sending it on October 31"
+      ]
+    }
+  ]
+}

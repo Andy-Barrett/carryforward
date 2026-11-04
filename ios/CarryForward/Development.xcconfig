@@ -1,0 +1,8 @@
+// Simulator default. A physical phone must use a reachable private HTTPS origin.
+CF_ORIGIN_SCHEME = http
+CF_ORIGIN_HOST = 127.0.0.1
+CF_ORIGIN_PORT = 4350
+// Optional machine-local origin/signing settings; never checked into Git.
+#include? "../Local.xcconfig"
+
+CF_DISPLAY_NAME = CarryForward Dev

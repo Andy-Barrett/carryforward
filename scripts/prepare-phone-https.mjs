@@ -1,0 +1,24 @@
+// Prepare certificates and an isolated trial. Does not listen, install trust or call providers.
+import {mkdir,writeFile,chmod} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {randomBytes,X509Certificate} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {isIP} from 'node:net';
+const host=process.argv[2];
+if(isIP(host)!==4 || !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host))throw Error('Supply the Mac private Wi-Fi IPv4 address');
+const name=process.argv[3]||`phone-${Date.now()}`;
+if(!/^[a-z0-9-]{1,64}$/.test(name))throw Error('Use a short lowercase trial name');
+const root=new URL('../.local/phone-https/',import.meta.url);await mkdir(root,{recursive:true,mode:0o700});
+const dir=new URL(name+'/',root);await mkdir(dir,{mode:0o700});
+const run=args=>{const result=spawnSync('openssl',args,{cwd:dir,stdio:'pipe'});if(result.status!==0)throw Error('Certificate preparation failed: '+result.stderr.toString());};
+await writeFile(new URL('server.ext',dir),`basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:${host}\n`,{mode:0o600,flag:'wx'});
+run(['req','-x509','-newkey','rsa:2048','-nodes','-days','3','-sha256','-subj',`/CN=CarryForward Phone Trial CA ${name}`,'-addext','basicConstraints=critical,CA:TRUE,pathlen:0','-addext','keyUsage=critical,keyCertSign,cRLSign','-keyout','ca.key','-out','ca.pem']);
+run(['req','-new','-newkey','rsa:2048','-nodes','-subj','/CN=CarryForward Private Phone Trial','-keyout','server.key','-out','server.csr']);
+run(['x509','-req','-in','server.csr','-CA','ca.pem','-CAkey','ca.key','-CAcreateserial','-days','3','-sha256','-extfile','server.ext','-out','server.pem']);
+run(['x509','-in','ca.pem','-outform','DER','-out','CarryForward-Phone-Trial.cer']);
+for(const name of ['ca.key','server.key'])await chmod(new URL(name,dir),0o600);
+await writeFile(new URL('pairing-code.txt',dir),randomBytes(16).toString('hex')+'\n',{mode:0o600,flag:'wx'});
+const ca=new X509Certificate(await readFile(new URL('ca.pem',dir)));
+const config={status:'prepared_not_started',host,port:4316,origin:`https://${host}:4316`,caFingerprint256:ca.fingerprint256,expiresAt:ca.validTo,metaEnabled:false,operationsDatabase:new URL('operations.sqlite',dir).pathname};
+await writeFile(new URL('trial.json',dir),JSON.stringify(config,null,2),{mode:0o600,flag:'wx'});
+console.log(JSON.stringify({directory:dir.pathname,...config}));

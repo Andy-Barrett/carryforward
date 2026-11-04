@@ -21,7 +21,10 @@ body > .companion-header, body.cloud-workspace > .companion-header, body.visit-p
   background: var(--field-navy); border-bottom: 1px solid var(--field-line);
   position: sticky; top: 0; z-index: 20;
 }
-.companion-header .brand { display: inline-flex; align-items: center; gap: 9px; padding: 0; margin: 0; border: 0; background: transparent; color: var(--field-white); font-size: 20px; font-weight: 720; letter-spacing: -.8px; white-space: nowrap; }
+.companion-header .brand { display: inline-flex; align-items: center; gap: 9px; padding: 0; margin: 0; border: 0; background: transparent; color: var(--field-white); font-family: 'Avenir Next', Avenir, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 22px; font-weight: 500; letter-spacing: -.035em; white-space: nowrap; }
+.companion-header .brand-wordmark { display: inline-flex; align-items: baseline; line-height: 1; padding-inline-end: .04em; }
+.companion-header .brand-carry { color: var(--field-white); font-weight: 500; }
+.companion-header .brand-forward { color: var(--field-gold); font-weight: 800; font-style: italic; }
 .companion-header .brand img { width: 42px; height: 34px; object-fit: contain; }
 .companion-header svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .companion-nav { margin-left: auto; gap: 4px; flex-wrap: nowrap; }
@@ -140,7 +143,7 @@ body.visit-pages .jobs .job-card.is-current { border-color: #f3c71c77; }
 @media(max-width:600px) {
   body > .companion-header, body.cloud-workspace > .companion-header, body.visit-pages > .companion-header { padding: 0 18px; }
   .companion-header .brand { font-size: 19px; gap: 6px; }
-  .companion-header .brand img { width: 38px; height: 31px; }
+  .companion-header .brand img { width: 40px; height: 32px; }
   .companion-nav { gap: 0; }
   body.visit-pages > main { padding: 28px 18px; }
   .work-list-heading { margin-bottom: 20px; }

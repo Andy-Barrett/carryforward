@@ -1,5 +1,10 @@
 # Source release record
 
+## November 4 presentation update
+
+The contest main branch now includes the refined digital-football branding, a focused README, reproducible local setup, exact Meta roles and a [reviewer evidence guide](REVIEWER_GUIDE.md). Company-pilot development remains separate. Public source is MIT-licensed; the final video, hosted service and contest submission remain separate. The dated candidate receipts below are retained as history, not as the current branch head.
+
+
 ## November 3 public release
 
 [Andy-Barrett/carryforward](https://github.com/Andy-Barrett/carryforward) is public under MIT. The owner approved source/history publication, the fictional assets and selected app icon. GitHub detected MIT, published main matched the local commit, and unauthenticated raw reads matched README, LICENSE, dependency notices and package metadata. Credentials, private safety context, backups and recordings remain excluded. This is source publication; a hosted service and contest submission remain pending.
@@ -8,15 +13,15 @@ The first licensed public commit is `934706d6cdfa3975fc74c909197dde216fc7da33`. 
 
 A subsequent focused fix accepts documented Starter credit rollover without changing the 6,000-character/60-request local cap, exact monthly tier check or no-overage requirements. All 187 Node checks pass, and a fresh Sarah synthesis completed after active Starter verification. Private publication manifests identify each archived commit precisely. Earlier candidate archives below are retained as historical evidence.
 
-## November 3 pre-license candidate
+## Historical November 3 pre-license candidate
 
-The current tested code candidate is `4a07fcf9db6e7d176c5525ed98162ff56b1851a8`. Its tracked-source-only archive contains 175 files and is 3,508,206 bytes. SHA-256: `4995f1d0b7cdf68f5f3fa8c60b7cec79e88e8900f974bef0827ee79d48ef0282`. The ignored manifest and archive are under `.local/releases/contest-20261103/`.
+The tested code candidate at this historical checkpoint was `4a07fcf9db6e7d176c5525ed98162ff56b1851a8`. Its tracked-source-only archive contains 175 files and is 3,508,206 bytes. SHA-256: `4995f1d0b7cdf68f5f3fa8c60b7cec79e88e8900f974bef0827ee79d48ef0282`. The ignored manifest and archive are under `.local/releases/contest-20261103/`.
 
 A clean extraction installed the locked dependency from the local npm cache with lifecycle scripts disabled, then passed all **186 Node checks**. No live inference was required. A bounded scan of 53 reachable commits and 641 blobs found no matches for the checked credential signatures or sensitive generated paths; no blobs were skipped. This is a bounded check, not a security guarantee. Private app backups, credentials, company-manual context, databases, recordings and runtime receipts are excluded from the archive.
 
 Native build 18 and the updated web shell have a bounded physical conversation pass plus the same visit’s owner-confirmed API closeout, original-audio readback and separate simulator acceptance with two Operations follow-ups. Camera capture passed separately. Android remains deferred; production integration and a hosted release remain unbuilt.
 
-The owner approved MIT licensing, dependency notices, a normal source/history push and public repository visibility on November 3. Root LICENSE and THIRD_PARTY_NOTICES.md now carry those notices. The last GitHub observation was private; public publication and readback are the next authorized steps. Contest submission remains separate. Metadata-only release changes after this candidate do not change the demonstrated app; the final publication archive/manifest will identify its exact commit.
+The owner approved MIT licensing, dependency notices, a normal source/history push and public repository visibility on November 3. Root LICENSE and THIRD_PARTY_NOTICES.md now carry those notices. At this pre-license checkpoint, the last GitHub observation was private. Publication and readback subsequently completed as recorded in the public-release section above. Contest submission remains separate. Metadata-only release changes after this candidate do not change the demonstrated app; the final publication archive/manifest will identify its exact commit.
 
 Next is the identified continuous contest recording and [submission preparation](CONTEST_FINISH_2026-11-03.md), including voice-output publication rights. No public push, visibility change, deployment, upload or contest submission occurred in preparing this candidate.
 

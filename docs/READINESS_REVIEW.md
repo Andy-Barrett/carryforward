@@ -1,5 +1,7 @@
 # Local readiness review
 
+As of November 4, the public main branch is an MIT-licensed contest prototype. The November 3 owner-run fictional iPhone visit completed correction, owned deferral, confirmation, actual local API delivery, source receipt and separate acceptance of the same revision. See [the field trial](FIELD_TRIAL_2026-11-03.md) and [reviewer guide](REVIEWER_GUIDE.md). The final contest video and submission are still pending.
+
 CarryForward's local evidence-to-handoff loop is implemented. The full field-product goal is still open: the broader physical-device matrix and a technician usability run remain incomplete. This review uses source, actual browser exercises, preserved evaluation results and local API readback, rather than treating green unit tests as proof of phone behavior.
 
 | Requirement | Current evidence | Status |
@@ -12,18 +14,22 @@ CarryForward's local evidence-to-handoff loop is implemented. The full field-pro
 | Actual substantive Meta interpretation | Twelve-case run, three-case retest and reduced-photo review with retained model/usage/provenance | Verified on fictional data |
 | Useful bounded follow-up, corrections and deferrals | Retained first responses and development retest; equivalent-question and three-question-limit tests | Verified on bounded synthetic cases |
 | Explicit style without weakening requirements | Direct/conversational saved preference; common core instructions; browser reload and actual review | Implemented; benefit unmeasured |
-| Voice input, playback and reviewed transcription | Synthetic WAV persistence/playback, actual ASR and original-byte readback | Uploaded-audio path verified |
+| Voice input, playback and transcription | Guarded ASR tied to original audio, including the November 3 continuous owner trial and exact-byte readback | Bounded iPhone pass; machine words remain unreviewed until human review |
 | Real microphone and camera | Owner-confirmed local iPhone audio, live input and Nov 1 camera original/copy with exact API readback | Bounded iPhone audio/camera and Home/background passes; other interruption routes/devices pending |
 | Cloud workspace and job-source recall | Actual PDF/image/video reference viewers; job-local recall, zoom and unavailable-warning checks in `CLOUD_INTERFACE.md`; 95 tests total | Desktop and phone-width verified; general retrieval pending |
-| Spoken conversation | One owner-confirmed physical speech → Meta transcript → reviewed Send → Spark follow-up → local spoken response; see `LIVE_VOICE.md` | One iPhone cycle verified; full-duplex and broader usability pending |
+| Spoken conversation | Owner-confirmed November 3 hold/release questions, report, partial reading correction, explicit Operations deferrals and full final readout; see `FIELD_TRIAL_2026-11-03.md` | Bounded continuous iPhone visit; current-design capture recheck, full-duplex and broader usability remain pending |
 | Offline startup and local capture | Native server-stopped cold launch; owner-confirmed new local record/play; build 5 pairing/reconnect and retained audible clip | Desktop and one native iPhone server-unavailable sequence verified; airplane mode/eviction pending |
 | Unambiguous observation times | Offset/calendar validator, explicit form field, legacy-open behavior and browser roundtrip | Local verified |
 | Accurate review and exact confirmation | Separate reported/documented/open outcomes; v5 contract; stale report/media/event rejection | Local verified |
-| API handoff, receipt and acceptance | Live local simulator flow and source-byte readback; exact accepted revision with open follow-ups, including Nov 1 physical iPhone packet | Local and one native iPhone pass |
-| Budget and data boundary | Guard source and tests; persistent aggregate ledger; only CarryForward code and fictional examples | Active; no production/customer authorization |
+| API handoff, receipt and acceptance | November 3 phone-confirmed report, exact-revision delivery, seven original voice files and eleven events matched readback, separate acceptance with two Operations follow-ups | Bounded iPhone/local API pass; assignment in this visit was admitted at closeout |
+| Budget and data boundary | Guard source and tests; persistent aggregate ledger; fictional visits and owner-approved development sources, including explicitly approved private company-context excerpts excluded from public source | Active; no production/customer authorization |
 | Accuracy/efficiency claim | Strong same-model comparison did not show an accuracy advantage; human interaction time and enjoyment not measured | No improvement claim justified |
 | Broader phone and interrupted-recording acceptance | Owner confirmed Home/background stop, partial-clip playback and retained playback after build update | Partial; lock/call, other matrix cases and Android pending |
-| Contest publication and demonstration | Tracked-source candidate independently extracted/tested; see `RELEASE_CANDIDATE.md`. No public release, hosted deployment or submission performed | Owner release decision pending |
+| Contest publication and demonstration | Public MIT source and tracked-source verification; see `RELEASE_CANDIDATE.md` | Public source verified; final video, hosted release and submission remain pending |
+
+## Historical checkpoints
+
+The following dated observations preserve earlier limits and debugging history. The November 4 summary above and linked field trial take precedence for current status.
 
 The private physical-device access path and one assisted end-to-end iPhone loop now work. Next are the remaining checks in `PHONE_VALIDATION.md`, followed by a short technician usability run using `evaluation/usability/README.md`. The prepared kit remains explicitly unrun; it is not participant evidence. Andy deferred Android on November 1 so the immediate pilot and remaining device work focus on his iPhone. Keep the natural interview/evidence loop as the product; additional framework work does not replace those checks. Do not claim completion or production readiness from this local review.
 
@@ -39,7 +45,7 @@ November 2 owner feedback reopened usability and audio acceptance: the page was 
 
 The subsequent November 2 physical check activated build 6’s four-stage shell, renewed the existing private session and visibly restored live-interview availability. The original local voice note remained present with the new playback control. The owner then confirmed direct playback of the retained clip was audible. A fresh work order is ready; the full revised workflow and new capture remain pending. No recording or model request was started during activation.
 
-## November 2 current replacement status
+## Historical November 2 replacement status
 
 The current main interface supersedes the earlier four-stage test: customer contact links, reply, Hold to speak and collapsed Details. Release automatically transcribes and requests a reply; machine words remain unreviewed. The code-free private connection was observed after app relaunch on the physical iPhone. The first physical hold failed before usable words and showed the repeated microphone prompt. Build 8 reuses existing granted permission for the fixed origin; that change and the full replacement conversation require fresh phone evidence. Historical reviewed-Send and retained-playback passes do not establish this replacement.
 

@@ -1,41 +1,62 @@
 # CarryForward
 
-**Know the job. Bring back the evidence.**
+**Arrive prepared. Bring back the evidence. Carry the next step forward.**
 
-CarryForward helps field technicians arrive prepared and bring back a useful service report. It starts with the work order, keeps the requested work in view, and checks the closeout for missing observations and unfinished commitments.
+![CarryForward — Know the job. Bring back the evidence.](docs/assets/carryforward-banner.png)
 
-## Why I’m building it
+[![Checks](https://github.com/Andy-Barrett/carryforward/actions/workflows/checks.yml/badge.svg)](https://github.com/Andy-Barrett/carryforward/actions/workflows/checks.yml)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-43853d)](https://nodejs.org/)
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-I run Perihelion Solar. When a technician finishes a service visit, the office needs more than “it’s fixed.” We need to know what they found, what they did, what they measured, and what we still owe the customer.
+CarryForward is a field-visit assistant for solar service teams. It brings the work order into a simple conversation, helps identify missing evidence, and returns a reviewable closeout with unfinished obligations and their owners intact.
 
-Replacing an inverter, confirming production, restoring monitoring, and sending warranty paperwork are separate pieces of work. A good report keeps those distinctions clear. It also gives the technician a chance to fill in missing information while they’re still at the site.
+Built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. This repository contains the working local prototype and its development record. The three-minute contest video is being finalized. [Review the demonstrated behavior](docs/REVIEWER_GUIDE.md) or [run the local prototype](#try-it-locally).
 
-That’s the job I want CarryForward to do.
+## The problem
+
+I run a solar company. When a technician returns from a visit, the office needs what they found, what they did, what they measured and what we still owe the customer.
+
+Repair, production, monitoring and warranty paperwork are different outcomes. A useful handoff keeps them separate, even when the technician corrects a detail or cannot verify a result.
 
 — Andy Barrett
 
-## The field workflow
+## One visit, four steps
 
-1. **Get the briefing.** Review the customer, property, system, reported problem, previous notes, and assigned scope.
-2. **Record the visit.** Capture findings, work performed, dated observations, evidence references, and promises made to the customer.
-3. **Review the closeout.** See which assigned checks have supporting information and which need another answer or follow-up.
-4. **Hand it back.** Confirm the technician’s report and export it for Operations review. Unfinished work stays visible.
+1. **Arrive prepared.** Read or hear the assignment, recent history, access notes and supplied sources. Ask a question about the job.
+2. **Talk through the visit.** Hold to speak and release for a reply when providers are configured. Text remains available; photos are optional and stay job-scoped.
+3. **Resolve what matters.** Correct a reading, answer a useful follow-up, or leave a check open with an explicit owner. Original testimony stays traceable.
+4. **Carry it forward.** Review and confirm the report. Deliver it through the local API, then record source receipt and separate acceptance of that exact revision.
 
-```mermaid
-flowchart LR
-    A[Operations work order] --> B[Technician briefing]
-    B --> C[Field report and evidence]
-    C --> D[Closeout review]
-    D -->|Missing information| C
-    D --> E[Technician confirmation]
-    E --> F[Operations acceptance]
-```
+Work-order answers are context, not field testimony. Machine transcripts are marked unreviewed; final human report confirmation is a separate action. A confirmed report and an accepted handoff do not independently verify physical work.
 
-The prototype supports file import/export and a local Operations simulator with HTTP assignment, evidence, handoff, receipt and acceptance endpoints. It has no live Perihelion connection.
+## A correction that survives the handoff
+
+In the November 3 owner-run fictional iPhone trial:
+
+- A **4.2 kW** report was corrected to **2.4 kW, before work**.
+- The amendment preserved the original words, reported monitoring and the report that no replacement was performed.
+- **Production and warranty remained deferred to Operations**.
+- The owner confirmed the report on the phone. HTTP delivery, source receipt and simulator acceptance applied to the same packet revision.
+- Readback matched seven original voice files and eleven investigation events, including the correction links and both deferred owners.
+
+The result was `accepted_with_followups`: the handoff arrived with its evidence and open work intact. Camera capture passed in a separate trial; no photo was part of this continuous visit.
+
+See the [field-trial record](docs/FIELD_TRIAL_2026-11-03.md) and [physical-phone checks](docs/PHONE_VALIDATION.md).
+
+## Where Meta fits
+
+| Component | Role |
+| --- | --- |
+| `muse-voice-transcribe-1.0` | Transcribes newly submitted speech, linked to the original recording. |
+| `muse-spark-1.3` | Interprets testimony and explicitly selected job images, proposes useful follow-ups and reconciles corrections. |
+| Local application logic | Handles narrow source lookups, validates model references and changes, preserves evidence history, and binds confirmation to a revision. |
+| ElevenLabs Sarah | Supplies spoken replies when configured; Apple speech remains a fallback. Speech output is separate from Meta interpretation. |
+
+Provider calls are server-side, explicitly configured and bounded by the development guard. Existing recordings and photos are not implicitly sent. The current conversation uses sequential hold/release requests, not full-duplex streaming.
 
 ## Try it locally
 
-You need **Node.js 24**. Install the locked WebSocket dependency before starting. There is no web build step.
+Requires **Node.js 24**. There is no web build step.
 
 ```sh
 git clone https://github.com/Andy-Barrett/carryforward.git
@@ -44,76 +65,41 @@ npm ci --ignore-scripts
 npm run dev
 ```
 
-Open **http://127.0.0.1:4310/**. The server listens only on your computer.
+Open [http://127.0.0.1:4310/](http://127.0.0.1:4310/). The server listens locally.
 
-The list includes four fictional assignments: Elena’s inverter fault, Marcus’s monitoring outage, Priya’s production comparison and Owen’s storm inspection. Each has separate equipment, customer history, access and closeout checks. Start with Elena’s work order. The main screen has one Hold to speak control. With guarded Meta development enabled, hold to ask about the job or report what happened; release for a spoken reply. Without inference configured, use the text fallback under More. Open items remain visible in the final update.
-
-To use another port:
-
-```sh
-PORT=4311 npm run dev
-```
-
-Run the checks:
+Choose one of four fictional assignments; Elena’s inverter visit is the main example. Use the text controls under **More** to record findings and review the final update. Default startup makes no inference calls. Voice and model review require explicit development configuration; see [guarded Meta development](docs/META_DEVELOPMENT.md).
 
 ```sh
 npm test
 ```
 
-## What works today
+The November 3 checkpoint passed **189 Node checks**, including evidence/revision validation, persistence and local HTTP handoff cases. See [storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) for browser upgrade, rollback and recovery checks.
 
-- A single conversation screen: customer contact links, the current reply and Hold to speak. Release sends the new utterance and requests a reply automatically. Swipe right to take a photo; saved thumbnails stay on the conversation screen. Sources, saved recordings, trial feedback and handoff tools are under More. See [the simple visit](docs/SIMPLE_VISIT.md).
-- Guarded Meta answers with the full work order, recent job conversation, dated demo history, public Perihelion background, general safety references and candidate SolarEdge family-manual summaries. An explicitly approved private company-safety context can supply bounded cited sections. Spoken reports use one Meta response for classification and a validated evidence interpretation; replies name saved open checks and owners. Explicit follow-up instructions retain quoted testimony, and a partial correction keeps unrelated facts from the original report. Questions stay separate from field reports; see [conversation context](docs/CONVERSATION_CONTEXT.md).
-- A pre-visit brief covering system/problem, planning ideas, customer preferences, access and explicit safety/ladder source gaps, with source metadata and on-demand recall. See [pre-visit briefing](docs/PRE_VISIT_BRIEF.md).
-- Work-order briefing with site and system identifiers, assigned scope, and source history.
-- Validated JSON work-order import and a downloadable sample.
-- Field reporting against individual work-order checks.
-- Browser-local drafts, saved interviews, correction history and explicit deferrals. Unsent interview text, corrections and reviewed voice links recover per job; Save answer commits the turn and clears its draft together.
-- Local voice clips and playback, guarded Meta transcription and source-linked reports. The current hold-to-speak path keeps the original recording and labels automatic transcripts as unreviewed. It uses Meta ASR and Spark evidence review, with ElevenLabs v4 Turbo/Sarah selected; current development uses verified monthly Starter. Two physical Sarah replies finished, and the owner accepted the revised brisk pace and shorter gate-code wait. The owner completed a continuous fictional iPhone visit through briefing, onsite questions, a report, a reading correction, explicit Operations deferrals and the final draft/readout. Exact gate-code/model excerpts can be read directly from the assignment, with separate source provenance. Apple speech remains the fallback; full-duplex conversation remains unbuilt. See [voice implementation](docs/LIVE_VOICE.md).
-- Rule-based review for missing notes, evidence references, observation times, and follow-up ownership.
-- Technician confirmation and JSON closeout export, including unresolved items.
-- Local Operations API and persistent simulator inbox with original evidence bytes, explicit receipt and exact-revision acceptance.
-- Responsive layouts checked at desktop and phone widths.
+## Scope and current limits
 
-A typed evidence reference is a technician’s reference to a record; the completeness checker does not inspect an arbitrary referenced file. Optional Meta review inspects only explicitly selected saved job images. The interview previews originals and can prepare smaller, explicitly labeled review copies without replacing them. Copies retain the original ID/hash through export and handoff. See [review-copy details and limits](docs/PHOTO_REVIEW_COPIES.md). “Documented” means the required information is present, not that the underlying work has been independently verified.
+- **Working locally:** fictional assignments, source-tagged briefing, job-scoped photos/audio, correction history, owned deferrals, report confirmation and a persistent Operations simulator.
+- **Observed on iPhone:** a bounded owner-run conversation and exact-revision closeout; camera, background and server-unavailable recovery have separate documented passes.
+- **Still under evaluation:** broader interruptions, storage failure, browser eviction, iPhone Safari and Android. No independent technician study, accuracy advantage or measured time saving is claimed.
+- **Separate company pilot:** under active development in an isolated candidate. This main-branch quickstart does not include company accounts, broad document ingestion or a hosted production service.
+- **Safety boundary:** source context does not certify equipment safety or compliance; applicable approved procedures remain necessary.
 
-The current iPhone development build is 19. The main screen now uses Perihelion navy and solar gold, a transparent football mark, one brand bar and a fixed talk/camera dock. Practice controls stay under More; the work-order list opens from the header. Sarah’s brisker playback and shorter gate-code wait have owner passes. Right swipes now use the native rear camera after reproducing WebKit picker rejection; camera opening, Cancel and reopening were observed on the phone. The owner confirmed capture, Use Photo and a new thumbnail. The continuous fictional conversation now passes through the corrected final draft and full Sarah readout, owner confirmation, API delivery, source receipt and separate simulator acceptance with two Operations follow-ups. Photo tap retains the ordinary picker. See [spoken replies](docs/VOICE_OUTPUT.md) and [physical observations](docs/PHONE_VALIDATION.md).
+Demo records are fictional. Local browser storage is not a portable backup; clearing it removes local records. Use the available exports and consult the documented recovery limits.
 
-The November 3 local pass has 189 passing Node checks, actual browser upgrade/recovery and transaction rollback checks, and a synthetic SQLite backup/restore rehearsal. The final draft reads current source-linked findings, with original reports and corrections kept in expandable history. Original media and unsent drafts survived the tested upgrade. [Storage verification](docs/LOCAL_STORAGE_VERIFICATION.md) records the demonstrated fixes and remaining recovery gaps.
+## Built during the event
 
-## Where we’re taking it
+Andrew supplied the field workflow and tested the phone experience. **Codex** prepared the prototype, coordinated and reviewed development, and implemented later investigation, Meta integration, simulator, voice and native layers. **Muse Code**, using `muse-spark-1.3`, contributed the initial durable job/photo sessions, evidence links, media export and revision-bound confirmation.
 
-The target is a short conversation, not a longer form. A technician should be able to describe the visit naturally, refer to a job photo, correct a detail, and get one useful follow-up. Each new answer or image updates the investigation. Unresolved work stays visible without asking the same question over and over.
+The football artwork was refined with built-in image generation; the wordmark remains live text.
 
-Communication style can be direct or conversational, with room for a little humor. The evidence requirements stay the same. An explicit direct/conversational preference now saves with each job and controls future Meta review wording. Automatic preference learning remains planned; no accuracy benefit has been established. The saved interview preserves answers, corrections and deferrals, with optional guarded Meta interpretation and a form for final review.
+The [development record](docs/DEVELOPMENT_LOG.md) separates coding assistance from actual product calls and retains failures that informed the current behavior.
 
+## Explore the implementation
 
-Photo attachments now persist locally in IndexedDB, with job-scoped links and a bounded media export. Voice recording controls and guarded transcription are implemented. On October 31, the owner confirmed audible playback of an existing clip and a fresh record/stop/play cycle in the native iPhone development app. One Home/background interruption preserved an audible partial clip, and native build 4 opened the saved visit with the private server stopped. The owner also confirmed a new local recording and playback with the server stopped, then audible playback after the build update and fresh pairing. Lock/call interruption, airplane mode and Android remain unverified. Meta-backed review compares the original assignment with field evidence and proposes focused follow-up questions. The first synthetic comparison preserved expected outcomes but did not establish an accuracy advantage over a strong same-model summary. See [evaluation findings](docs/EVALUATION_FIRST_PASS.md).
-
-An installable web app for iPhone and Android is the delivery target. Voice capture controls and uploaded-audio transcription are implemented; the basic record/stop/play cycle is owner-confirmed in the native iPhone development app. Safari/Android capture and interruption behavior remain unverified. A versioned app shell now supports offline reopening after successful initial installation; server-stopped browser reload and local answer persistence were verified. Native iPhone development installation is verified; web-app installation and airplane-mode behavior remain unverified. Production Operations integration remains unimplemented. The local simulator uses same-origin session authentication and separate acceptance of exact handoff revisions. Meta review is available behind the explicit guarded development configuration; the first bounded live phone turn and spoken follow-up are owner-confirmed; full-duplex conversation and broader phone acceptance remain incomplete.
-
-See [guarded Meta development](docs/META_DEVELOPMENT.md) for the local inference boundary.
-
-See the [readiness review](docs/READINESS_REVIEW.md), [contest scope](docs/CONTEST_SCOPE.md), [build plan](docs/BUILD_PLAN.md), and [technical notes](docs/ARCHITECTURE.md). Developers should start with [AGENTS.md](AGENTS.md) and the [Muse Code handoff](docs/MUSE_HANDOFF.md).
-
-## Integration direction
-
-CarryForward is a separate product from Perihelion Operations and PRISM. A system that assigns work should be able to supply a work order and receive a structured closeout. The originating system retains responsibility for accepting the report and completing its own work order.
-
-The JSON format is a prototype contract, not an adopted Perihelion API. The local simulator now accepts assignments and evidence, exposes an Operations inbox, and records receipt and acceptance separately. Retries are idempotent for identical assignments and queued report revisions; changed scope or stale revisions are rejected. See [local Operations API](docs/OPERATIONS_API.md).
-
-## Development status and data
-
-This is an early prototype built for the **Meta Global AI Developer Hackathon**, starting October 30, 2026. It began as a business-transition concept and was narrowed to field operations before model integration. The base completeness review is deterministic. Optional server-side Meta review now interprets saved synthetic testimony and selected job images through the approved aggregate spending guard; it remains disabled unless explicitly configured.
-
-The demonstration records are fictional. No Perihelion customer records or application source were copied into this repository. The owner-approved safety-manual snapshot stays in ignored private server storage; it is not part of the distributed source or public app shell. Use synthetic data while developing and testing. Keep credentials, customer records, and field evidence out of Git and issue reports.
-
-Drafts and photo attachments stay in this browser. IndexedDB stores job sessions, photo bytes, events and revision-bound confirmations; the active text draft also uses localStorage. Export the closeout/media bundle to retain a portable copy. Clearing browser storage removes local records. The tested upgrade and rollback paths are documented above; quota recovery, browser eviction, portable media import and broader physical phone behavior still need validation.
-
-For development guidance, see [CONTRIBUTING.md](CONTRIBUTING.md). For security concerns, see [SECURITY.md](SECURITY.md).
-
-A private [iPhone development target](ios/README.md) now reuses this web app through SwiftUI/WKWebView. The app renders the brief and visit workspace in an iPhone Air simulator. An owner-approved Personal Team build now loads the current briefing on the physical iPhone through the paired private HTTPS service. We have now run one fictional visit on the iPhone through live speech, a camera photo, Meta review and an API handoff to the local test inbox. Both photos and the voice clip arrived intact, with four follow-ups still open. A Home/background recording and server-stopped cold startup now have bounded iPhone passes. New local recording with the server stopped and retained playback after update/reconnection also passed. The remaining interruption, airplane-mode and Android checks are still open. See the [phone results](docs/PHONE_VALIDATION.md).
+- [Simple conversation](docs/SIMPLE_VISIT.md) · [Voice path](docs/LIVE_VOICE.md) · [Photo review](docs/PHOTO_REVIEW_COPIES.md)
+- [Local Operations API](docs/OPERATIONS_API.md) · [Architecture](docs/ARCHITECTURE.md) · [iPhone development app](ios/README.md)
+- [Evaluation findings](docs/EVALUATION_FIRST_PASS.md) · [Readiness](docs/READINESS_REVIEW.md) · [Contest scope](docs/CONTEST_SCOPE.md)
+- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## License
 
-CarryForward is released under the [MIT license](LICENSE). Dependency notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Provider services, generated voice output and private company documents retain their own terms.
+[MIT](LICENSE). See [dependency notices](THIRD_PARTY_NOTICES.md). Provider services and generated speech retain their own terms.
